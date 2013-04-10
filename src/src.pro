@@ -43,7 +43,8 @@ HEADERS += \
            $$PWD/seasidefilteredmodel.h \
            $$PWD/seasidenamegroupmodel.h
 
-CONFIG += seaside-tracker
+# Do not use tracker contacts backend
+#CONFIG += seaside-tracker
 contains(CONFIG, seaside-tracker) {
     CONFIG += qtsparql
     DEFINES += SEASIDE_SPARQL_QUERIES
