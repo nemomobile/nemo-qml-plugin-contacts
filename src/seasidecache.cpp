@@ -32,6 +32,7 @@
 #include "seasidecache.h"
 
 #include "seasideperson.h"
+#include "normalization_p.h"
 #include "synchronizelists_p.h"
 
 #include <QCoreApplication>
@@ -347,7 +348,8 @@ QContact SeasideCache::contactById(QContactLocalId id)
 
 SeasidePerson *SeasideCache::personByPhoneNumber(const QString &msisdn)
 {
-    QHash<QString, QContactLocalId>::iterator it = instance->m_phoneNumberIds.find(msisdn);
+    QString normalizedNumber = Normalization::normalizePhoneNumber(msisdn);
+    QHash<QString, QContactLocalId>::const_iterator it = instance->m_phoneNumberIds.find(normalizedNumber);
     if (it != instance->m_phoneNumberIds.end())
         return personById(*it);
     return 0;
@@ -785,9 +787,10 @@ void SeasideCache::appendContacts(const QList<QContact> &contacts)
         if (m_fetchFilter == SeasideFilteredModel::FilterAll)
             addToContactNameGroup(nameGroupForCacheItem(&cacheItem), 0);
 
-        QList<QContactPhoneNumber> phoneNumbers = contact.details<QContactPhoneNumber>();
-        for (int j = 0; j < phoneNumbers.count(); ++j)
-            m_phoneNumberIds[phoneNumbers.at(j).number()] = contact.localId();
+        foreach (const QContactPhoneNumber &phoneNumber, contact.details<QContactPhoneNumber>()) {
+            QString normalizedNumber = Normalization::normalizePhoneNumber(phoneNumber.number());
+            m_phoneNumberIds[normalizedNumber] = contact.localId();
+        }
     }
 
     for (int i = 0; i < models.count(); ++i)
