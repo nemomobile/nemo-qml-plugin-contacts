@@ -869,7 +869,7 @@ QStringList SeasidePerson::accountIconPaths() const
     foreach (const QContactOnlineAccount &account, mContact.details<QContactOnlineAccount>()) {
         // Include the icon path value for each account returned by accountPaths
         if (account.hasValue("AccountPath")) {
-            rv.append(account.value("ServiceIconPath"));
+            rv.append(account.value("AccountIconPath"));
         }
     }
 
@@ -882,7 +882,7 @@ void SeasidePerson::addAccount(const QString &path, const QString &uri, const QS
     detail.setValue("AccountPath", path);
     detail.setAccountUri(uri);
     detail.setServiceProvider(provider);
-    detail.setValue("ServiceIconPath", iconPath);
+    detail.setValue("AccountIconPath", iconPath);
 
     mContact.saveDetail(&detail);
 
