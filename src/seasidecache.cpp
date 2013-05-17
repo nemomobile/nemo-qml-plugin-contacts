@@ -50,6 +50,7 @@
 #include <QContactOrganization>
 #include <QContactPhoneNumber>
 #include <QContactGlobalPresence>
+#include <QContactSyncTarget>
 
 #include <QVersitContactExporter>
 #include <QVersitContactImporter>
@@ -503,11 +504,16 @@ bool SeasideCache::event(QEvent *event)
 
         QContactLocalIdFilter filter;
         filter.setIds(m_changedContacts);
-
         m_changedContacts.clear();
 
+        // A local ID filter will fetch all contacts, rather than just aggregates;
+        // we only want to retrieve aggregate contacts that have changed
+        QContactDetailFilter stFilter;
+        stFilter.setDetailDefinitionName(QContactSyncTarget::DefinitionName, QContactSyncTarget::FieldSyncTarget);
+        stFilter.setValue("aggregate");
+
         m_appendIndex = 0;
-        m_fetchRequest.setFilter(filter);
+        m_fetchRequest.setFilter(filter & stFilter);
         m_fetchRequest.start();
     } else if (m_refreshRequired) {
         m_resultsRead = 0;
