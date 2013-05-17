@@ -138,6 +138,7 @@ private:
 
     void requestUpdate();
     void appendContacts(const QList<QContact> &contacts);
+    void fetchContacts();
 
     void finalizeUpdate(SeasideFilteredModel::FilterType filter);
     void removeRange(SeasideFilteredModel::FilterType filter, int index, int count);
@@ -157,6 +158,7 @@ private:
     void notifyNameGroupsChanged(const QList<QChar> &groups);
 
     QBasicTimer m_expiryTimer;
+    QBasicTimer m_fetchTimer;
     QHash<QContactLocalId, SeasideCacheItem> m_people;
     QHash<QString, QContactLocalId> m_phoneNumberIds;
     QHash<QContactLocalId, QContact> m_contactsToSave;
@@ -193,6 +195,7 @@ private:
     bool m_refreshRequired;
 
     QElapsedTimer m_timer;
+    QElapsedTimer m_fetchPostponed;
 
     static SeasideCache *instance;
     static QList<QChar> allContactNameGroups;

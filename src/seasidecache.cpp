@@ -395,7 +395,7 @@ SeasidePerson *SeasideCache::person(SeasideCacheItem *cacheItem)
             cacheItem->person->setComplete(false);
             cacheItem->hasCompleteContact = true;
             instance->m_changedContacts.append(cacheItem->contact.localId());
-            instance->requestUpdate();
+            instance->fetchContacts();
         }
     }
     return cacheItem->person;
@@ -542,6 +542,10 @@ bool SeasideCache::event(QEvent *event)
 
 void SeasideCache::timerEvent(QTimerEvent *event)
 {
+    if (event->timerId() == m_fetchTimer.timerId()) {
+        fetchContacts();
+    }
+
     if (event->timerId() == m_expiryTimer.timerId()) {
         m_expiryTimer.stop();
         instance = 0;
@@ -557,20 +561,56 @@ void SeasideCache::contactsRemoved(const QList<QContactLocalId> &)
 
 void SeasideCache::updateContacts()
 {
+    QList<QContactLocalId> contactIds;
+
     typedef QHash<QContactLocalId, SeasideCacheItem>::iterator iterator;
     for (iterator it = m_people.begin(); it != m_people.end(); ++it) {
         if (it->hasCompleteContact)
-            m_changedContacts.append(it->contact.localId());
+            contactIds.append(it->contact.localId());
     }
-    m_refreshRequired = true;
-    requestUpdate();
+
+    updateContacts(contactIds);
+}
+
+void SeasideCache::fetchContacts()
+{
+    static const int WaitIntervalMs = 250;
+
+    if (m_fetchRequest.isActive()) {
+        // The current fetch is still active - we may as well continue to accumulate
+        m_fetchTimer.start(WaitIntervalMs , this);
+    } else {
+        m_fetchTimer.stop();
+        m_fetchPostponed.invalidate();
+
+        // Fetch any changed contacts immediately
+        m_refreshRequired = true;
+        requestUpdate();
+    }
 }
 
 void SeasideCache::updateContacts(const QList<QContactLocalId> &contactIds)
 {
+    // Wait for new changes to be reported
+    static const int PostponementIntervalMs = 500;
+
+    // Maximum wait until we fetch all changes previously reported
+    static const int MaxPostponementMs = 5000;
+
     m_changedContacts.append(contactIds);
-    m_refreshRequired = true;
-    requestUpdate();
+
+    if (m_fetchPostponed.isValid()) {
+        // We are waiting to accumulate further changes
+        int remainder = MaxPostponementMs - m_fetchPostponed.elapsed();
+        if (remainder > 0) {
+            // We can postpone further
+            m_fetchTimer.start(std::min(remainder, PostponementIntervalMs), this);
+        }
+    } else {
+        // Wait for further changes before we query for the ones we have now
+        m_fetchPostponed.restart();
+        m_fetchTimer.start(PostponementIntervalMs, this);
+    }
 }
 
 void SeasideCache::contactsAvailable()
