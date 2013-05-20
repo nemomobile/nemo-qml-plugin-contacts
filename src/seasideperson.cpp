@@ -152,7 +152,6 @@ void SeasidePerson::setMiddleName(const QString &name)
 // small helper to avoid inconvenience
 QString SeasidePerson::generateDisplayLabel(const QContact &mContact, SeasideProxyModel::DisplayLabelOrder order)
 {
-    //REVISIT: Move this or parts of this to localeutils.cpp
     QString displayLabel;
     QContactName name = mContact.detail<QContactName>();
 
@@ -270,8 +269,6 @@ QString SeasidePerson::sectionBucket()
     if (displayLabel().isEmpty())
         return QString();
 
-//    return priv->localeHelper->getBinForString(data(row,
-//                DisplayLabelRole).toString());
     // TODO: won't be at all correct for localisation
     // for some locales (asian in particular), we may need multiple bytes - not
     // just the first - also, we should use QLocale (or ICU) to uppercase, not
