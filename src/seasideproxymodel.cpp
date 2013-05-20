@@ -11,7 +11,6 @@
 
 #include <QStringList>
 
-#include "localeutils_p.h"
 #include "seasideperson.h"
 #include "seasidepeoplemodel.h"
 #include "seasideproxymodel.h"
@@ -25,7 +24,6 @@ public:
     }
 
     SeasideProxyModel::FilterType filterType;
-    LocaleUtils *localeHelper;
     QString searchPattern;
     bool componentComplete;
 };
@@ -36,7 +34,6 @@ SeasideProxyModel::SeasideProxyModel(QObject *parent)
     priv = new SeasideProxyModelPriv;
     priv->filterType = FilterAll;
     mDisplayLabelOrder = FirstNameFirst;
-    priv->localeHelper = LocaleUtils::self();
     setDynamicSortFilter(true);
     setFilterKeyColumn(-1);
 
@@ -219,8 +216,17 @@ bool SeasideProxyModel::lessThan(const QModelIndex& left,
     else if (!rightPerson)
         return true;
 
-    return priv->localeHelper->isLessThan(leftPerson->displayLabel(),
-                                          rightPerson->displayLabel());
+    QString lStr = leftPerson->displayLabel();
+    QString rStr = rightPerson->displayLabel();
+
+    if (lStr == "#")
+        return false;
+    if (rStr == "#")
+        return true;
+
+    // TODO: QString::toUpper() ignores locale!
+    // TODO: string copies here are not a nice thing
+    return lStr.toUpper() < rStr.toUpper();
 }
 
 QVariantMap SeasideProxyModel::get(int row) const

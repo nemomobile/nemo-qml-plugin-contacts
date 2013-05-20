@@ -17,7 +17,6 @@
 #include <QContactGuid>
 
 #include "seasidepeoplemodel.h"
-#include "localeutils_p.h"
 
 class MGConfItem;
 class SeasidePeopleModelPriv : public QObject
@@ -42,7 +41,6 @@ public:
     QMap<QString, QContactLocalId> phoneNumbersToContactIds;
     QVector<QStringList> data;
     QStringList headers;
-    LocaleUtils *localeHelper;
     QContactGuid currentGuid;
     QList<QContact> contactsPendingSave;
     MGConfItem *displayLabelOrderConf;

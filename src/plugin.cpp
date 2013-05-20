@@ -47,12 +47,6 @@ public:
     void initializeEngine(QDeclarativeEngine *engine, const char *uri)
     {
         Q_ASSERT(uri == QLatin1String("org.nemomobile.contacts"));
-
-/*
- * not a good solution, let's solve it properly this time
- * -    rootContext->setContextProperty(QString::fromLatin1("localeUtils"""), 
- * -                                    LocaleUtils::self());
- */
     }
 
     void registerTypes(const char *uri)

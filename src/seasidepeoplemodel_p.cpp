@@ -63,8 +63,6 @@ SeasidePeopleModelPriv::SeasidePeopleModelPriv(SeasidePeopleModel *parent)
 
     MODEL_DEBUG() << Q_FUNC_INFO << "Manager is " << manager->managerName();
 
-    localeHelper = LocaleUtils::self();
-
     connect(manager, SIGNAL(contactsAdded(QList<QContactLocalId>)),
             this, SLOT(contactsAdded(QList<QContactLocalId>)));
     connect(manager, SIGNAL(contactsChanged(QList<QContactLocalId>)),
