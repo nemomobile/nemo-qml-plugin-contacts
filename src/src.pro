@@ -14,13 +14,6 @@ INSTALLS += qmldir
 
 
 CONFIG += link_pkgconfig
-packagesExist(icu-i18n) {
-    DEFINES += HAS_ICU
-    PKGCONFIG += icu-i18n
-} else {
-    warning("ICU not detected. This may cause problems with i18n.")
-}
-
 packagesExist(mlite) {
     PKGCONFIG += mlite
     DEFINES += HAS_MLITE
@@ -32,7 +25,6 @@ CONFIG += mobility
 MOBILITY += contacts versit
 
 SOURCES += $$PWD/plugin.cpp \
-           $$PWD/localeutils.cpp \
            $$PWD/seasidepeoplemodel.cpp \
            $$PWD/seasidepeoplemodel_p.cpp \
            $$PWD/seasideperson.cpp \
@@ -41,7 +33,7 @@ SOURCES += $$PWD/plugin.cpp \
            $$PWD/seasidefilteredmodel.cpp \
            $$PWD/seasidenamegroupmodel.cpp
 
-HEADERS += $$PWD/localeutils_p.h \
+HEADERS += \
            $$PWD/synchronizelists_p.h \
            $$PWD/seasidepeoplemodel.h \
            $$PWD/seasidepeoplemodel_p.h \
