@@ -45,17 +45,5 @@ HEADERS += \
            $$PWD/seasidefilteredmodel.h \
            $$PWD/seasidenamegroupmodel.h
 
-# Do not use tracker contacts backend
-#CONFIG += seaside-tracker
-contains(CONFIG, seaside-tracker) {
-    CONFIG += qtsparql
-    DEFINES += SEASIDE_SPARQL_QUERIES
-    SOURCES += \
-            sparqlfetchrequest.cpp
-
-    HEADERS += \
-            sparqlfetchrequest_p.h
-}
-
 MOC_DIR = $$PWD/../.moc
 OBJECTS_DIR = $$PWD/../.obj

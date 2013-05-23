@@ -9,7 +9,7 @@ Name:       nemo-qml-plugin-contacts
 # << macros
 
 Summary:    Nemo QML contacts plugin
-Version:    0.0.0
+Version:    0.0.3
 Release:    1
 Group:      System/Libraries
 License:    BSD
@@ -20,7 +20,6 @@ BuildRequires:  pkgconfig(QtCore) >= 4.7.0
 BuildRequires:  pkgconfig(QtDeclarative)
 BuildRequires:  pkgconfig(QtGui)
 BuildRequires:  pkgconfig(QtContacts)
-BuildRequires:  pkgconfig(QtSparql)
 BuildRequires:  pkgconfig(mlite)
 Provides:   nemo-qml-plugins-contacts > 0.3.26
 Obsoletes:   nemo-qml-plugins-contacts <= 0.3.26

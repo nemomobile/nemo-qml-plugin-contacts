@@ -36,6 +36,7 @@
 #include <QContactManager>
 #include <QContactLocalIdFilter>
 #include <QContactFetchRequest>
+#include <QContactLocalIdFetchRequest>
 #include <QContactRemoveRequest>
 #include <QContactSaveRequest>
 
@@ -46,12 +47,6 @@
 
 #ifdef HAS_MLITE
 #include <mgconfitem.h>
-#endif
-
-#ifdef SEASIDE_SPARQL_QUERIES
-#include "sparqlfetchrequest_p.h"
-#else
-#include <QContactLocalIdFetchRequest>
 #endif
 
 #include "seasidefilteredmodel.h"
@@ -173,11 +168,7 @@ private:
     QHash<QContactLocalId,int> m_expiredContacts;
     QContactManager m_manager;
     QContactFetchRequest m_fetchRequest;
-#ifdef SEASIDE_SPARQL_QUERIES
-    SparqlFetchRequest m_contactIdRequest;
-#else
     QContactLocalIdFetchRequest m_contactIdRequest;
-#endif
     QContactRemoveRequest m_removeRequest;
     QContactSaveRequest m_saveRequest;
 #ifdef HAS_MLITE

@@ -157,13 +157,6 @@ SeasideCache::SeasideCache()
     m_removeRequest.setManager(&m_manager);
     m_saveRequest.setManager(&m_manager);
 
-#ifdef SEASIDE_SPARQL_QUERIES
-    m_contactIdRequest.setQueryData(true);
-    m_contactIdRequest.setFavoritesOnly(true);
-    m_contactIdRequest.setSortOnFirstName(m_displayLabelOrder == SeasideFilteredModel::FirstNameFirst);
-
-    m_contactIdRequest.start();
-#else
     m_contactIdRequest.setManager(&m_manager);
 
     QContactFetchHint fetchHint;
@@ -207,8 +200,6 @@ SeasideCache::SeasideCache()
     m_contactIdRequest.setSorting(sorting);
 
     m_fetchRequest.start();
-#endif
-
 }
 
 SeasideCache::~SeasideCache()
@@ -520,11 +511,7 @@ bool SeasideCache::event(QEvent *event)
         m_refreshRequired = false;
         m_fetchFilter = SeasideFilteredModel::FilterFavorites;
 
-#ifdef SEASIDE_SPARQL_QUERIES
-        m_contactIdRequest.setFavoritesOnly(true);
-#else
         m_contactIdRequest.setFilter(QContactFavorite::match());
-#endif
         m_contactIdRequest.start();
     } else {
         m_updatesPending = false;
@@ -714,13 +701,6 @@ void SeasideCache::notifyNameGroupsChanged(const QList<QChar> &groups)
 
 void SeasideCache::contactIdsAvailable()
 {
-#ifdef SEASIDE_SPARQL_QUERIES
-    if (!isPopulated(m_fetchFilter)) {
-        appendContacts(m_contactIdRequest.contacts());
-        return;
-    }
-#endif
-
     synchronizeList(
             this,
             m_contacts[m_fetchFilter],
@@ -858,22 +838,13 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
 
         if (!isPopulated(SeasideFilteredModel::FilterFavorites)) {
             qDebug() << "Favorites queried in" << m_timer.elapsed() << "ms";
-#ifdef SEASIDE_SPARQL_QUERIES
-            m_contactIdRequest.setFavoritesOnly(false);
-            m_contactIdRequest.start();
-#else
             m_appendIndex = 0;
             m_fetchRequest.setFilter(QContactFilter());
             m_fetchRequest.start();
-#endif
             makePopulated(SeasideFilteredModel::FilterFavorites);
         } else {
             finalizeUpdate(SeasideFilteredModel::FilterFavorites);
-#ifdef SEASIDE_SPARQL_QUERIES
-            m_contactIdRequest.setFavoritesOnly(false);
-#else
             m_contactIdRequest.setFilter(QContactFilter());
-#endif
             m_contactIdRequest.start();
         }
     } else if (m_fetchFilter == SeasideFilteredModel::FilterAll) {
@@ -882,24 +853,15 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
 
         if (!isPopulated(SeasideFilteredModel::FilterAll)) {
             qDebug() << "All queried in" << m_timer.elapsed() << "ms";
-#ifdef SEASIDE_SPARQL_QUERIES
-            m_contactIdRequest.setOnlineOnly(true);
-            m_contactIdRequest.start();
-#else
             // Not correct, but better than nothing...
             m_appendIndex = 0;
             m_fetchRequest.setFilter(QContactGlobalPresence::match(QContactPresence::PresenceAvailable));
             m_fetchRequest.start();
-#endif
             makePopulated(SeasideFilteredModel::FilterNone);
             makePopulated(SeasideFilteredModel::FilterAll);
         } else {
             finalizeUpdate(SeasideFilteredModel::FilterAll);
-#ifdef SEASIDE_SPARQL_QUERIES
-            m_contactIdRequest.setOnlineOnly(true);
-#else
             m_contactIdRequest.setFilter(QContactGlobalPresence::match(QContactPresence::PresenceAvailable));
-#endif
             m_contactIdRequest.start();
         }
     } else if (m_fetchFilter == SeasideFilteredModel::FilterOnline) {
@@ -911,11 +873,7 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
 
         if (!isPopulated(SeasideFilteredModel::FilterOnline)) {
             qDebug() << "Online queried in" << m_timer.elapsed() << "ms";
-#ifdef SEASIDE_SPARQL_QUERIES
-            m_contactIdRequest.setQueryData(false);
-#else
             m_fetchRequest.setFetchHint(QContactFetchHint());
-#endif
             makePopulated(SeasideFilteredModel::FilterOnline);
         } else {
             finalizeUpdate(SeasideFilteredModel::FilterOnline);
@@ -943,9 +901,6 @@ void SeasideCache::displayLabelOrderChanged()
     QVariant displayLabelOrder = m_displayLabelOrderConf.value();
     if (displayLabelOrder.isValid() && displayLabelOrder.toInt() != m_displayLabelOrder) {
         m_displayLabelOrder = SeasideFilteredModel::DisplayLabelOrder(displayLabelOrder.toInt());
-#ifdef SEASIDE_SPARQL_QUERIES
-        m_contactIdRequest.setSortOnFirstName(true);
-#else
         QContactSortOrder firstNameOrder;
         firstNameOrder.setDetailDefinitionName(
                     QContactName::DefinitionName, QContactName::FieldFirstName);
@@ -966,7 +921,6 @@ void SeasideCache::displayLabelOrderChanged()
 
         m_fetchRequest.setSorting(sorting);
         m_contactIdRequest.setSorting(sorting);
-#endif
         typedef QHash<QContactLocalId, SeasideCacheItem>::iterator iterator;
         for (iterator it = m_people.begin(); it != m_people.end(); ++it) {
             if (it->person) {
