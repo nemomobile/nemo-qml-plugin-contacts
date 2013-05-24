@@ -32,6 +32,7 @@
 #include "seasidecache.h"
 
 #include "seasideperson.h"
+#include "normalization_p.h"
 #include "synchronizelists_p.h"
 
 #include <QCoreApplication>
@@ -49,6 +50,7 @@
 #include <QContactOrganization>
 #include <QContactPhoneNumber>
 #include <QContactGlobalPresence>
+#include <QContactSyncTarget>
 
 #include <QVersitContactExporter>
 #include <QVersitContactImporter>
@@ -113,7 +115,7 @@ SeasideCache::SeasideCache()
     , m_populated(0)
     , m_cacheIndex(0)
     , m_queryIndex(0)
-    , m_selfId(0)
+    , m_appendIndex(0)
     , m_fetchFilter(SeasideFilteredModel::FilterFavorites)
     , m_displayLabelOrder(SeasideFilteredModel::FirstNameFirst)
     , m_updatesPending(true)
@@ -155,20 +157,15 @@ SeasideCache::SeasideCache()
     m_removeRequest.setManager(&m_manager);
     m_saveRequest.setManager(&m_manager);
 
-#ifdef SEASIDE_SPARQL_QUERIES
-    m_contactIdRequest.setQueryData(true);
-    m_contactIdRequest.setFavoritesOnly(true);
-    m_contactIdRequest.setSortOnFirstName(m_displayLabelOrder == SeasideFilteredModel::FirstNameFirst);
-
-    m_contactIdRequest.start();
-#else
-    m_selfId = m_manager.selfContactId();
     m_contactIdRequest.setManager(&m_manager);
 
     QContactFetchHint fetchHint;
     fetchHint.setOptimizationHints(QContactFetchHint::NoRelationships
             | QContactFetchHint::NoActionPreferences
             | QContactFetchHint::NoBinaryBlobs);
+
+    /* Possibly too aggressive - this filters out details we may need, such as nickname.
+       Remove until performance testing indicates it is worthwhile.
     fetchHint.setDetailDefinitionsHint(QStringList()
             << QContactName::DefinitionName
             << QContactAvatar::DefinitionName
@@ -176,6 +173,7 @@ SeasideCache::SeasideCache()
             << QContactEmailAddress::DefinitionName
             << QContactOrganization::DefinitionName
             << QContactOnlineAccount::DefinitionName);
+    */
 
     m_fetchRequest.setFetchHint(fetchHint);
     m_fetchRequest.setFilter(QContactFavorite::match());
@@ -202,14 +200,25 @@ SeasideCache::SeasideCache()
     m_contactIdRequest.setSorting(sorting);
 
     m_fetchRequest.start();
-#endif
-
 }
 
 SeasideCache::~SeasideCache()
 {
     if (instance == this)
         instance = 0;
+}
+
+void SeasideCache::checkForExpiry()
+{
+    if (instance->m_users.isEmpty()) {
+        bool unused = true;
+        for (int i = 0; i < SeasideFilteredModel::FilterTypesCount; ++i) {
+            unused &= instance->m_models[i].isEmpty();
+        }
+        if (unused) {
+            instance->m_expiryTimer.start(30000, instance);
+        }
+    }
 }
 
 void SeasideCache::registerModel(SeasideFilteredModel *model, SeasideFilteredModel::FilterType type)
@@ -226,14 +235,27 @@ void SeasideCache::registerModel(SeasideFilteredModel *model, SeasideFilteredMod
 
 void SeasideCache::unregisterModel(SeasideFilteredModel *model)
 {
-    bool empty = true;
-    for (int i = 0; i < SeasideFilteredModel::FilterTypesCount; ++i) {
+    for (int i = 0; i < SeasideFilteredModel::FilterTypesCount; ++i)
         instance->m_models[i].removeAll(model);
-        empty &= instance->m_models[i].isEmpty();
-    }
 
-    if (empty)
-        instance->m_expiryTimer.start(30000, instance);
+    checkForExpiry();
+}
+
+void SeasideCache::registerUser(QObject *user)
+{
+    if (!instance) {
+        new SeasideCache;
+    } else {
+        instance->m_expiryTimer.stop();
+    }
+    instance->m_users.insert(user);
+}
+
+void SeasideCache::unregisterUser(QObject *user)
+{
+    instance->m_users.remove(user);
+
+    checkForExpiry();
 }
 
 void SeasideCache::registerNameGroupChangeListener(SeasideNameGroupChangeListener *listener)
@@ -342,7 +364,8 @@ QContact SeasideCache::contactById(QContactLocalId id)
 
 SeasidePerson *SeasideCache::personByPhoneNumber(const QString &msisdn)
 {
-    QHash<QString, QContactLocalId>::iterator it = instance->m_phoneNumberIds.find(msisdn);
+    QString normalizedNumber = Normalization::normalizePhoneNumber(msisdn);
+    QHash<QString, QContactLocalId>::const_iterator it = instance->m_phoneNumberIds.find(normalizedNumber);
     if (it != instance->m_phoneNumberIds.end())
         return personById(*it);
     return 0;
@@ -364,7 +387,7 @@ SeasidePerson *SeasideCache::person(SeasideCacheItem *cacheItem)
             cacheItem->person->setComplete(false);
             cacheItem->hasCompleteContact = true;
             instance->m_changedContacts.append(cacheItem->contact.localId());
-            instance->requestUpdate();
+            instance->fetchContacts();
         }
     }
     return cacheItem->person;
@@ -472,21 +495,23 @@ bool SeasideCache::event(QEvent *event)
 
         QContactLocalIdFilter filter;
         filter.setIds(m_changedContacts);
-
         m_changedContacts.clear();
 
-        m_fetchRequest.setFilter(filter);
+        // A local ID filter will fetch all contacts, rather than just aggregates;
+        // we only want to retrieve aggregate contacts that have changed
+        QContactDetailFilter stFilter;
+        stFilter.setDetailDefinitionName(QContactSyncTarget::DefinitionName, QContactSyncTarget::FieldSyncTarget);
+        stFilter.setValue("aggregate");
+
+        m_appendIndex = 0;
+        m_fetchRequest.setFilter(filter & stFilter);
         m_fetchRequest.start();
     } else if (m_refreshRequired) {
         m_resultsRead = 0;
         m_refreshRequired = false;
         m_fetchFilter = SeasideFilteredModel::FilterFavorites;
 
-#ifdef SEASIDE_SPARQL_QUERIES
-        m_contactIdRequest.setFavoritesOnly(true);
-#else
         m_contactIdRequest.setFilter(QContactFavorite::match());
-#endif
         m_contactIdRequest.start();
     } else {
         m_updatesPending = false;
@@ -510,6 +535,10 @@ bool SeasideCache::event(QEvent *event)
 
 void SeasideCache::timerEvent(QTimerEvent *event)
 {
+    if (event->timerId() == m_fetchTimer.timerId()) {
+        fetchContacts();
+    }
+
     if (event->timerId() == m_expiryTimer.timerId()) {
         m_expiryTimer.stop();
         instance = 0;
@@ -525,20 +554,56 @@ void SeasideCache::contactsRemoved(const QList<QContactLocalId> &)
 
 void SeasideCache::updateContacts()
 {
+    QList<QContactLocalId> contactIds;
+
     typedef QHash<QContactLocalId, SeasideCacheItem>::iterator iterator;
     for (iterator it = m_people.begin(); it != m_people.end(); ++it) {
         if (it->hasCompleteContact)
-            m_changedContacts.append(it->contact.localId());
+            contactIds.append(it->contact.localId());
     }
-    m_refreshRequired = true;
-    requestUpdate();
+
+    updateContacts(contactIds);
+}
+
+void SeasideCache::fetchContacts()
+{
+    static const int WaitIntervalMs = 250;
+
+    if (m_fetchRequest.isActive()) {
+        // The current fetch is still active - we may as well continue to accumulate
+        m_fetchTimer.start(WaitIntervalMs , this);
+    } else {
+        m_fetchTimer.stop();
+        m_fetchPostponed.invalidate();
+
+        // Fetch any changed contacts immediately
+        m_refreshRequired = true;
+        requestUpdate();
+    }
 }
 
 void SeasideCache::updateContacts(const QList<QContactLocalId> &contactIds)
 {
+    // Wait for new changes to be reported
+    static const int PostponementIntervalMs = 500;
+
+    // Maximum wait until we fetch all changes previously reported
+    static const int MaxPostponementMs = 5000;
+
     m_changedContacts.append(contactIds);
-    m_refreshRequired = true;
-    requestUpdate();
+
+    if (m_fetchPostponed.isValid()) {
+        // We are waiting to accumulate further changes
+        int remainder = MaxPostponementMs - m_fetchPostponed.elapsed();
+        if (remainder > 0) {
+            // We can postpone further
+            m_fetchTimer.start(std::min(remainder, PostponementIntervalMs), this);
+        }
+    } else {
+        // Wait for further changes before we query for the ones we have now
+        m_fetchPostponed.restart();
+        m_fetchTimer.start(PostponementIntervalMs, this);
+    }
 }
 
 void SeasideCache::contactsAvailable()
@@ -636,13 +701,6 @@ void SeasideCache::notifyNameGroupsChanged(const QList<QChar> &groups)
 
 void SeasideCache::contactIdsAvailable()
 {
-#ifdef SEASIDE_SPARQL_QUERIES
-    if (!isPopulated(m_fetchFilter)) {
-        appendContacts(m_contactIdRequest.contacts());
-        return;
-    }
-#endif
-
     synchronizeList(
             this,
             m_contacts[m_fetchFilter],
@@ -705,22 +763,14 @@ int SeasideCache::insertRange(
     QList<SeasideFilteredModel *> &models = m_models[filter];
     QList<QChar> modifiedNameGroups;
 
-    int end = index + count - 1;
-#ifndef SEASIDE_SPARQL_QUERIES
-    // Exclude the self contact Id.
-    for (int i = 0; i < count; ++i) {
-        if (queryIds.at(queryIndex + i) == m_selfId) {
-            --end;
-            break;
-        }
-    }
-#endif
+    const QContactLocalId selfId = m_manager.selfContactId();
 
+    int end = index + count - 1;
     for (int i = 0; i < models.count(); ++i)
         models[i]->sourceAboutToInsertItems(index, end);
 
     for (int i = 0; i < count; ++i) {
-        if (queryIds.at(queryIndex + i) == m_selfId)
+        if (queryIds.at(queryIndex + i) == selfId)
             continue;
 
         if (filter == SeasideFilteredModel::FilterAll) {
@@ -748,28 +798,13 @@ void SeasideCache::appendContacts(const QList<QContact> &contacts)
     cacheIds.reserve(contacts.count());
 
     const int begin = cacheIds.count();
-    int end = contacts.count() - 1;
-
-#ifndef SEASIDE_SPARQL_QUERIES
-    // Exclude the self contact Id.
-    for (int i = cacheIds.count(); i < contacts.count(); ++i) {
-        if (contacts.at(i).localId() == m_selfId) {
-            --end;
-            break;
-        }
-    }
-#endif
+    int end = cacheIds.count() + contacts.count() - m_appendIndex - 1;
 
     for (int i = 0; i < models.count(); ++i)
         models.at(i)->sourceAboutToInsertItems(begin, end);
 
-    for (int i = cacheIds.count(); i < contacts.count(); ++i) {
-        QContact contact = contacts.at(i);
-
-#ifndef SEASIDE_SPARQL_QUERIES
-        if (contact.localId() == m_selfId)
-            continue;
-#endif
+    for (; m_appendIndex < contacts.count(); ++m_appendIndex) {
+        QContact contact = contacts.at(m_appendIndex);
 
         cacheIds.append(contact.localId());
         SeasideCacheItem &cacheItem = m_people[contact.localId()];
@@ -779,9 +814,10 @@ void SeasideCache::appendContacts(const QList<QContact> &contacts)
         if (m_fetchFilter == SeasideFilteredModel::FilterAll)
             addToContactNameGroup(nameGroupForCacheItem(&cacheItem), 0);
 
-        QList<QContactPhoneNumber> phoneNumbers = contact.details<QContactPhoneNumber>();
-        for (int j = 0; j < phoneNumbers.count(); ++j)
-            m_phoneNumberIds[phoneNumbers.at(j).number()] = contact.localId();
+        foreach (const QContactPhoneNumber &phoneNumber, contact.details<QContactPhoneNumber>()) {
+            QString normalizedNumber = Normalization::normalizePhoneNumber(phoneNumber.number());
+            m_phoneNumberIds[normalizedNumber] = contact.localId();
+        }
     }
 
     for (int i = 0; i < models.count(); ++i)
@@ -802,21 +838,13 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
 
         if (!isPopulated(SeasideFilteredModel::FilterFavorites)) {
             qDebug() << "Favorites queried in" << m_timer.elapsed() << "ms";
-#ifdef SEASIDE_SPARQL_QUERIES
-            m_contactIdRequest.setFavoritesOnly(false);
-            m_contactIdRequest.start();
-#else
+            m_appendIndex = 0;
             m_fetchRequest.setFilter(QContactFilter());
             m_fetchRequest.start();
-#endif
             makePopulated(SeasideFilteredModel::FilterFavorites);
         } else {
             finalizeUpdate(SeasideFilteredModel::FilterFavorites);
-#ifdef SEASIDE_SPARQL_QUERIES
-            m_contactIdRequest.setFavoritesOnly(false);
-#else
             m_contactIdRequest.setFilter(QContactFilter());
-#endif
             m_contactIdRequest.start();
         }
     } else if (m_fetchFilter == SeasideFilteredModel::FilterAll) {
@@ -825,23 +853,15 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
 
         if (!isPopulated(SeasideFilteredModel::FilterAll)) {
             qDebug() << "All queried in" << m_timer.elapsed() << "ms";
-#ifdef SEASIDE_SPARQL_QUERIES
-            m_contactIdRequest.setOnlineOnly(true);
-            m_contactIdRequest.start();
-#else
             // Not correct, but better than nothing...
+            m_appendIndex = 0;
             m_fetchRequest.setFilter(QContactGlobalPresence::match(QContactPresence::PresenceAvailable));
             m_fetchRequest.start();
-#endif
             makePopulated(SeasideFilteredModel::FilterNone);
             makePopulated(SeasideFilteredModel::FilterAll);
         } else {
             finalizeUpdate(SeasideFilteredModel::FilterAll);
-#ifdef SEASIDE_SPARQL_QUERIES
-            m_contactIdRequest.setOnlineOnly(true);
-#else
             m_contactIdRequest.setFilter(QContactGlobalPresence::match(QContactPresence::PresenceAvailable));
-#endif
             m_contactIdRequest.start();
         }
     } else if (m_fetchFilter == SeasideFilteredModel::FilterOnline) {
@@ -853,11 +873,7 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
 
         if (!isPopulated(SeasideFilteredModel::FilterOnline)) {
             qDebug() << "Online queried in" << m_timer.elapsed() << "ms";
-#ifdef SEASIDE_SPARQL_QUERIES
-            m_contactIdRequest.setQueryData(false);
-#else
             m_fetchRequest.setFetchHint(QContactFetchHint());
-#endif
             makePopulated(SeasideFilteredModel::FilterOnline);
         } else {
             finalizeUpdate(SeasideFilteredModel::FilterOnline);
@@ -885,9 +901,6 @@ void SeasideCache::displayLabelOrderChanged()
     QVariant displayLabelOrder = m_displayLabelOrderConf.value();
     if (displayLabelOrder.isValid() && displayLabelOrder.toInt() != m_displayLabelOrder) {
         m_displayLabelOrder = SeasideFilteredModel::DisplayLabelOrder(displayLabelOrder.toInt());
-#ifdef SEASIDE_SPARQL_QUERIES
-        m_contactIdRequest.setSortOnFirstName(true);
-#else
         QContactSortOrder firstNameOrder;
         firstNameOrder.setDetailDefinitionName(
                     QContactName::DefinitionName, QContactName::FieldFirstName);
@@ -908,9 +921,8 @@ void SeasideCache::displayLabelOrderChanged()
 
         m_fetchRequest.setSorting(sorting);
         m_contactIdRequest.setSorting(sorting);
-#endif
         typedef QHash<QContactLocalId, SeasideCacheItem>::iterator iterator;
-        for (iterator it = m_people.begin(); it != m_people.begin(); ++it) {
+        for (iterator it = m_people.begin(); it != m_people.end(); ++it) {
             if (it->person) {
                 it->person->recalculateDisplayLabel(SeasideProxyModel::DisplayLabelOrder(m_displayLabelOrder));
                 it->contact = it->person->contact();

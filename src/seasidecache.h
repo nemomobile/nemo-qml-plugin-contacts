@@ -36,6 +36,7 @@
 #include <QContactManager>
 #include <QContactLocalIdFilter>
 #include <QContactFetchRequest>
+#include <QContactLocalIdFetchRequest>
 #include <QContactRemoveRequest>
 #include <QContactSaveRequest>
 
@@ -46,12 +47,6 @@
 
 #ifdef HAS_MLITE
 #include <mgconfitem.h>
-#endif
-
-#ifdef SEASIDE_SPARQL_QUERIES
-#include "sparqlfetchrequest_p.h"
-#else
-#include <QContactLocalIdFetchRequest>
 #endif
 
 #include "seasidefilteredmodel.h"
@@ -82,6 +77,9 @@ class SeasideCache : public QObject
 public:
     static void registerModel(SeasideFilteredModel *model, SeasideFilteredModel::FilterType type);
     static void unregisterModel(SeasideFilteredModel *model);
+
+    static void registerUser(QObject *user);
+    static void unregisterUser(QObject *user);
 
     static void registerNameGroupChangeListener(SeasideNameGroupChangeListener *listener);
     static void unregisterNameGroupChangeListener(SeasideNameGroupChangeListener *listener);
@@ -131,8 +129,11 @@ private:
     SeasideCache();
     ~SeasideCache();
 
+    static void checkForExpiry();
+
     void requestUpdate();
     void appendContacts(const QList<QContact> &contacts);
+    void fetchContacts();
 
     void finalizeUpdate(SeasideFilteredModel::FilterType filter);
     void removeRange(SeasideFilteredModel::FilterType filter, int index, int count);
@@ -152,6 +153,7 @@ private:
     void notifyNameGroupsChanged(const QList<QChar> &groups);
 
     QBasicTimer m_expiryTimer;
+    QBasicTimer m_fetchTimer;
     QHash<QContactLocalId, SeasideCacheItem> m_people;
     QHash<QString, QContactLocalId> m_phoneNumberIds;
     QHash<QContactLocalId, QContact> m_contactsToSave;
@@ -162,14 +164,11 @@ private:
     QList<SeasideNameGroupChangeListener*> m_nameGroupChangeListeners;
     QVector<QContactLocalId> m_contacts[SeasideFilteredModel::FilterTypesCount];
     QList<SeasideFilteredModel *> m_models[SeasideFilteredModel::FilterTypesCount];
+    QSet<QObject *> m_users;
     QHash<QContactLocalId,int> m_expiredContacts;
     QContactManager m_manager;
     QContactFetchRequest m_fetchRequest;
-#ifdef SEASIDE_SPARQL_QUERIES
-    SparqlFetchRequest m_contactIdRequest;
-#else
     QContactLocalIdFetchRequest m_contactIdRequest;
-#endif
     QContactRemoveRequest m_removeRequest;
     QContactSaveRequest m_saveRequest;
 #ifdef HAS_MLITE
@@ -179,7 +178,7 @@ private:
     int m_populated;
     int m_cacheIndex;
     int m_queryIndex;
-    QContactLocalId m_selfId;
+    int m_appendIndex;
     SeasideFilteredModel::FilterType m_fetchFilter;
     SeasideFilteredModel::DisplayLabelOrder m_displayLabelOrder;
     bool m_updatesPending;
@@ -187,6 +186,7 @@ private:
     bool m_refreshRequired;
 
     QElapsedTimer m_timer;
+    QElapsedTimer m_fetchPostponed;
 
     static SeasideCache *instance;
     static QList<QChar> allContactNameGroups;

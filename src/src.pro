@@ -25,6 +25,7 @@ CONFIG += mobility
 MOBILITY += contacts versit
 
 SOURCES += $$PWD/plugin.cpp \
+           $$PWD/normalization_p.cpp \
            $$PWD/seasidepeoplemodel.cpp \
            $$PWD/seasidepeoplemodel_p.cpp \
            $$PWD/seasideperson.cpp \
@@ -34,6 +35,7 @@ SOURCES += $$PWD/plugin.cpp \
            $$PWD/seasidenamegroupmodel.cpp
 
 HEADERS += \
+           $$PWD/normalization_p.h \
            $$PWD/synchronizelists_p.h \
            $$PWD/seasidepeoplemodel.h \
            $$PWD/seasidepeoplemodel_p.h \
@@ -42,17 +44,6 @@ HEADERS += \
            $$PWD/seasidecache.h \
            $$PWD/seasidefilteredmodel.h \
            $$PWD/seasidenamegroupmodel.h
-
-CONFIG += seaside-tracker
-contains(CONFIG, seaside-tracker) {
-    CONFIG += qtsparql
-    DEFINES += SEASIDE_SPARQL_QUERIES
-    SOURCES += \
-            sparqlfetchrequest.cpp
-
-    HEADERS += \
-            sparqlfetchrequest_p.h
-}
 
 MOC_DIR = $$PWD/../.moc
 OBJECTS_DIR = $$PWD/../.obj
