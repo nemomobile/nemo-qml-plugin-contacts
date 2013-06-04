@@ -42,7 +42,7 @@
 #include <QContactPresence>
 
 // Seaside
-#include "seasideproxymodel.h"
+#include "seasidefilteredmodel.h"
 
 QTM_USE_NAMESPACE
 
@@ -258,7 +258,7 @@ public:
 
     static QString generateDisplayLabel(
                 const QContact &mContact,
-                SeasideProxyModel::DisplayLabelOrder order = SeasideProxyModel::FirstNameFirst);
+                SeasideFilteredModel::DisplayLabelOrder order = SeasideFilteredModel::FirstNameFirst);
     static QString generateDisplayLabelFromNonNameDetails(const QContact &mContact);
 
     static SeasidePersonAttached *qmlAttachedProperties(QObject *object);
@@ -296,7 +296,7 @@ signals:
     void accountIconPathsChanged();
 
 public slots:
-    void recalculateDisplayLabel(SeasideProxyModel::DisplayLabelOrder order = SeasideProxyModel::FirstNameFirst);
+    void recalculateDisplayLabel(SeasideFilteredModel::DisplayLabelOrder order = SeasideFilteredModel::FirstNameFirst);
 
 private:
     // TODO: private class

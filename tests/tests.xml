@@ -7,8 +7,8 @@
            <case manual="false" name="seasideperson">
                <step>/opt/tests/nemo-qml-plugins/contacts/tst_seasideperson</step>
            </case>
-           <case manual="false" name="seasideproxymodel">
-               <step>/opt/tests/nemo-qml-plugins/contacts/tst_seasideproxymodel</step>
+           <case manual="false" name="seasidefilteredmodel">
+               <step>/opt/tests/nemo-qml-plugins/contacts/tst_seasidefilteredmodel</step>
            </case>
        </set>
    </suite>

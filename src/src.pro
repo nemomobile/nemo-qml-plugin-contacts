@@ -26,10 +26,7 @@ MOBILITY += contacts versit
 
 SOURCES += $$PWD/plugin.cpp \
            $$PWD/normalization_p.cpp \
-           $$PWD/seasidepeoplemodel.cpp \
-           $$PWD/seasidepeoplemodel_p.cpp \
            $$PWD/seasideperson.cpp \
-           $$PWD/seasideproxymodel.cpp \
            $$PWD/seasidecache.cpp \
            $$PWD/seasidefilteredmodel.cpp \
            $$PWD/seasidenamegroupmodel.cpp
@@ -37,10 +34,7 @@ SOURCES += $$PWD/plugin.cpp \
 HEADERS += \
            $$PWD/normalization_p.h \
            $$PWD/synchronizelists_p.h \
-           $$PWD/seasidepeoplemodel.h \
-           $$PWD/seasidepeoplemodel_p.h \
            $$PWD/seasideperson.h \
-           $$PWD/seasideproxymodel.h \
            $$PWD/seasidecache.h \
            $$PWD/seasidefilteredmodel.h \
            $$PWD/seasidenamegroupmodel.h

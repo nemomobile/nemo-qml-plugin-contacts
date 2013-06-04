@@ -1,5 +1,5 @@
 TEMPLATE = subdirs
-SUBDIRS = tst_seasideproxymodel \
+SUBDIRS = \
           tst_seasideperson \
           tst_seasidefilteredmodel \
           tst_synchronizelists

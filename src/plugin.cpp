@@ -34,7 +34,6 @@
 #include <QDeclarativeEngine>
 #include <QDeclarativeExtensionPlugin>
 
-#include "seasideproxymodel.h"
 #include "seasideperson.h"
 #include "seasidefilteredmodel.h"
 #include "seasidenamegroupmodel.h"

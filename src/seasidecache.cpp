@@ -924,7 +924,7 @@ void SeasideCache::displayLabelOrderChanged()
         typedef QHash<QContactLocalId, SeasideCacheItem>::iterator iterator;
         for (iterator it = m_people.begin(); it != m_people.end(); ++it) {
             if (it->person) {
-                it->person->recalculateDisplayLabel(SeasideProxyModel::DisplayLabelOrder(m_displayLabelOrder));
+                it->person->recalculateDisplayLabel(SeasideFilteredModel::DisplayLabelOrder(m_displayLabelOrder));
                 it->contact = it->person->contact();
             } else {
                 QContactName name = it->contact.detail<QContactName>();
