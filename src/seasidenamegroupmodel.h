@@ -39,7 +39,7 @@
 
 #include "seasidecache.h"
 
-QTM_USE_NAMESPACE
+USE_CONTACTS_NAMESPACE
 
 class SeasideNameGroup
 {
@@ -70,6 +70,11 @@ public:
     QVariant data(const QModelIndex &index, int role) const;
 
     void nameGroupsUpdated(const QHash<QChar, int> &groups);
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    virtual
+#endif
+    QHash<int, QByteArray> roleNames() const;
 
 signals:
     void countChanged();
