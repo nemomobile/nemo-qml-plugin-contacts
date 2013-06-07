@@ -1,15 +1,16 @@
+include(../../config.pri)
+
 QT += testlib
 TEMPLATE = app
 CONFIG -= app_bundle
 
 SRCDIR = $$PWD/../../src
 
-CONFIG += mobility
-MOBILITY += contacts versit
+equals(QT_MAJOR_VERSION, 4): QT += declarative
+equals(QT_MAJOR_VERSION, 5): QT += qml
 
-QT += declarative
-
-target.path = /opt/tests/nemo-qml-plugins/contacts
+equals(QT_MAJOR_VERSION, 4): target.path = /opt/tests/nemo-qml-plugins/contacts
+equals(QT_MAJOR_VERSION, 5): target.path = /opt/tests/nemo-qml-plugins/contacts-qt5
 INSTALLS += target
 
 INCLUDEPATH += $$SRCDIR

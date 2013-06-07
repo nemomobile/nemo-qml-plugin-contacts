@@ -33,6 +33,9 @@
 #include <QtTest>
 
 #include <QContactName>
+#ifdef USING_QTPIM
+#include <QContactManager>
+#endif
 
 #include "seasidefilteredmodel.h"
 #include "seasidecache.h"
@@ -44,6 +47,8 @@ class tst_SeasideFilteredModel : public QObject
 {
     Q_OBJECT
 public:
+    typedef SeasideFilteredModel::ContactIdType ContactIdType;
+
     tst_SeasideFilteredModel();
 
 private slots:
@@ -58,8 +63,11 @@ private slots:
     void data();
     void filterId();
     void searchByFirstNameCharacter();
+    void lookupById();
 
 private:
+    QVariant idAt(int index) const { return QVariant::fromValue<ContactIdType>(cache.idAt(index)); }
+
     SeasideCache cache;
 };
 
@@ -71,6 +79,11 @@ tst_SeasideFilteredModel::tst_SeasideFilteredModel()
 
 void tst_SeasideFilteredModel::init()
 {
+#ifdef USING_QTPIM
+    // The backend must be loaded for cache reset to work correctly
+    QContactManager cm("org.nemomobile.contacts.sqlite");
+#endif
+
     cache.reset();
 }
 
@@ -131,8 +144,10 @@ void tst_SeasideFilteredModel::filterType()
     QCOMPARE(typeSpy.count(), 1);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 2);
-    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0); QCOMPARE(removedSpy.at(0).at(2).value<int>(), 1);
-    QCOMPARE(removedSpy.at(1).at(1).value<int>(), 1); QCOMPARE(removedSpy.at(1).at(2).value<int>(), 2);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 1);
+    QCOMPARE(removedSpy.at(1).at(1).value<int>(), 1);
+    QCOMPARE(removedSpy.at(1).at(2).value<int>(), 2);
 
     typeSpy.clear();
     removedSpy.clear();
@@ -143,8 +158,10 @@ void tst_SeasideFilteredModel::filterType()
     QCOMPARE(model.rowCount(), 7);
     QCOMPARE(typeSpy.count(), 1);
     QCOMPARE(insertedSpy.count(), 2);
-    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 0); QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 1);
-    QCOMPARE(insertedSpy.at(1).at(1).value<int>(), 3); QCOMPARE(insertedSpy.at(1).at(2).value<int>(), 4);
+    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 1);
+    QCOMPARE(insertedSpy.at(1).at(1).value<int>(), 3);
+    QCOMPARE(insertedSpy.at(1).at(2).value<int>(), 4);
     QCOMPARE(removedSpy.count(), 0);
 
     typeSpy.clear();
@@ -157,7 +174,8 @@ void tst_SeasideFilteredModel::filterType()
     QCOMPARE(typeSpy.count(), 1);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
-    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0); QCOMPARE(removedSpy.at(0).at(2).value<int>(), 6);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 6);
 }
 
 void tst_SeasideFilteredModel::filterPattern()
@@ -178,7 +196,8 @@ void tst_SeasideFilteredModel::filterPattern()
     QCOMPARE(model.rowCount(), 5);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
-    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 5); QCOMPARE(removedSpy.at(0).at(2).value<int>(), 6);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 5);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 6);
 
     patternSpy.clear();
     removedSpy.clear();
@@ -190,7 +209,8 @@ void tst_SeasideFilteredModel::filterPattern()
     QCOMPARE(patternSpy.count(), 1);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
-    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 3); QCOMPARE(removedSpy.at(0).at(2).value<int>(), 3);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 3);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 3);
 
     patternSpy.clear();
     removedSpy.clear();
@@ -202,7 +222,8 @@ void tst_SeasideFilteredModel::filterPattern()
     QCOMPARE(patternSpy.count(), 1);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
-    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 1); QCOMPARE(removedSpy.at(0).at(2).value<int>(), 2);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 1);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 2);
 
     patternSpy.clear();
     removedSpy.clear();
@@ -214,7 +235,8 @@ void tst_SeasideFilteredModel::filterPattern()
     QCOMPARE(patternSpy.count(), 0);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
-    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0); QCOMPARE(removedSpy.at(0).at(2).value<int>(), 1);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 1);
 
     removedSpy.clear();
 
@@ -224,7 +246,8 @@ void tst_SeasideFilteredModel::filterPattern()
     QCOMPARE(model.rowCount(), 1);
     QCOMPARE(patternSpy.count(), 1);
     QCOMPARE(insertedSpy.count(), 1);
-    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 0); QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 0);
+    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 0);
     QCOMPARE(removedSpy.count(), 0);
 
     patternSpy.clear();
@@ -236,8 +259,10 @@ void tst_SeasideFilteredModel::filterPattern()
     QCOMPARE(model.rowCount(), 4);
     QCOMPARE(patternSpy.count(), 0);
     QCOMPARE(insertedSpy.count(), 2);
-    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 0); QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 1);
-    QCOMPARE(insertedSpy.at(1).at(1).value<int>(), 3); QCOMPARE(insertedSpy.at(1).at(2).value<int>(), 3);
+    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 1);
+    QCOMPARE(insertedSpy.at(1).at(1).value<int>(), 3);
+    QCOMPARE(insertedSpy.at(1).at(2).value<int>(), 3);
     QCOMPARE(removedSpy.count(), 0);
 
     insertedSpy.clear();
@@ -248,7 +273,8 @@ void tst_SeasideFilteredModel::filterPattern()
     QCOMPARE(model.rowCount(), 5);
     QCOMPARE(patternSpy.count(), 1);
     QCOMPARE(insertedSpy.count(), 1);
-    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 3); QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 3);
+    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 3);
+    QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 3);
     QCOMPARE(removedSpy.count(), 0);
 
     patternSpy.clear();
@@ -260,10 +286,13 @@ void tst_SeasideFilteredModel::filterPattern()
     QCOMPARE(model.rowCount(), 3);
     QCOMPARE(patternSpy.count(), 1);
     QCOMPARE(insertedSpy.count(), 1);
-    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 2); QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 2);
+    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 2);
+    QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 2);
     QCOMPARE(removedSpy.count(), 2);
-    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0); QCOMPARE(removedSpy.at(0).at(2).value<int>(), 1);
-    QCOMPARE(removedSpy.at(1).at(1).value<int>(), 2); QCOMPARE(removedSpy.at(1).at(2).value<int>(), 2);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 1);
+    QCOMPARE(removedSpy.at(1).at(1).value<int>(), 2);
+    QCOMPARE(removedSpy.at(1).at(2).value<int>(), 2);
 
     patternSpy.clear();
     insertedSpy.clear();
@@ -275,9 +304,12 @@ void tst_SeasideFilteredModel::filterPattern()
     QCOMPARE(model.rowCount(), 7);
     QCOMPARE(patternSpy.count(), 1);
     QCOMPARE(insertedSpy.count(), 3);
-    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 0); QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 1);
-    QCOMPARE(insertedSpy.at(1).at(1).value<int>(), 4); QCOMPARE(insertedSpy.at(1).at(2).value<int>(), 4);
-    QCOMPARE(insertedSpy.at(2).at(1).value<int>(), 6); QCOMPARE(insertedSpy.at(2).at(2).value<int>(), 6);
+    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 1);
+    QCOMPARE(insertedSpy.at(1).at(1).value<int>(), 4);
+    QCOMPARE(insertedSpy.at(1).at(2).value<int>(), 4);
+    QCOMPARE(insertedSpy.at(2).at(1).value<int>(), 6);
+    QCOMPARE(insertedSpy.at(2).at(2).value<int>(), 6);
     QCOMPARE(removedSpy.count(), 0);
 
     patternSpy.clear();
@@ -299,7 +331,8 @@ void tst_SeasideFilteredModel::filterPattern()
     QCOMPARE(patternSpy.count(), 1);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
-    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0); QCOMPARE(removedSpy.at(0).at(2).value<int>(), 3);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 3);
 
     patternSpy.clear();
     removedSpy.clear();
@@ -320,7 +353,8 @@ void tst_SeasideFilteredModel::filterEmail()
     QCOMPARE(model.rowCount(), 6);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
-    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 6); QCOMPARE(removedSpy.at(0).at(2).value<int>(), 6);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 6);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 6);
 
     removedSpy.clear();
 
@@ -335,7 +369,8 @@ void tst_SeasideFilteredModel::filterEmail()
     QCOMPARE(model.rowCount(), 3);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
-    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 3); QCOMPARE(removedSpy.at(0).at(2).value<int>(), 5);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 3);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 5);
 
     removedSpy.clear();
 
@@ -343,9 +378,11 @@ void tst_SeasideFilteredModel::filterEmail()
     model.setFilterPattern("example.org");
     QCOMPARE(model.rowCount(), 3);
     QCOMPARE(insertedSpy.count(), 1);
-    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 0); QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 2);
+    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 2);
     QCOMPARE(removedSpy.count(), 1);
-    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0); QCOMPARE(removedSpy.at(0).at(2).value<int>(), 2);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 2);
 
     insertedSpy.clear();
     removedSpy.clear();
@@ -355,7 +392,8 @@ void tst_SeasideFilteredModel::filterEmail()
     QCOMPARE(model.rowCount(), 2);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
-    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0); QCOMPARE(removedSpy.at(0).at(2).value<int>(), 0);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 0);
 
     removedSpy.clear();
 
@@ -364,7 +402,8 @@ void tst_SeasideFilteredModel::filterEmail()
     QCOMPARE(model.rowCount(), 1);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
-    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 1); QCOMPARE(removedSpy.at(0).at(2).value<int>(), 1);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 1);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 1);
 
     removedSpy.clear();
 
@@ -380,8 +419,8 @@ void tst_SeasideFilteredModel::rowsInserted()
     // Remove the exitsting index values
     cache.remove(SeasideFilteredModel::FilterAll, 0, 7);
 
-    cache.insert(SeasideFilteredModel::FilterAll, 0, QVector<QContactLocalId>()
-            << 2 << 5);
+    cache.insert(SeasideFilteredModel::FilterAll, 0, QVector<ContactIdType>()
+            << cache.idAt(2) << cache.idAt(5));
 
     SeasideFilteredModel model;
     model.setFilterType(SeasideFilteredModel::FilterAll);
@@ -391,11 +430,12 @@ void tst_SeasideFilteredModel::rowsInserted()
     QCOMPARE(model.rowCount(), 2);
 
     // 0 1 2 5
-    cache.insert(SeasideFilteredModel::FilterAll, 0, QVector<QContactLocalId>()
-            << 0 << 1);
+    cache.insert(SeasideFilteredModel::FilterAll, 0, QVector<ContactIdType>()
+            << cache.idAt(0) << cache.idAt(1));
     QCOMPARE(model.rowCount(), 4);
     QCOMPARE(insertedSpy.count(), 1);
-    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 0); QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 1);
+    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 1);
 
     insertedSpy.clear();
 
@@ -404,11 +444,12 @@ void tst_SeasideFilteredModel::rowsInserted()
     QCOMPARE(model.rowCount(), 1);
 
     // 1 3
-    cache.insert(SeasideFilteredModel::FilterAll, 3, QVector<QContactLocalId>()
-            << 3 << 4);
+    cache.insert(SeasideFilteredModel::FilterAll, 3, QVector<ContactIdType>()
+            << cache.idAt(3) << cache.idAt(4));
     QCOMPARE(model.rowCount(), 2);
     QCOMPARE(insertedSpy.count(), 1);
-    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 1); QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 1);
+    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 1);
+    QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 1);
 }
 
 void tst_SeasideFilteredModel::rowsRemoved()
@@ -424,7 +465,8 @@ void tst_SeasideFilteredModel::rowsRemoved()
     cache.remove(SeasideFilteredModel::FilterAll, 0, 2);
     QCOMPARE(model.rowCount(), 5);
     QCOMPARE(removedSpy.count(), 1);
-    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0); QCOMPARE(removedSpy.at(0).at(2).value<int>(), 1);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 1);
 
     // 2 3 5
     model.setFilterPattern("Jo");
@@ -436,7 +478,8 @@ void tst_SeasideFilteredModel::rowsRemoved()
     cache.remove(SeasideFilteredModel::FilterAll, 1, 2);
     QCOMPARE(model.rowCount(), 2);
     QCOMPARE(removedSpy.count(), 1);
-    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 1); QCOMPARE(removedSpy.at(0).at(2).value<int>(), 1);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 1);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 1);
 }
 
 void tst_SeasideFilteredModel::dataChanged()
@@ -470,7 +513,8 @@ void tst_SeasideFilteredModel::dataChanged()
     cache.setDisplayName(SeasideFilteredModel::FilterAll, 2, "Aaron Johns");
     QCOMPARE(model.rowCount(), 5);
     QCOMPARE(insertedSpy.count(), 1);
-    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 2); QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 2);
+    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 2);
+    QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 2);
     QCOMPARE(removedSpy.count(), 0);
     QCOMPARE(changedSpy.count(), 0);
 
@@ -481,7 +525,8 @@ void tst_SeasideFilteredModel::dataChanged()
     QCOMPARE(model.rowCount(), 4);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
-    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 2); QCOMPARE(removedSpy.at(0).at(2).value<int>(), 2);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 2);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 2);
     QCOMPARE(changedSpy.count(), 0);
 }
 
@@ -547,43 +592,43 @@ void tst_SeasideFilteredModel::filterId()
     // 6: Robin Burchell
 
     // first name only
-    model.setFilterPattern("R");            QVERIFY(model.filterId(6));
-    model.setFilterPattern("Ro");           QVERIFY(model.filterId(6));
-    model.setFilterPattern("Rob");          QVERIFY(model.filterId(6));
-    model.setFilterPattern("Robi");         QVERIFY(model.filterId(6));
-    model.setFilterPattern("Robin");        QVERIFY(model.filterId(6));
+    model.setFilterPattern("R");            QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Ro");           QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Rob");          QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Robi");         QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Robin");        QVERIFY(model.filterId(cache.idAt(6)));
 
     // match using last name
-    model.setFilterPattern("B");            QVERIFY(model.filterId(6));
-    model.setFilterPattern("Bu");           QVERIFY(model.filterId(6));
-    model.setFilterPattern("Bur");          QVERIFY(model.filterId(6));
-    model.setFilterPattern("Burc");         QVERIFY(model.filterId(6));
-    model.setFilterPattern("Burch");        QVERIFY(model.filterId(6));
-    model.setFilterPattern("Burche");       QVERIFY(model.filterId(6));
-    model.setFilterPattern("Burchel");      QVERIFY(model.filterId(6));
-    model.setFilterPattern("Burchell");     QVERIFY(model.filterId(6));
+    model.setFilterPattern("B");            QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Bu");           QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Bur");          QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Burc");         QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Burch");        QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Burche");       QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Burchel");      QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Burchell");     QVERIFY(model.filterId(cache.idAt(6)));
 
 
     // first name plus last name
-    model.setFilterPattern("Robin ");           QVERIFY(model.filterId(6));
-    model.setFilterPattern("Robin B");          QVERIFY(model.filterId(6));
-    model.setFilterPattern("Robin Bu");         QVERIFY(model.filterId(6));
-    model.setFilterPattern("Robin Bur");        QVERIFY(model.filterId(6));
-    model.setFilterPattern("Robin Burc");       QVERIFY(model.filterId(6));
-    model.setFilterPattern("Robin Burch");      QVERIFY(model.filterId(6));
-    model.setFilterPattern("Robin Burche");     QVERIFY(model.filterId(6));
-    model.setFilterPattern("Robin Burchel");    QVERIFY(model.filterId(6));
-    model.setFilterPattern("Robin Burchell");   QVERIFY(model.filterId(6));
+    model.setFilterPattern("Robin ");           QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Robin B");          QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Robin Bu");         QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Robin Bur");        QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Robin Burc");       QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Robin Burch");      QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Robin Burche");     QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Robin Burchel");    QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Robin Burchell");   QVERIFY(model.filterId(cache.idAt(6)));
 
     // match using funky spacing
-    model.setFilterPattern("R B");  QVERIFY(model.filterId(6));
-    model.setFilterPattern("R Bu"); QVERIFY(model.filterId(6));
+    model.setFilterPattern("R B");  QVERIFY(model.filterId(cache.idAt(6)));
+    model.setFilterPattern("R Bu"); QVERIFY(model.filterId(cache.idAt(6)));
 
     // test some that most definitely shouldn't match
-    model.setFilterPattern("Robert");           QVERIFY(!model.filterId(6));
-    model.setFilterPattern("Robin Brooks");     QVERIFY(!model.filterId(6));
-    model.setFilterPattern("John Burchell");    QVERIFY(!model.filterId(6));
-    model.setFilterPattern("Brooks");           QVERIFY(!model.filterId(6));
+    model.setFilterPattern("Robert");           QVERIFY(!model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Robin Brooks");     QVERIFY(!model.filterId(cache.idAt(6)));
+    model.setFilterPattern("John Burchell");    QVERIFY(!model.filterId(cache.idAt(6)));
+    model.setFilterPattern("Brooks");           QVERIFY(!model.filterId(cache.idAt(6)));
 }
 
 void tst_SeasideFilteredModel::searchByFirstNameCharacter()
@@ -603,12 +648,19 @@ void tst_SeasideFilteredModel::searchByFirstNameCharacter()
     model.setFilterPattern("aaron");    // only first letter counts
     QCOMPARE(model.rowCount(), 4);
 
-    SeasideCacheItem *cacheItem = SeasideCache::cacheItemById(0);
+    SeasideCacheItem *cacheItem = SeasideCache::cacheItemById(cache.idAt(0));
+#ifdef USING_QTPIM
+    QContactDisplayLabel displayLabel = cacheItem->contact.detail<QContactDisplayLabel>();
+    displayLabel.setLabel("");
+    cacheItem->contact.saveDetail(&displayLabel);
+#endif
     QContactName origName = cacheItem->contact.detail<QContactName>();
     QContactName name = origName;
     name.setFirstName("123");
     name.setLastName("");
+#ifndef USING_QTPIM
     name.setCustomLabel("");
+#endif
     cacheItem->contact.saveDetail(&name);
     model.setFilterPattern("#");    // non-letters
     QCOMPARE(model.rowCount(), 1);
@@ -618,6 +670,28 @@ void tst_SeasideFilteredModel::searchByFirstNameCharacter()
     QCOMPARE(model.rowCount(), 7);
     model.setFilterPattern("#");
     QCOMPARE(model.rowCount(), 0);
+}
+
+void tst_SeasideFilteredModel::lookupById()
+{
+    QModelIndex index;
+
+    SeasideFilteredModel model;
+    model.setFilterType(SeasideFilteredModel::FilterAll);
+
+    QCOMPARE(model.rowCount(), 7);
+
+    for (int i = 0; i < 7; ++i) {
+        // Verify the lookup by integer
+        QModelIndex index = model.index(QModelIndex(), i, 0);
+
+        SeasidePerson *person = index.data(SeasideFilteredModel::PersonRole).value<SeasidePerson *>();
+        QCOMPARE(model.personById(person->id()), person);
+    }
+
+    // Verify that invalid values yield nothing
+    QCOMPARE(model.personById(0), static_cast<SeasidePerson *>(0));
+    QCOMPARE(model.personById(666), static_cast<SeasidePerson *>(0));
 }
 
 #include "tst_seasidefilteredmodel.moc"

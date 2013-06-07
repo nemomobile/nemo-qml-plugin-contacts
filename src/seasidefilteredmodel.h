@@ -37,11 +37,11 @@
 #include <QStringList>
 #include <QVector>
 
-#include <QContactId>
+#include <QContact>
 
 class SeasidePerson;
 
-QTM_USE_NAMESPACE
+USE_CONTACTS_NAMESPACE
 
 class SeasideFilteredModel : public QAbstractListModel
 {
@@ -74,6 +74,21 @@ public:
         SectionBucketRole,
         PersonRole
     };
+
+#ifdef USING_QTPIM
+    typedef QContactId ContactIdType;
+#else
+    typedef QContactLocalId ContactIdType;
+#endif
+
+    static ContactIdType apiId(const QContact &contact);
+    static bool validId(const ContactIdType &id);
+
+    static quint32 internalId(const QContact &contact);
+    static quint32 internalId(const QContactId &id);
+#ifndef USING_QTPIM
+    static quint32 internalId(QContactLocalId id);
+#endif
 
     SeasideFilteredModel(QObject *parent = 0);
     ~SeasideFilteredModel();
@@ -124,10 +139,17 @@ public:
     void makePopulated();
     void updateDisplayLabelOrder();
 
+    bool filterId(const ContactIdType &contactId) const;
+
     // For synchronizeLists()
-    bool filterId(QContactLocalId contactId) const;
-    void insertRange(int index, int count, const QVector<QContactLocalId> &source, int sourceIndex);
+    bool filterValue(const ContactIdType &contactId) const { return filterId(contactId); }
+    void insertRange(int index, int count, const QVector<ContactIdType> &source, int sourceIndex);
     void removeRange(int index, int count);
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    virtual
+#endif
+    QHash<int, QByteArray> roleNames() const;
 
 signals:
     void populatedChanged();
@@ -141,11 +163,11 @@ private:
     void populateIndex();
     void refineIndex();
     void updateIndex();
-    void updateContactData(QContactLocalId contactId, SeasideFilteredModel::FilterType filter);
+    void updateContactData(const ContactIdType &contactId, SeasideFilteredModel::FilterType filter);
 
-    QVector<QContactLocalId> m_filteredContactIds;
-    const QVector<QContactLocalId> *m_contactIds;
-    const QVector<QContactLocalId> *m_referenceContactIds;
+    QVector<ContactIdType> m_filteredContactIds;
+    const QVector<ContactIdType> *m_contactIds;
+    const QVector<ContactIdType> *m_referenceContactIds;
     QStringList m_filterParts;
     QString m_filterPattern;
     int m_filterIndex;

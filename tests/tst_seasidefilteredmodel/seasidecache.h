@@ -19,6 +19,8 @@ class SeasideCache : public QObject
 {
     Q_OBJECT
 public:
+    typedef SeasideFilteredModel::ContactIdType ContactIdType;
+
     SeasideCache();
     ~SeasideCache();
 
@@ -30,10 +32,15 @@ public:
 
     static SeasideFilteredModel::DisplayLabelOrder displayLabelOrder();
 
-    static SeasideCacheItem *cacheItemById(QContactLocalId);
-    static SeasidePerson *personById(QContactLocalId id);
+    static int contactId(const QContact &contact);
+
+    static SeasideCacheItem *cacheItemById(const ContactIdType &id);
+    static SeasidePerson *personById(const ContactIdType &id);
+#ifdef USING_QTPIM
+    static SeasidePerson *personById(int id);
+#endif
     static SeasidePerson *selfPerson();
-    static QContact contactById(QContactLocalId id);
+    static QContact contactById(const ContactIdType &id);
     static QChar nameGroupForCacheItem(SeasideCacheItem *cacheItem);
     static QList<QChar> allNameGroups();
 
@@ -43,11 +50,11 @@ public:
     static bool savePerson(SeasidePerson *person);
     static void removePerson(SeasidePerson *person);
 
-    static const QVector<QContactLocalId> *contacts(SeasideFilteredModel::FilterType filterType);
+    static const QVector<ContactIdType> *contacts(SeasideFilteredModel::FilterType filterType);
     static bool isPopulated(SeasideFilteredModel::FilterType filterType);
 
     void populate(SeasideFilteredModel::FilterType filterType);
-    void insert(SeasideFilteredModel::FilterType filterType, int index, const QVector<QContactLocalId> &ids);
+    void insert(SeasideFilteredModel::FilterType filterType, int index, const QVector<ContactIdType> &ids);
     void remove(SeasideFilteredModel::FilterType filterType, int index, int count);
 
     static int importContacts(const QString &path);
@@ -57,16 +64,21 @@ public:
 
     void reset();
 
-    static QVector<QContactLocalId> getContactsForFilterType(SeasideFilteredModel::FilterType filterType);
+    static QVector<ContactIdType> getContactsForFilterType(SeasideFilteredModel::FilterType filterType);
 
-    QVector<QContactLocalId> m_contacts[SeasideFilteredModel::FilterTypesCount];
+    QVector<ContactIdType> m_contacts[SeasideFilteredModel::FilterTypesCount];
     SeasideFilteredModel *m_models[SeasideFilteredModel::FilterTypesCount];
     bool m_populated[SeasideFilteredModel::FilterTypesCount];
 
     QVector<SeasideCacheItem> m_cache;
+#ifdef USING_QTPIM
+    QHash<ContactIdType, int> m_cacheIndices;
+#endif
 
     static SeasideCache *instance;
     static QList<QChar> allContactNameGroups;
+
+    ContactIdType idAt(int index) const;
 };
 
 
