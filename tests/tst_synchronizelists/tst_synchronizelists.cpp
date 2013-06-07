@@ -34,10 +34,6 @@
 
 #include "synchronizelists_p.h"
 
-typedef QVector<QContactLocalId> List;
-
-Q_DECLARE_METATYPE(List)
-
 
 class tst_SynchronizeLists : public QObject
 {
@@ -47,11 +43,11 @@ public:
     tst_SynchronizeLists();
 
     bool m_filterEnabled;
-    QVector<QContactLocalId> m_filter;
-    QVector<QContactLocalId> m_cache;
+    QVector<quint32> m_filter;
+    QVector<quint32> m_cache;
 
-    bool filterId(QContactLocalId contactId) const;
-    int insertRange(int index, int count, const QVector<QContactLocalId> &source, int sourceIndex);
+    bool filterValue(quint32 contactId) const;
+    int insertRange(int index, int count, const QVector<quint32> &source, int sourceIndex);
     int removeRange(int index, int count);
 
 private slots:
@@ -61,18 +57,23 @@ private slots:
     void unfiltered();
 };
 
+typedef QVector<quint32> List;
+
+Q_DECLARE_METATYPE(List)
+
+
 tst_SynchronizeLists::tst_SynchronizeLists()
 {
     qRegisterMetaType<List>();
 }
 
-bool tst_SynchronizeLists::filterId(QContactLocalId contactId) const
+bool tst_SynchronizeLists::filterValue(quint32 contactId) const
 {
     return !m_filterEnabled || m_filter.contains(contactId);
 }
 
 int tst_SynchronizeLists::insertRange(
-        int index, int count, const QVector<QContactLocalId> &source, int sourceIndex)
+        int index, int count, const QVector<quint32> &source, int sourceIndex)
 {
     for (int i = 0; i < count; ++i)
         m_cache.insert(index + i, source.at(sourceIndex + i));
@@ -89,9 +90,9 @@ int tst_SynchronizeLists::removeRange(int index, int count)
 
 void tst_SynchronizeLists::filtered_data()
 {
-    QTest::addColumn<QVector<QContactLocalId> >("reference");
-    QTest::addColumn<QVector<QContactLocalId> >("original");
-    QTest::addColumn<QVector<QContactLocalId> >("expected");
+    QTest::addColumn<QVector<quint32> >("reference");
+    QTest::addColumn<QVector<quint32> >("original");
+    QTest::addColumn<QVector<quint32> >("expected");
 
     {
         const List reference = List() << 0 << 1 << 2 << 3 << 4 << 5 << 6 << 7 << 8 << 9 << 10;
@@ -225,9 +226,9 @@ void tst_SynchronizeLists::filtered_data()
 
 void tst_SynchronizeLists::filtered()
 {
-    QFETCH(QVector<QContactLocalId>, reference);
-    QFETCH(QVector<QContactLocalId>, original);
-    QFETCH(QVector<QContactLocalId>, expected);
+    QFETCH(QVector<quint32>, reference);
+    QFETCH(QVector<quint32>, original);
+    QFETCH(QVector<quint32>, expected);
 
     m_filterEnabled = true;
     m_cache = original;
@@ -255,8 +256,8 @@ void tst_SynchronizeLists::filtered()
 
 void tst_SynchronizeLists::unfiltered_data()
 {
-    QTest::addColumn<QVector<QContactLocalId> >("reference");
-    QTest::addColumn<QVector<QContactLocalId> >("original");
+    QTest::addColumn<QVector<quint32> >("reference");
+    QTest::addColumn<QVector<quint32> >("original");
 
     QTest::newRow("0")
             << (List() << 0 << 1 << 2 << 3 << 4 << 5 << 6 << 7 << 8 << 9 << 10)
@@ -283,8 +284,8 @@ void tst_SynchronizeLists::unfiltered_data()
 
 void tst_SynchronizeLists::unfiltered()
 {
-    QFETCH(QVector<QContactLocalId>, reference);
-    QFETCH(QVector<QContactLocalId>, original);
+    QFETCH(QVector<quint32>, reference);
+    QFETCH(QVector<quint32>, original);
 
     m_filterEnabled = false;
     m_cache = original;

@@ -33,6 +33,7 @@
 #include "seasidecache.h"
 #include "seasideperson.h"
 #include "synchronizelists_p.h"
+#include "constants_p.h"
 
 #include <QContactAvatar>
 #include <QContactEmailAddress>
@@ -47,7 +48,7 @@
 // We could squeeze a little more performance out of QVector by inserting all the items in a
 // single hit, but tests are more important right now.
 static void insert(
-        QVector<QContactLocalId> *destination, int to, const QVector<QContactLocalId> &source)
+        QVector<SeasideFilteredModel::ContactIdType> *destination, int to, const QVector<SeasideFilteredModel::ContactIdType> &source)
 {
     for (int i = 0; i < source.count(); ++i)
         destination->insert(to + i, source.at(i));
@@ -61,20 +62,95 @@ static QStringList splitWords(const QString &string)
     QTextBoundaryFinder finder(QTextBoundaryFinder::Word, string);
 
     for (int start = 0; finder.position() != -1 && finder.position() < string.length();) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+        if (!(finder.boundaryReasons() & QTextBoundaryFinder::StartOfItem)) {
+#else
         if (!(finder.boundaryReasons() & QTextBoundaryFinder::StartWord)) {
+#endif
             finder.toNextBoundary();
             start = finder.position();
         }
 
         finder.toNextBoundary();
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+        if (finder.position() > start && finder.boundaryReasons() & QTextBoundaryFinder::EndOfItem) {
+#else
         if (finder.position() > start && finder.boundaryReasons() & QTextBoundaryFinder::EndWord) {
+#endif
             words.append(string.mid(start, finder.position() - start));
             start = finder.position();
         }
     }
     return words;
 }
+
+SeasideFilteredModel::ContactIdType SeasideFilteredModel::apiId(const QContact &contact)
+{
+#ifdef USING_QTPIM
+    return contact.id();
+#else
+    return contact.id().localId();
+#endif
+}
+
+SeasideFilteredModel::ContactIdType SeasideFilteredModel::apiId(quint32 iid)
+{
+#ifdef USING_QTPIM
+    // Currently only works with qtcontacts-sqlite
+    QContactId contactId;
+    if (iid != 0) {
+        static const QString idStr(QString::fromLatin1("qtcontacts:org.nemomobile.contacts.sqlite::sql-%1"));
+        contactId = QContactId::fromString(idStr.arg(iid));
+        if (contactId.isNull()) {
+            qWarning() << "Unable to formulate valid ID from:" << iid;
+        }
+    }
+    return contactId;
+#else
+    return static_cast<ContactIdType>(iid);
+#endif
+}
+
+bool SeasideFilteredModel::validId(const ContactIdType &id)
+{
+#ifdef USING_QTPIM
+    return !id.isNull();
+#else
+    return (id != 0);
+#endif
+}
+
+quint32 SeasideFilteredModel::internalId(const QContact &contact)
+{
+    return internalId(contact.id());
+}
+
+quint32 SeasideFilteredModel::internalId(const QContactId &id)
+{
+#ifdef USING_QTPIM
+    // We need to be able to represent an ID as a 32-bit int; we could use
+    // hashing, but for now we will just extract the integral part of the ID
+    // string produced by qtcontacts-sqlite
+    if (!id.isNull()) {
+        QStringList components = id.toString().split(QChar::fromLatin1(':'));
+        const QString &idComponent = components.isEmpty() ? QString() : components.last();
+        if (idComponent.startsWith(QString::fromLatin1("sql-"))) {
+            return idComponent.mid(4).toUInt();
+        }
+    }
+    return 0;
+#else
+    return static_cast<quint32>(id.localId());
+#endif
+}
+
+#ifndef USING_QTPIM
+quint32 SeasideFilteredModel::internalId(QContactLocalId id)
+{
+    return static_cast<quint32>(id);
+}
+#endif
 
 SeasideFilteredModel::SeasideFilteredModel(QObject *parent)
     : QAbstractListModel(parent)
@@ -83,14 +159,9 @@ SeasideFilteredModel::SeasideFilteredModel(QObject *parent)
     , m_filterType(FilterAll)
     , m_searchByFirstNameCharacter(false)
 {
-    QHash<int, QByteArray> roles;
-    roles.insert(Qt::DisplayRole, "display");
-    roles.insert(FirstNameRole, "firstName");
-    roles.insert(LastNameRole, "lastName");
-    roles.insert(SectionBucketRole, "sectionBucket");
-    roles.insert(PersonRole, "person");
-    roles.insert(AvatarRole, "avatar");
-    setRoleNames(roles);
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+    setRoleNames(roleNames());
+#endif
 
     SeasideCache::registerModel(this, FilterAll);
     m_referenceContactIds = SeasideCache::contacts(FilterAll);
@@ -100,6 +171,18 @@ SeasideFilteredModel::SeasideFilteredModel(QObject *parent)
 SeasideFilteredModel::~SeasideFilteredModel()
 {
     SeasideCache::unregisterModel(this);
+}
+
+QHash<int, QByteArray> SeasideFilteredModel::roleNames() const
+{
+    QHash<int, QByteArray> roles;
+    roles.insert(Qt::DisplayRole, "display");
+    roles.insert(FirstNameRole, "firstName");
+    roles.insert(LastNameRole, "lastName");
+    roles.insert(SectionBucketRole, "sectionBucket");
+    roles.insert(PersonRole, "person");
+    roles.insert(AvatarRole, "avatar");
+    return roles;
 }
 
 bool SeasideFilteredModel::isPopulated() const
@@ -176,6 +259,12 @@ void SeasideFilteredModel::setFilterPattern(const QString &pattern)
 
         m_filterPattern = pattern;
         m_filterParts = splitWords(m_filterPattern);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+        // Qt5 does not recognize '#' as a word
+        if (m_filterParts.isEmpty() && !pattern.isEmpty()) {
+            m_filterParts.append(pattern);
+        }
+#endif
         m_referenceIndex = 0;
         m_filterIndex = 0;
 
@@ -232,7 +321,7 @@ void SeasideFilteredModel::setSearchByFirstNameCharacter(bool searchByFirstNameC
     }
 }
 
-bool SeasideFilteredModel::filterId(QContactLocalId contactId) const
+bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
 {
     if (m_filterParts.isEmpty())
         return true;
@@ -250,7 +339,11 @@ bool SeasideFilteredModel::filterId(QContactLocalId contactId) const
     // other locales, see MBreakIterator
 
     if (item->filterKey.isEmpty()) {
+#ifdef USING_QTPIM
+        item->filterKey = splitWords(item->contact.detail<QContactName>().value<QString>(QContactName__FieldCustomLabel));
+#else
         item->filterKey = splitWords(item->contact.detail<QContactName>().customLabel());
+#endif
 
         foreach (const QContactPhoneNumber &detail, item->contact.details<QContactPhoneNumber>())
             item->filterKey.append(splitWords(detail.number()));
@@ -291,7 +384,7 @@ bool SeasideFilteredModel::filterId(QContactLocalId contactId) const
 }
 
 void SeasideFilteredModel::insertRange(
-        int index, int count, const QVector<QContactLocalId> &source, int sourceIndex)
+        int index, int count, const QVector<ContactIdType> &source, int sourceIndex)
 {
     beginInsertRows(QModelIndex(), index, index + count - 1);
     for (int i = 0; i < count; ++i)
@@ -337,7 +430,7 @@ void SeasideFilteredModel::updateIndex()
         removeRange(f, m_filteredContactIds.count() - f);
 
     if (r < m_referenceContactIds->count()) {
-        QVector<QContactLocalId> insertIds;
+        QVector<ContactIdType> insertIds;
         for (; r < m_referenceContactIds->count(); ++r) {
             if (filterId(m_referenceContactIds->at(r)))
                 insertIds.append(m_referenceContactIds->at(r));
@@ -380,7 +473,11 @@ QVariantMap SeasideFilteredModel::get(int row) const
     if (cacheItem && cacheItem->person) {
         sectionBucket = cacheItem->person->sectionBucket();
     } else if (cacheItem) {
+#ifdef USING_QTPIM
+        QString displayLabel = cacheItem->contact.detail<QContactName>().value<QString>(QContactName__FieldCustomLabel);
+#else
         QString displayLabel = cacheItem->contact.detail<QContactName>().customLabel();
+#endif
         if (!displayLabel.isEmpty())
             sectionBucket = displayLabel.at(0).toUpper();
     }
@@ -455,7 +552,11 @@ QVariant SeasideFilteredModel::data(const QModelIndex &index, int role) const
                 ? QUrl(QLatin1String("image://theme/icon-m-telephony-contact-avatar"))
                 : avatarUrl;
     } else if (role != PersonRole && !cacheItem->person) {  // Display or Section Bucket.
+#ifdef USING_QTPIM
+        QString displayLabel = cacheItem->contact.detail<QContactName>().value<QString>(QContactName__FieldCustomLabel);
+#else
         QString displayLabel = cacheItem->contact.detail<QContactName>().customLabel();
+#endif
 
         return role == Qt::DisplayRole || displayLabel.isEmpty()
                 ? displayLabel
@@ -536,7 +637,7 @@ void SeasideFilteredModel::sourceItemsInserted(int begin, int end)
         emit countChanged();
     } else {
         // Check if any of the inserted items match the filter.
-        QVector<QContactLocalId> insertIds;
+        QVector<ContactIdType> insertIds;
         for (int r = begin; r <= end; ++r) {
             if (filterId(m_referenceContactIds->at(r)))
                 insertIds.append(m_referenceContactIds->at(r));

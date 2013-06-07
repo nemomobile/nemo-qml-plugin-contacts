@@ -37,10 +37,9 @@ SeasideNameGroupModel::SeasideNameGroupModel(QObject *parent)
 {
     SeasideCache::registerNameGroupChangeListener(this);
 
-    QHash<int, QByteArray> roles;
-    roles.insert(NameRole, "name");
-    roles.insert(EntryCount, "entryCount");
-    setRoleNames(roles);
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+    setRoleNames(roleNames());
+#endif
 
     QList<QChar> allGroups = SeasideCache::allNameGroups();
     QHash<QChar, int> existingGroups = SeasideCache::nameGroupCounts();
@@ -56,6 +55,14 @@ SeasideNameGroupModel::SeasideNameGroupModel(QObject *parent)
 SeasideNameGroupModel::~SeasideNameGroupModel()
 {
     SeasideCache::unregisterNameGroupChangeListener(this);
+}
+
+QHash<int, QByteArray> SeasideNameGroupModel::roleNames() const
+{
+    QHash<int, QByteArray> roles;
+    roles.insert(NameRole, "name");
+    roles.insert(EntryCount, "entryCount");
+    return roles;
 }
 
 int SeasideNameGroupModel::rowCount(const QModelIndex &) const

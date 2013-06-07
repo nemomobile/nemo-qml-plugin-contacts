@@ -53,6 +53,9 @@
 
 #include "seasideperson.h"
 #include "seasidecache.h"
+#include "constants_p.h"
+
+USE_VERSIT_NAMESPACE
 
 SeasidePersonAttached::SeasidePersonAttached(QObject *parent)
     : QObject(parent)
@@ -92,7 +95,7 @@ SeasidePerson::~SeasidePerson()
 // QT5: this needs to change type
 int SeasidePerson::id() const
 {
-    return mContact.id().localId();
+    return SeasideCache::contactId(mContact);
 }
 
 bool SeasidePerson::isComplete() const
@@ -154,18 +157,23 @@ void SeasidePerson::setMiddleName(const QString &name)
 }
 
 // small helper to avoid inconvenience
-QString SeasidePerson::generateDisplayLabel(const QContact &mContact, SeasideProxyModel::DisplayLabelOrder order)
+QString SeasidePerson::generateDisplayLabel(const QContact &mContact, SeasideFilteredModel::DisplayLabelOrder order)
 {
     QContactName name = mContact.detail<QContactName>();
 
-    if (!name.customLabel().isNull())
-        return name.customLabel();
+#ifdef USING_QTPIM
+    QString customLabel = name.value<QString>(QContactName__FieldCustomLabel);
+#else
+    QString customLabel = name.customLabel();
+#endif
+    if (!customLabel.isNull())
+        return customLabel;
 
     QString displayLabel;
 
     QString nameStr1;
     QString nameStr2;
-    if (order == SeasideProxyModel::LastNameFirst) {
+    if (order == SeasideFilteredModel::LastNameFirst) {
         nameStr1 = name.lastName();
         nameStr2 = name.firstName();
     } else {
@@ -239,7 +247,7 @@ QString SeasidePerson::generateDisplayLabelFromNonNameDetails(const QContact &mC
     return QString();
 }
 
-void SeasidePerson::recalculateDisplayLabel(SeasideProxyModel::DisplayLabelOrder order)
+void SeasidePerson::recalculateDisplayLabel(SeasideFilteredModel::DisplayLabelOrder order)
 {
     QString oldDisplayLabel = mDisplayLabel;
     QString newDisplayLabel = generateDisplayLabel(mContact, order);
@@ -348,70 +356,98 @@ void SeasidePerson::setAvatarPath(QUrl avatarPath)
     emit avatarPathChanged();
 }
 
-#define LIST_PROPERTY_FROM_DETAIL_FIELD(detailType, fieldName) \
-    QStringList list; \
-    \
-    foreach (const detailType &detail, mContact.details<detailType>()) { \
-        if (!detail.fieldName().isEmpty()) \
-            list << detail.fieldName(); \
-    } \
-    return list;
+namespace { // Helper functions
+
+template<typename F>
+#ifdef USING_QTPIM
+int fieldIdentifier(F field) { return static_cast<int>(field); }
+#else
+QString fieldIdentifier(F field) { return QString::fromLatin1(field.latin1()); }
+#endif
+
+template<typename D, typename F>
+bool detailHasField(const D &detail, F field)
+{
+    return detail.hasValue(fieldIdentifier(field));
+}
+
+template<typename T, typename D, typename F>
+T detailFieldValue(const D &detail, F field)
+{
+    return detail.template value<T>(fieldIdentifier(field));
+}
+
+template<typename D, typename F>
+QStringList listPropertyFromDetailField(const QContact &contact, F field)
+{
+    QStringList rv;
+    foreach (const D &detail, contact.details<D>()) {
+        if (detailHasField(detail, field))
+            rv.append(detailFieldValue<QString>(detail, field));
+    }
+    return rv;
+}
+
+template<typename T, typename F, typename V>
+void setPropertyFieldFromList(QContact &contact, F field, V newValueList)
+{
+    const QList<T> oldDetailList = contact.details<T>();
+
+    if (oldDetailList.count() != newValueList.count()) {
+        bool removeAndReadd = true;
+        if (oldDetailList.count() < newValueList.count()) {
+            /* Check to see if existing details were modified at all */
+            bool modification = false;
+            for (int i = 0; i < oldDetailList.count(); ++i) {
+                if (detailFieldValue<typename V::value_type>(oldDetailList.at(i), field) != newValueList.at(i)) {
+                    modification = true;
+                    break;
+                }
+            }
+
+            if (!modification) {
+                /* If the only changes are new additions, just add them. */
+                for (int i = oldDetailList.count(); i < newValueList.count(); ++i) {
+                    T detail;
+                    detail.setValue(fieldIdentifier(field), newValueList.at(i));
+                    contact.saveDetail(&detail);
+                }
+                removeAndReadd = false;
+            } else {
+                removeAndReadd = true;
+            }
+        }
+
+        if (removeAndReadd) {
+            foreach (T detail, oldDetailList)
+                contact.removeDetail(&detail);
+
+            foreach (typename V::value_type const &value, newValueList) {
+                T detail;
+                detail.setValue(fieldIdentifier(field), value);
+                contact.saveDetail(&detail);
+            }
+        }
+    } else {
+        /* assign new numbers to the existing details. */
+        for (int i = 0; i != newValueList.count(); ++i) {
+            T detail = oldDetailList.at(i);
+            detail.setValue(fieldIdentifier(field), newValueList.at(i));
+            contact.saveDetail(&detail);
+        }
+    }
+}
+
+}
 
 QStringList SeasidePerson::phoneNumbers() const
 {
-    LIST_PROPERTY_FROM_DETAIL_FIELD(QContactPhoneNumber, number);
+    return listPropertyFromDetailField<QContactPhoneNumber>(mContact, QContactPhoneNumber::FieldNumber);
 }
-
-#define SET_PROPERTY_FIELD_FROM_LIST(detailType, fieldNameGet, fieldNameSet, newValueList) \
-    const QList<detailType> &oldDetailList = mContact.details<detailType>(); \
-    \
-    if (oldDetailList.count() != newValueList.count()) { \
-        bool removeAndReadd = true; \
-        if (oldDetailList.count() < newValueList.count()) { \
-            /* Check to see if existing details were modified at all */ \
-            bool modification = false; \
-            for (int i = 0; i < oldDetailList.count(); ++i) { \
-                if (oldDetailList.at(i).fieldNameGet() != newValueList.at(i)) { \
-                    modification = true; \
-                    break; \
-                } \
-            } \
-    \
-            if (!modification) { \
-                /* If the only changes are new additions, just add them. */ \
-                for (int i = oldDetailList.count(); i < newValueList.count(); ++i) { \
-                    detailType detail; \
-                    detail.fieldNameSet(newValueList.at(i)); \
-                    mContact.saveDetail(&detail); \
-                } \
-                removeAndReadd = false; \
-            } else { \
-                removeAndReadd = true; \
-            } \
-        } \
-    \
-        if (removeAndReadd) { \
-            foreach (detailType detail, oldDetailList) \
-                mContact.removeDetail(&detail); \
-    \
-            foreach (const QString &value, newValueList) { \
-                detailType detail; \
-                detail.fieldNameSet(value); \
-                mContact.saveDetail(&detail); \
-            } \
-        } \
-    } else { \
-        /* assign new numbers to the existing details. */ \
-        for (int i = 0; i != newValueList.count(); ++i) { \
-            detailType detail = oldDetailList.at(i); \
-            detail.fieldNameSet(newValueList.at(i)); \
-            mContact.saveDetail(&detail); \
-        } \
-    }
 
 void SeasidePerson::setPhoneNumbers(const QStringList &phoneNumbers)
 {
-    SET_PROPERTY_FIELD_FROM_LIST(QContactPhoneNumber, number, setNumber, phoneNumbers)
+    setPropertyFieldFromList<QContactPhoneNumber>(mContact, QContactPhoneNumber::FieldNumber, phoneNumbers);
     emit phoneNumbersChanged();
 }
 
@@ -445,6 +481,12 @@ QList<int> SeasidePerson::phoneNumberTypes() const
     return types;
 }
 
+#ifdef USING_QTPIM
+void setPhoneNumberType(QContactPhoneNumber &phoneNumber, QContactPhoneNumber::SubType type) { phoneNumber.setSubTypes(QList<int>() << static_cast<int>(type)); }
+#else
+void setPhoneNumberType(QContactPhoneNumber &phoneNumber, const QString &type) { phoneNumber.setSubTypes(type); }
+#endif
+
 void SeasidePerson::setPhoneNumberType(int which, SeasidePerson::DetailType type)
 {
     const QList<QContactPhoneNumber> &numbers = mContact.details<QContactPhoneNumber>();
@@ -455,19 +497,19 @@ void SeasidePerson::setPhoneNumberType(int which, SeasidePerson::DetailType type
 
     QContactPhoneNumber number = numbers.at(which);
     if (type == SeasidePerson::PhoneHomeType) {
-        number.setSubTypes(QContactPhoneNumber::SubTypeLandline);
+        ::setPhoneNumberType(number, QContactPhoneNumber::SubTypeLandline);
         number.setContexts(QContactDetail::ContextHome);
     }  else if (type == SeasidePerson::PhoneWorkType) {
-        number.setSubTypes(QContactPhoneNumber::SubTypeLandline);
+        ::setPhoneNumberType(number, QContactPhoneNumber::SubTypeLandline);
         number.setContexts(QContactDetail::ContextWork);
     } else if (type == SeasidePerson::PhoneMobileType) {
-        number.setSubTypes(QContactPhoneNumber::SubTypeMobile);
+        ::setPhoneNumberType(number, QContactPhoneNumber::SubTypeMobile);
         number.setContexts(QContactDetail::ContextHome);
     } else if (type == SeasidePerson::PhoneFaxType) {
-        number.setSubTypes(QContactPhoneNumber::SubTypeFax);
+        ::setPhoneNumberType(number, QContactPhoneNumber::SubTypeFax);
         number.setContexts(QContactDetail::ContextHome);
     } else if (type == SeasidePerson::PhonePagerType) {
-        number.setSubTypes(QContactPhoneNumber::SubTypePager);
+        ::setPhoneNumberType(number, QContactPhoneNumber::SubTypePager);
         number.setContexts(QContactDetail::ContextHome);
     } else {
         qWarning() << "Warning: Could not save phone type '" << type << "'";
@@ -479,12 +521,12 @@ void SeasidePerson::setPhoneNumberType(int which, SeasidePerson::DetailType type
 
 QStringList SeasidePerson::emailAddresses() const
 {
-    LIST_PROPERTY_FROM_DETAIL_FIELD(QContactEmailAddress, emailAddress);
+    return listPropertyFromDetailField<QContactEmailAddress>(mContact, QContactEmailAddress::FieldEmailAddress);
 }
 
 void SeasidePerson::setEmailAddresses(const QStringList &emailAddresses)
 {
-    SET_PROPERTY_FIELD_FROM_LIST(QContactEmailAddress, emailAddress, setEmailAddress, emailAddresses)
+    setPropertyFieldFromList<QContactEmailAddress>(mContact, QContactEmailAddress::FieldEmailAddress, emailAddresses);
     emit emailAddressesChanged();
 }
 
@@ -649,12 +691,12 @@ void SeasidePerson::setAddressType(int which, SeasidePerson::DetailType type)
 
 QStringList SeasidePerson::websites() const
 {
-    LIST_PROPERTY_FROM_DETAIL_FIELD(QContactUrl, url);
+    return listPropertyFromDetailField<QContactUrl>(mContact, QContactUrl::FieldUrl);
 }
 
 void SeasidePerson::setWebsites(const QStringList &websites)
 {
-    SET_PROPERTY_FIELD_FROM_LIST(QContactUrl, url, setUrl, websites)
+    setPropertyFieldFromList<QContactUrl>(mContact, QContactUrl::FieldUrl, websites);
     emit websitesChanged();
 }
 
@@ -766,7 +808,7 @@ ListType inAccountOrder(ListType list, AccountListType accountList)
     // Find the detailUri for each reportable account in the order they're yielded
     QStringList uriList;
     foreach (const typename AccountListType::value_type &account, accountList) {
-        if (account.hasValue("AccountPath")) {
+        if (account.hasValue(QContactOnlineAccount__FieldAccountPath)) {
             uriList.append(account.detailUri());
         }
     }
@@ -828,24 +870,14 @@ QStringList SeasidePerson::presenceMessages() const
     return rv;
 }
 
-// TODO: merge with LIST_PROPERTY_FROM_DETAIL_FIELD
-#define LIST_PROPERTY_FROM_FIELD_NAME(detailType, fieldName) \
-    QStringList list; \
-    \
-    foreach (const detailType &detail, mContact.details<detailType>()) { \
-        if (detail.hasValue(fieldName)) \
-            list << detail.value(fieldName); \
-    } \
-    return list;
-
 QStringList SeasidePerson::accountUris() const
 {
-    LIST_PROPERTY_FROM_FIELD_NAME(QContactOnlineAccount, QContactOnlineAccount::FieldAccountUri)
+    return listPropertyFromDetailField<QContactOnlineAccount>(mContact, QContactOnlineAccount::FieldAccountUri);
 }
 
 QStringList SeasidePerson::accountPaths() const
 {
-    LIST_PROPERTY_FROM_FIELD_NAME(QContactOnlineAccount, "AccountPath") // QContactOnlineAccount__FieldAccountPath
+    return listPropertyFromDetailField<QContactOnlineAccount>(mContact, QContactOnlineAccount__FieldAccountPath);
 }
 
 QStringList SeasidePerson::accountProviders() const
@@ -854,7 +886,7 @@ QStringList SeasidePerson::accountProviders() const
 
     foreach (const QContactOnlineAccount &account, mContact.details<QContactOnlineAccount>()) {
         // Include the provider value for each account returned by accountPaths
-        if (account.hasValue("AccountPath")) {
+        if (account.hasValue(QContactOnlineAccount__FieldAccountPath)) {
             rv.append(account.serviceProvider());
         }
     }
@@ -868,8 +900,8 @@ QStringList SeasidePerson::accountIconPaths() const
 
     foreach (const QContactOnlineAccount &account, mContact.details<QContactOnlineAccount>()) {
         // Include the icon path value for each account returned by accountPaths
-        if (account.hasValue("AccountPath")) {
-            rv.append(account.value("AccountIconPath"));
+        if (account.hasValue(QContactOnlineAccount__FieldAccountPath)) {
+            rv.append(account.value<QString>(QContactOnlineAccount__FieldAccountIconPath));
         }
     }
 
@@ -879,10 +911,10 @@ QStringList SeasidePerson::accountIconPaths() const
 void SeasidePerson::addAccount(const QString &path, const QString &uri, const QString &provider, const QString &iconPath)
 {
     QContactOnlineAccount detail;
-    detail.setValue("AccountPath", path);
+    detail.setValue(QContactOnlineAccount__FieldAccountPath, path);
     detail.setAccountUri(uri);
     detail.setServiceProvider(provider);
-    detail.setValue("AccountIconPath", iconPath);
+    detail.setValue(QContactOnlineAccount__FieldAccountIconPath, iconPath);
 
     mContact.saveDetail(&detail);
 
@@ -902,7 +934,7 @@ void SeasidePerson::setContact(const QContact &contact)
     QContact oldContact = mContact;
     mContact = contact;
 
-    if (oldContact.id().localId() != mContact.id().localId())
+    if (oldContact.id() != mContact.id())
         emit contactChanged();
 
     QContactName oldName = oldContact.detail<QContactName>();
