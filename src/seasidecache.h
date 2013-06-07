@@ -168,8 +168,8 @@ private:
 
     QBasicTimer m_expiryTimer;
     QBasicTimer m_fetchTimer;
-    QHash<ContactIdType, SeasideCacheItem> m_people;
-    QHash<QString, ContactIdType> m_phoneNumberIds;
+    QHash<quint32, SeasideCacheItem> m_people;
+    QHash<QString, quint32> m_phoneNumberIds;
     QHash<ContactIdType, QContact> m_contactsToSave;
     QHash<QChar, int> m_contactNameGroups;
     QList<QContact> m_contactsToCreate;

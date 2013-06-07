@@ -82,6 +82,8 @@ public:
 #endif
 
     static ContactIdType apiId(const QContact &contact);
+    static ContactIdType apiId(quint32 iid);
+
     static bool validId(const ContactIdType &id);
 
     static quint32 internalId(const QContact &contact);

@@ -94,6 +94,24 @@ SeasideFilteredModel::ContactIdType SeasideFilteredModel::apiId(const QContact &
 #endif
 }
 
+SeasideFilteredModel::ContactIdType SeasideFilteredModel::apiId(quint32 iid)
+{
+#ifdef USING_QTPIM
+    // Currently only works with qtcontacts-sqlite
+    QContactId contactId;
+    if (iid != 0) {
+        static const QString idStr(QString::fromLatin1("qtcontacts:org.nemomobile.contacts.sqlite::sql-%1"));
+        contactId = QContactId::fromString(idStr.arg(iid));
+        if (contactId.isNull()) {
+            qWarning() << "Unable to formulate valid ID from:" << iid;
+        }
+    }
+    return contactId;
+#else
+    return static_cast<ContactIdType>(iid);
+#endif
+}
+
 bool SeasideFilteredModel::validId(const ContactIdType &id)
 {
 #ifdef USING_QTPIM
