@@ -19,11 +19,21 @@ equals(QT_MAJOR_VERSION, 5): qmldir.path +=  $$[QT_INSTALL_QML]/$$PLUGIN_IMPORT_
 INSTALLS += qmldir
 
 CONFIG += link_pkgconfig
-packagesExist(mlite) {
-    PKGCONFIG += mlite
-    DEFINES += HAS_MLITE
-} else {
-    warning("mlite not available. Some functionality may not work as expected.")
+equals(QT_MAJOR_VERSION, 4) {
+    packagesExist(mlite) {
+        PKGCONFIG += mlite
+        DEFINES += HAS_MLITE
+    } else {
+        warning("mlite not available. Some functionality may not work as expected.")
+    }
+}
+equals(QT_MAJOR_VERSION, 5) {
+    packagesExist(mlite5) {
+        PKGCONFIG += mlite5
+        DEFINES += HAS_MLITE
+    } else {
+        warning("mlite not available. Some functionality may not work as expected.")
+    }
 }
 
 SOURCES += $$PWD/plugin.cpp \

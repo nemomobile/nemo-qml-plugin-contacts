@@ -10,7 +10,7 @@ equals(QT_MAJOR_VERSION, 4): QT += declarative
 equals(QT_MAJOR_VERSION, 5): QT += qml
 
 equals(QT_MAJOR_VERSION, 4): target.path = /opt/tests/nemo-qml-plugins/contacts
-equals(QT_MAJOR_VERSION, 5): target.path = /opt/tests/nemo-qml-plugins/contacts-qt5
+equals(QT_MAJOR_VERSION, 5): target.path = /opt/tests/nemo-qml-plugins-qt5/contacts
 INSTALLS += target
 
 INCLUDEPATH += $$SRCDIR

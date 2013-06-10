@@ -7,5 +7,5 @@ SUBDIRS = \
 tests_xml.target = tests.xml
 tests_xml.files = tests.xml
 equals(QT_MAJOR_VERSION, 4): tests_xml.path = /opt/tests/nemo-qml-plugins/contacts
-equals(QT_MAJOR_VERSION, 5): tests_xml.path = /opt/tests/nemo-qml-plugins/contacts-qt5
+equals(QT_MAJOR_VERSION, 5): tests_xml.path = /opt/tests/nemo-qml-plugins-qt5/contacts
 INSTALLS += tests_xml
