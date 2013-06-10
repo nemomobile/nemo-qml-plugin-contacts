@@ -47,6 +47,11 @@
 
 class Q_DECL_EXPORT NemoContactsPlugin : public QDeclarativeExtensionPlugin
 {
+    Q_OBJECT
+#ifdef QT_VERSION_5
+    Q_PLUGIN_METADATA(IID "org.nemomobile.contacts")
+#endif
+
 public:
     virtual ~NemoContactsPlugin() { }
 
@@ -71,3 +76,4 @@ public:
 Q_EXPORT_PLUGIN2(nemocontacts, NemoContactsPlugin);
 #endif
 
+#include "plugin.moc"
