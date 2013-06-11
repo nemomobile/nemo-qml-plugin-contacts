@@ -134,9 +134,17 @@ private slots:
     void contactsAvailable();
     void contactIdsAvailable();
     void requestStateChanged(QContactAbstractRequest::State state);
-    void contactsRemoved(const QList<ContactIdType> &contactIds);
+#ifdef USING_QTPIM
+    void contactsRemoved(const QList<QContactId> &contactIds);
+#else
+    void contactsRemoved(const QList<QContactLocalId> &contactIds);
+#endif
     void updateContacts();
-    void updateContacts(const QList<ContactIdType> &contactIds);
+#ifdef USING_QTPIM
+    void updateContacts(const QList<QContactId> &contactIds);
+#else
+    void updateContacts(const QList<QContactLocalId> &contactIds);
+#endif
     void displayLabelOrderChanged();
 
 private:
