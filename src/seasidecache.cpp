@@ -871,6 +871,9 @@ void SeasideCache::appendContacts(const QList<QContact> &contacts)
     const int begin = cacheIds.count();
     int end = cacheIds.count() + contacts.count() - m_appendIndex - 1;
 
+    if (end < begin)
+        return;
+
     for (int i = 0; i < models.count(); ++i)
         models.at(i)->sourceAboutToInsertItems(begin, end);
 
