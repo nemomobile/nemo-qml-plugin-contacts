@@ -37,6 +37,7 @@
 #include <QContactFetchRequest>
 #include <QContactRemoveRequest>
 #include <QContactSaveRequest>
+
 #ifdef USING_QTPIM
 #include <QContactIdFilter>
 #include <QContactIdFetchRequest>
@@ -134,10 +135,16 @@ private slots:
     void contactsAvailable();
     void contactIdsAvailable();
     void requestStateChanged(QContactAbstractRequest::State state);
-    void contactsRemoved(const QList<ContactIdType> &contactIds);
     void updateContacts();
-    void updateContacts(const QList<ContactIdType> &contactIds);
     void displayLabelOrderChanged();
+
+#ifdef USING_QTPIM
+    void contactsRemoved(const QList<QContactId> &contactIds);
+    void updateContacts(const QList<QContactId> &contactIds);
+#else
+    void contactsRemoved(const QList<QContactLocalId> &contactIds);
+    void updateContacts(const QList<QContactLocalId> &contactIds);
+#endif
 
 private:
     SeasideCache();
