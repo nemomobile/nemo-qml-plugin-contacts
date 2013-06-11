@@ -150,6 +150,15 @@ SeasideCache::SeasideCache()
         m_displayLabelOrder = SeasideFilteredModel::DisplayLabelOrder(displayLabelOrder.toInt());
 #endif
 
+#ifdef USING_QTPIM
+    connect(&m_manager, SIGNAL(dataChanged()), this, SLOT(updateContacts()));
+    connect(&m_manager, SIGNAL(contactsChanged(QList<QContactId>)),
+            this, SLOT(updateContacts(QList<QContactId>)));
+    connect(&m_manager, SIGNAL(contactsAdded(QList<QContactId>)),
+            this, SLOT(updateContacts(QList<QContactId>)));
+    connect(&m_manager, SIGNAL(contactsRemoved(QList<QContactId>)),
+            this, SLOT(contactsRemoved(QList<QContactId>)));
+#else
     connect(&m_manager, SIGNAL(dataChanged()), this, SLOT(updateContacts()));
     connect(&m_manager, SIGNAL(contactsChanged(QList<QContactLocalId>)),
             this, SLOT(updateContacts(QList<QContactLocalId>)));
@@ -157,6 +166,7 @@ SeasideCache::SeasideCache()
             this, SLOT(updateContacts(QList<QContactLocalId>)));
     connect(&m_manager, SIGNAL(contactsRemoved(QList<QContactLocalId>)),
             this, SLOT(contactsRemoved(QList<QContactLocalId>)));
+#endif
 
     connect(&m_fetchRequest, SIGNAL(resultsAvailable()), this, SLOT(contactsAvailable()));
     connect(&m_contactIdRequest, SIGNAL(resultsAvailable()), this, SLOT(contactIdsAvailable()));
@@ -781,7 +791,8 @@ void SeasideCache::finalizeUpdate(SeasideFilteredModel::FilterType filter)
 
     if (m_queryIndex < queryIds.count()) {
         const int count = queryIds.count() - m_queryIndex;
-        insertRange(filter, cacheIds.count(), count, queryIds, m_queryIndex);
+        if (count)
+            insertRange(filter, cacheIds.count(), count, queryIds, m_queryIndex);
     }
 
     m_cacheIndex = 0;
@@ -854,41 +865,45 @@ int SeasideCache::insertRange(
 
 void SeasideCache::appendContacts(const QList<QContact> &contacts)
 {
-    QVector<ContactIdType> &cacheIds = m_contacts[m_fetchFilter];
-    QList<SeasideFilteredModel *> &models = m_models[m_fetchFilter];
+    if (!contacts.isEmpty()) {
+        QVector<ContactIdType> &cacheIds = m_contacts[m_fetchFilter];
+        QList<SeasideFilteredModel *> &models = m_models[m_fetchFilter];
 
-    cacheIds.reserve(contacts.count());
+        cacheIds.reserve(contacts.count());
 
-    const int begin = cacheIds.count();
-    int end = cacheIds.count() + contacts.count() - m_appendIndex - 1;
+        const int begin = cacheIds.count();
+        int end = cacheIds.count() + contacts.count() - m_appendIndex - 1;
 
-    for (int i = 0; i < models.count(); ++i)
-        models.at(i)->sourceAboutToInsertItems(begin, end);
+        if (begin <= end) {
+            for (int i = 0; i < models.count(); ++i)
+                models.at(i)->sourceAboutToInsertItems(begin, end);
 
-    for (; m_appendIndex < contacts.count(); ++m_appendIndex) {
-        QContact contact = contacts.at(m_appendIndex);
-        ContactIdType apiId = SeasideFilteredModel::apiId(contact);
-        quint32 iid = SeasideFilteredModel::internalId(contact);
+            for (; m_appendIndex < contacts.count(); ++m_appendIndex) {
+                QContact contact = contacts.at(m_appendIndex);
+                ContactIdType apiId = SeasideFilteredModel::apiId(contact);
+                quint32 iid = SeasideFilteredModel::internalId(contact);
 
-        cacheIds.append(apiId);
-        SeasideCacheItem &cacheItem = m_people[iid];
-        cacheItem.contact = contact;
-        cacheItem.filterKey = QStringList();
+                cacheIds.append(apiId);
+                SeasideCacheItem &cacheItem = m_people[iid];
+                cacheItem.contact = contact;
+                cacheItem.filterKey = QStringList();
 
-        if (m_fetchFilter == SeasideFilteredModel::FilterAll)
-            addToContactNameGroup(nameGroupForCacheItem(&cacheItem), 0);
+                if (m_fetchFilter == SeasideFilteredModel::FilterAll)
+                    addToContactNameGroup(nameGroupForCacheItem(&cacheItem), 0);
 
-        foreach (const QContactPhoneNumber &phoneNumber, contact.details<QContactPhoneNumber>()) {
-            QString normalizedNumber = Normalization::normalizePhoneNumber(phoneNumber.number());
-            m_phoneNumberIds[normalizedNumber] = iid;
+                foreach (const QContactPhoneNumber &phoneNumber, contact.details<QContactPhoneNumber>()) {
+                    QString normalizedNumber = Normalization::normalizePhoneNumber(phoneNumber.number());
+                    m_phoneNumberIds[normalizedNumber] = iid;
+                }
+            }
+
+            for (int i = 0; i < models.count(); ++i)
+                models.at(i)->sourceItemsInserted(begin, end);
+
+            if (!m_nameGroupChangeListeners.isEmpty())
+                notifyNameGroupsChanged(m_contactNameGroups.keys());
         }
     }
-
-    for (int i = 0; i < models.count(); ++i)
-        models.at(i)->sourceItemsInserted(begin, end);
-
-    if (!m_nameGroupChangeListeners.isEmpty())
-        notifyNameGroupsChanged(m_contactNameGroups.keys());
 }
 
 void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
