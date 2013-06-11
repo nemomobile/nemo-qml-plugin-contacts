@@ -151,12 +151,21 @@ SeasideCache::SeasideCache()
 #endif
 
     connect(&m_manager, SIGNAL(dataChanged()), this, SLOT(updateContacts()));
+#ifdef USING_QTPIM
+    connect(&m_manager, SIGNAL(contactsChanged(QList<QContactId>)),
+            this, SLOT(updateContacts(QList<QContactId>)));
+    connect(&m_manager, SIGNAL(contactsAdded(QList<QContactId>)),
+            this, SLOT(updateContacts(QList<QContactId>)));
+    connect(&m_manager, SIGNAL(contactsRemoved(QList<QContactId>)),
+            this, SLOT(contactsRemoved(QList<QContactId>)));
+#else
     connect(&m_manager, SIGNAL(contactsChanged(QList<QContactLocalId>)),
             this, SLOT(updateContacts(QList<QContactLocalId>)));
     connect(&m_manager, SIGNAL(contactsAdded(QList<QContactLocalId>)),
             this, SLOT(updateContacts(QList<QContactLocalId>)));
     connect(&m_manager, SIGNAL(contactsRemoved(QList<QContactLocalId>)),
             this, SLOT(contactsRemoved(QList<QContactLocalId>)));
+#endif
 
     connect(&m_fetchRequest, SIGNAL(resultsAvailable()), this, SLOT(contactsAvailable()));
     connect(&m_contactIdRequest, SIGNAL(resultsAvailable()), this, SLOT(contactIdsAvailable()));
