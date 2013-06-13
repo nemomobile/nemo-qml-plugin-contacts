@@ -9,7 +9,7 @@ Name:       nemo-qml-plugin-contacts
 # << macros
 
 Summary:    Nemo QML contacts plugin
-Version:    0.0.4
+Version:    0.0.5
 Release:    1
 Group:      System/Libraries
 License:    BSD
