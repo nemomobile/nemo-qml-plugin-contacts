@@ -107,6 +107,10 @@ QList<QChar> SeasideCache::allContactNameGroups = getAllContactNameGroups();
 
 static QString managerName()
 {
+#ifdef USING_QTPIM
+    // Temporary override until qtpim supports QTCONTACTS_MANAGER_OVERRIDE
+    return QStringLiteral("org.nemomobile.contacts.sqlite");
+#endif
     QByteArray environmentManager = qgetenv("NEMO_CONTACT_MANAGER");
     return !environmentManager.isEmpty()
             ? QString::fromLatin1(environmentManager, environmentManager.length())
