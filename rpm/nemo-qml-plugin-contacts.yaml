@@ -24,6 +24,15 @@ Files:
     - "%{_libdir}/qt4/imports/org/nemomobile/contacts/libnemocontacts.so"
     - "%{_libdir}/qt4/imports/org/nemomobile/contacts/qmldir"
 SubPackages:
+    - Name: tools
+      Summary: Development tools for qmlcontacts
+      Description: "%{summary}."
+      Group: Applications/System
+      License: BSD
+      AutoDepend: false
+      Files:
+          - "%{_bindir}/vcardconverter"
+
     - Name: tests
       Summary: QML contacts plugin tests
       Group: System/Libraries

@@ -28,6 +28,14 @@ BuildRequires:  pkgconfig(mlite5)
 %description
 %{summary}.
 
+%package tools
+Summary:    Development tools for qmlcontacts
+License:    BSD
+Group:      Applications/System
+
+%description tools
+%{summary}.
+
 %package tests
 Summary:    QML contacts plugin tests
 Group:      System/Libraries
@@ -68,6 +76,12 @@ rm -rf %{buildroot}
 %{_libdir}/qt5/qml/org/nemomobile/contacts/qmldir
 # >> files
 # << files
+
+%files tools
+%defattr(-,root,root,-)
+%{_bindir}/vcardconverter
+# >> files tools
+# << files tools
 
 %files tests
 %defattr(-,root,root,-)

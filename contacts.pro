@@ -1,4 +1,4 @@
 TEMPLATE = subdirs
-SUBDIRS = src tests
+SUBDIRS = src tools tests
 
 tests.depends = src
