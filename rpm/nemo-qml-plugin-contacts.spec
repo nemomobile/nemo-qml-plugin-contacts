@@ -9,7 +9,7 @@ Name:       nemo-qml-plugin-contacts
 # << macros
 
 Summary:    Nemo QML contacts plugin
-Version:    0.0.6
+Version:    0.0.0
 Release:    1
 Group:      System/Libraries
 License:    BSD
@@ -25,6 +25,14 @@ Provides:   nemo-qml-plugins-contacts > 0.3.26
 Obsoletes:   nemo-qml-plugins-contacts <= 0.3.26
 
 %description
+%{summary}.
+
+%package tools
+Summary:    Development tools for qmlcontacts
+License:    BSD
+Group:      Applications/System
+
+%description tools
 %{summary}.
 
 %package tests
@@ -67,6 +75,12 @@ rm -rf %{buildroot}
 %{_libdir}/qt4/imports/org/nemomobile/contacts/qmldir
 # >> files
 # << files
+
+%files tools
+%defattr(-,root,root,-)
+%{_bindir}/vcardconverter
+# >> files tools
+# << files tools
 
 %files tests
 %defattr(-,root,root,-)
