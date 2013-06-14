@@ -9,7 +9,7 @@ Name:       nemo-qml-plugin-contacts-qt5
 # << macros
 
 Summary:    Nemo QML contacts plugin
-Version:    0.0.5
+Version:    0.0.6
 Release:    1
 Group:      System/Libraries
 License:    BSD
@@ -22,6 +22,7 @@ BuildRequires:  pkgconfig(Qt5Gui)
 BuildRequires:  pkgconfig(Qt5Contacts)
 BuildRequires:  pkgconfig(Qt5Versit)
 BuildRequires:  pkgconfig(mlite5)
+Requires: qtcontacts-sqlite-qt5
 
 %description
 %{summary}.
