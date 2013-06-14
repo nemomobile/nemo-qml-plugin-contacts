@@ -15,7 +15,6 @@ PkgConfigBR:
     - QtDeclarative
     - QtGui
     - QtContacts
-    - QtSparql # contacts
     - mlite
 Provides:
     - nemo-qml-plugins-contacts > 0.3.26
