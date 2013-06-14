@@ -9,20 +9,21 @@ Name:       nemo-qml-plugin-contacts-qt5
 # << macros
 
 Summary:    Nemo QML contacts plugin
-Version:    0.0.6
+Version:    0.0.0
 Release:    1
 Group:      System/Libraries
 License:    BSD
 URL:        https://github.com/nemomobile/nemo-qml-plugin-contacts
 Source0:    %{name}-%{version}.tar.bz2
-Source100:  nemo-qml-plugin-contacts.yaml
+Source100:  nemo-qml-plugin-contacts-qt5.yaml
+Requires:   qtcontacts-sqlite-qt5
 BuildRequires:  pkgconfig(Qt5Core)
 BuildRequires:  pkgconfig(Qt5Qml)
 BuildRequires:  pkgconfig(Qt5Gui)
 BuildRequires:  pkgconfig(Qt5Contacts)
 BuildRequires:  pkgconfig(Qt5Versit)
+BuildRequires:  pkgconfig(Qt5Test)
 BuildRequires:  pkgconfig(mlite5)
-Requires: qtcontacts-sqlite-qt5
 
 %description
 %{summary}.
@@ -31,7 +32,6 @@ Requires: qtcontacts-sqlite-qt5
 Summary:    QML contacts plugin tests
 Group:      System/Libraries
 Requires:   %{name} = %{version}-%{release}
-BuildRequires:  pkgconfig(Qt5Test)
 
 %description tests
 %{summary}.
@@ -46,7 +46,7 @@ BuildRequires:  pkgconfig(Qt5Test)
 # >> build pre
 # << build pre
 
-%qmake5
+%qmake5 
 
 make %{?jobs:-j%jobs}
 
@@ -57,7 +57,7 @@ make %{?jobs:-j%jobs}
 rm -rf %{buildroot}
 # >> install pre
 # << install pre
-%qmake5_install
+%qmake_install
 
 # >> install post
 # << install post
