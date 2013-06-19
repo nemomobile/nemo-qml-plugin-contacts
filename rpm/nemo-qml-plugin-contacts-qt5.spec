@@ -32,6 +32,8 @@ BuildRequires:  pkgconfig(mlite5)
 Summary:    Development tools for qmlcontacts
 License:    BSD
 Group:      Applications/System
+Provides:   qmlcontacts-tools > 0.4.9
+Obsoletes:  qmlcontacts-tools <= 0.4.9
 
 %description tools
 %{summary}.
