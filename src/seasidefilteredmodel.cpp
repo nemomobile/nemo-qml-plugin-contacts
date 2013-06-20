@@ -602,8 +602,8 @@ void SeasideFilteredModel::sourceAboutToRemoveItems(int begin, int end)
                 // total number that intersect.
                 int count = 0;
                 while (f + count < m_filteredContactIds.count() && r <= end) {
-                    ++count;
                     r = m_referenceContactIds->indexOf(m_filteredContactIds.at(f + count), r);
+                    ++count;
                 }
 
                 beginRemoveRows(QModelIndex(), f, f + count - 1);
