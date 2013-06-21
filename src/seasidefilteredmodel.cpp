@@ -38,9 +38,12 @@
 #include <QContactAvatar>
 #include <QContactEmailAddress>
 #include <QContactName>
+#include <QContactNickname>
 #include <QContactOnlineAccount>
 #include <QContactOrganization>
 #include <QContactPhoneNumber>
+#include <QContactGlobalPresence>
+#include <QContactPresence>
 #include <QTextBoundaryFinder>
 
 #include <QtDebug>
@@ -321,6 +324,13 @@ void SeasideFilteredModel::setSearchByFirstNameCharacter(bool searchByFirstNameC
     }
 }
 
+template<typename T>
+void insert(QSet<T> &set, const QList<T> &list)
+{
+    foreach (const T &item, list)
+        set.insert(item);
+}
+
 bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
 {
     if (m_filterParts.isEmpty())
@@ -339,22 +349,41 @@ bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
     // other locales, see MBreakIterator
 
     if (item->filterKey.isEmpty()) {
+        QSet<QString> matchTokens;
+
+        QContactName name = item->contact.detail<QContactName>();
+        insert(matchTokens, splitWords(name.firstName()));
+        insert(matchTokens, splitWords(name.middleName()));
+        insert(matchTokens, splitWords(name.lastName()));
+        insert(matchTokens, splitWords(name.prefix()));
+        insert(matchTokens, splitWords(name.suffix()));
+
+        QContactNickname nickname = item->contact.detail<QContactNickname>();
+        insert(matchTokens, splitWords(nickname.nickname()));
+
+        // Include the custom label - it may contain the user's customized name for the contact
 #ifdef USING_QTPIM
-        item->filterKey = splitWords(item->contact.detail<QContactName>().value<QString>(QContactName__FieldCustomLabel));
+        insert(matchTokens, splitWords(item->contact.detail<QContactName>().value<QString>(QContactName__FieldCustomLabel)));
 #else
-        item->filterKey = splitWords(item->contact.detail<QContactName>().customLabel());
+        insert(matchTokens, splitWords(item->contact.detail<QContactName>().customLabel()));
 #endif
 
         foreach (const QContactPhoneNumber &detail, item->contact.details<QContactPhoneNumber>())
-            item->filterKey.append(splitWords(detail.number()));
+            insert(matchTokens, splitWords(detail.number()));
         foreach (const QContactEmailAddress &detail, item->contact.details<QContactEmailAddress>())
-            item->filterKey.append(splitWords(detail.emailAddress()));
+            insert(matchTokens, splitWords(detail.emailAddress()));
         foreach (const QContactOrganization &detail, item->contact.details<QContactOrganization>())
-            item->filterKey.append(splitWords(detail.name()));
+            insert(matchTokens, splitWords(detail.name()));
         foreach (const QContactOnlineAccount &detail, item->contact.details<QContactOnlineAccount>()) {
-            item->filterKey.append(splitWords(detail.accountUri()));
-            item->filterKey.append(splitWords(detail.serviceProvider()));
+            insert(matchTokens, splitWords(detail.accountUri()));
+            insert(matchTokens, splitWords(detail.serviceProvider()));
         }
+        foreach (const QContactGlobalPresence &detail, item->contact.details<QContactGlobalPresence>())
+            insert(matchTokens, splitWords(detail.nickname()));
+        foreach (const QContactPresence &detail, item->contact.details<QContactPresence>())
+            insert(matchTokens, splitWords(detail.nickname()));
+
+        item->filterKey = matchTokens.toList();
     }
 
     // search forwards over the label components for each filter word, making
