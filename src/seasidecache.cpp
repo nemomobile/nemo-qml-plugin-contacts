@@ -439,6 +439,7 @@ SeasidePerson *SeasideCache::person(SeasideCacheItem *cacheItem)
     if (!cacheItem->person) {
         cacheItem->person = new SeasidePerson(instance);
         cacheItem->person->setContact(cacheItem->contact);
+        cacheItem->filterKey.clear();
 
         if (!cacheItem->hasCompleteContact) {
             // the name is a little incomplete, it's has complete or has requested complete contact.
@@ -717,6 +718,7 @@ void SeasideCache::contactsAvailable()
             if (item.person) {
                 item.person->setContact(contact);
                 item.person->setComplete(true);
+                item.filterKey.clear();
             }
 
              QList<QContactPhoneNumber> phoneNumbers = contact.details<QContactPhoneNumber>();
