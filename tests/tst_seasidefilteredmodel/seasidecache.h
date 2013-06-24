@@ -50,6 +50,8 @@ public:
     static bool savePerson(SeasidePerson *person);
     static void removePerson(SeasidePerson *person);
 
+    static void fetchConstituents(SeasidePerson *person);
+
     static const QVector<ContactIdType> *contacts(SeasideFilteredModel::FilterType filterType);
     static bool isPopulated(SeasideFilteredModel::FilterType filterType);
 

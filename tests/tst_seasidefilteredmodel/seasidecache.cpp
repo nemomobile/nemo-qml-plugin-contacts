@@ -350,6 +350,11 @@ void SeasideCache::removePerson(SeasidePerson *)
 {
 }
 
+void SeasideCache::fetchConstituents(SeasidePerson *person)
+{
+    emit person->constituentsChanged();
+}
+
 const QVector<SeasideCache::ContactIdType> *SeasideCache::contacts(SeasideFilteredModel::FilterType filterType)
 {
     return &instance->m_contacts[filterType];

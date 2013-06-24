@@ -35,8 +35,10 @@
 #include <QContact>
 #include <QContactManager>
 #include <QContactFetchRequest>
+#include <QContactFetchByIdRequest>
 #include <QContactRemoveRequest>
 #include <QContactSaveRequest>
+#include <QContactRelationshipFetchRequest>
 #ifdef USING_QTPIM
 #include <QContactIdFilter>
 #include <QContactIdFetchRequest>
@@ -114,6 +116,8 @@ public:
     static bool savePerson(SeasidePerson *person);
     static void removePerson(SeasidePerson *person);
 
+    static void fetchConstituents(SeasidePerson *person);
+
     static int importContacts(const QString &path);
     static QString exportContacts();
 
@@ -133,6 +137,7 @@ protected:
 private slots:
     void contactsAvailable();
     void contactIdsAvailable();
+    void relationshipsAvailable();
     void requestStateChanged(QContactAbstractRequest::State state);
 #ifdef USING_QTPIM
     void contactsRemoved(const QList<QContactId> &contactIds);
@@ -183,6 +188,7 @@ private:
     QList<QContact> m_contactsToCreate;
     QList<ContactIdType> m_contactsToRemove;
     QList<ContactIdType> m_changedContacts;
+    QList<QContactId> m_contactsToFetchConstituents;
     QList<SeasideNameGroupChangeListener*> m_nameGroupChangeListeners;
     QVector<ContactIdType> m_contacts[SeasideFilteredModel::FilterTypesCount];
     QList<SeasideFilteredModel *> m_models[SeasideFilteredModel::FilterTypesCount];
@@ -190,11 +196,13 @@ private:
     QHash<ContactIdType,int> m_expiredContacts;
     QContactManager m_manager;
     QContactFetchRequest m_fetchRequest;
+    QContactFetchByIdRequest m_fetchByIdRequest;
 #ifdef USING_QTPIM
     QContactIdFetchRequest m_contactIdRequest;
 #else
     QContactLocalIdFetchRequest m_contactIdRequest;
 #endif
+    QContactRelationshipFetchRequest m_relationshipsFetchRequest;
     QContactRemoveRequest m_removeRequest;
     QContactSaveRequest m_saveRequest;
 #ifdef HAS_MLITE
@@ -210,6 +218,8 @@ private:
     bool m_updatesPending;
     bool m_fetchActive;
     bool m_refreshRequired;
+    bool m_contactsUpdated;
+    QList<ContactIdType> m_constituentIds;
 
     QElapsedTimer m_timer;
     QElapsedTimer m_fetchPostponed;
