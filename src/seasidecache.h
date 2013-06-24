@@ -218,6 +218,7 @@ private:
     bool m_updatesPending;
     bool m_fetchActive;
     bool m_refreshRequired;
+    bool m_contactsUpdated;
     QList<ContactIdType> m_constituentIds;
 
     QElapsedTimer m_timer;

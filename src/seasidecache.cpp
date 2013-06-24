@@ -141,6 +141,7 @@ SeasideCache::SeasideCache()
     , m_displayLabelOrder(SeasideFilteredModel::FirstNameFirst)
     , m_updatesPending(true)
     , m_refreshRequired(false)
+    , m_contactsUpdated(false)
 {
     Q_ASSERT(!instance);
     instance = this;
@@ -684,7 +685,10 @@ void SeasideCache::fetchContacts()
         m_fetchPostponed.invalidate();
 
         // Fetch any changed contacts immediately
-        m_refreshRequired = true;
+        if (m_contactsUpdated) {
+            m_contactsUpdated = false;
+            m_refreshRequired = true;
+        }
         requestUpdate();
     }
 }
@@ -697,6 +701,7 @@ void SeasideCache::updateContacts(const QList<ContactIdType> &contactIds)
     // Maximum wait until we fetch all changes previously reported
     static const int MaxPostponementMs = 5000;
 
+    m_contactsUpdated = true;
     m_changedContacts.append(contactIds);
 
     if (m_fetchPostponed.isValid()) {
