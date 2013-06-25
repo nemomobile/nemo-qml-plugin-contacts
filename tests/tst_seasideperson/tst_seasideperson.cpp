@@ -81,6 +81,8 @@ private slots:
     void marshalling();
     void setContact();
     void vcard();
+    void syncTarget();
+    void constituents();
 };
 
 void tst_SeasidePerson::firstName()
@@ -522,6 +524,21 @@ void tst_SeasidePerson::vcard()
     QVERIFY(vcard.indexOf("TEL:12345678") > 0);
 }
 
+void tst_SeasidePerson::syncTarget()
+{
+    QScopedPointer<SeasidePerson> person(new SeasidePerson);
+
+    // Until stored to the contacts manager, a person has no syncTarget
+    QCOMPARE(person->syncTarget(), QString());
+}
+
+void tst_SeasidePerson::constituents()
+{
+    QScopedPointer<SeasidePerson> person(new SeasidePerson);
+
+    // No constituents in this data
+    QCOMPARE(person->constituents(), QList<int>());
+}
 
 // TODO:
 // - account URIs/paths (or let contactsd do that?)

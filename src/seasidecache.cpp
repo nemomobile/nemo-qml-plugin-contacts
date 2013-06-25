@@ -141,6 +141,7 @@ SeasideCache::SeasideCache()
     , m_displayLabelOrder(SeasideFilteredModel::FirstNameFirst)
     , m_updatesPending(true)
     , m_refreshRequired(false)
+    , m_contactsUpdated(false)
 {
     Q_ASSERT(!instance);
     instance = this;
@@ -173,11 +174,17 @@ SeasideCache::SeasideCache()
 #endif
 
     connect(&m_fetchRequest, SIGNAL(resultsAvailable()), this, SLOT(contactsAvailable()));
+    connect(&m_fetchByIdRequest, SIGNAL(resultsAvailable()), this, SLOT(contactsAvailable()));
     connect(&m_contactIdRequest, SIGNAL(resultsAvailable()), this, SLOT(contactIdsAvailable()));
+    connect(&m_relationshipsFetchRequest, SIGNAL(resultsAvailable()), this, SLOT(relationshipsAvailable()));
 
     connect(&m_fetchRequest, SIGNAL(stateChanged(QContactAbstractRequest::State)),
             this, SLOT(requestStateChanged(QContactAbstractRequest::State)));
+    connect(&m_fetchByIdRequest, SIGNAL(stateChanged(QContactAbstractRequest::State)),
+            this, SLOT(requestStateChanged(QContactAbstractRequest::State)));
     connect(&m_contactIdRequest, SIGNAL(stateChanged(QContactAbstractRequest::State)),
+            this, SLOT(requestStateChanged(QContactAbstractRequest::State)));
+    connect(&m_relationshipsFetchRequest, SIGNAL(stateChanged(QContactAbstractRequest::State)),
             this, SLOT(requestStateChanged(QContactAbstractRequest::State)));
     connect(&m_removeRequest, SIGNAL(stateChanged(QContactAbstractRequest::State)),
             this, SLOT(requestStateChanged(QContactAbstractRequest::State)));
@@ -185,10 +192,11 @@ SeasideCache::SeasideCache()
             this, SLOT(requestStateChanged(QContactAbstractRequest::State)));
 
     m_fetchRequest.setManager(&m_manager);
+    m_fetchByIdRequest.setManager(&m_manager);
+    m_contactIdRequest.setManager(&m_manager);
+    m_relationshipsFetchRequest.setManager(&m_manager);
     m_removeRequest.setManager(&m_manager);
     m_saveRequest.setManager(&m_manager);
-
-    m_contactIdRequest.setManager(&m_manager);
 
     QContactFetchHint fetchHint;
     fetchHint.setOptimizationHints(QContactFetchHint::NoRelationships
@@ -518,6 +526,16 @@ void SeasideCache::removeContactData(
         models.at(i)->sourceItemsRemoved();
 }
 
+void SeasideCache::fetchConstituents(SeasidePerson *person)
+{
+    QContactId personId(person->contact().id());
+
+    if (!instance->m_contactsToFetchConstituents.contains(personId)) {
+        instance->m_contactsToFetchConstituents.append(personId);
+        instance->requestUpdate();
+    }
+}
+
 const QVector<SeasideCache::ContactIdType> *SeasideCache::contacts(SeasideFilteredModel::FilterType type)
 {
     return &instance->m_contacts[type];
@@ -550,6 +568,30 @@ bool SeasideCache::event(QEvent *event)
 
         m_contactsToCreate.clear();
         m_contactsToSave.clear();
+    } else if (!m_constituentIds.isEmpty()) {
+        // Fetch the constituent information (even if they're already in the
+        // cache, because we don't update non-aggregates on change notifications)
+#ifdef USING_QTPIM
+        m_fetchByIdRequest.setIds(m_constituentIds);
+#else
+        m_fetchByIdRequest.setLocalIds(m_constituentIds);
+#endif
+        m_fetchByIdRequest.start();
+    } else if (!m_contactsToFetchConstituents.isEmpty()) {
+        QContactId aggregateId = m_contactsToFetchConstituents.first();
+
+        // Find the constituents of this contact
+#ifdef USING_QTPIM
+        QContact first;
+        first.setId(aggregateId);
+        m_relationshipsFetchRequest.setFirst(first);
+        m_relationshipsFetchRequest.setRelationshipType(QContactRelationship::Aggregates());
+#else
+        m_relationshipsFetchRequest.setFirst(aggregateId);
+        m_relationshipsFetchRequest.setRelationshipType(QContactRelationship::Aggregates);
+#endif
+
+        m_relationshipsFetchRequest.start();
     } else if (!m_changedContacts.isEmpty()) {
         m_resultsRead = 0;
 
@@ -643,7 +685,10 @@ void SeasideCache::fetchContacts()
         m_fetchPostponed.invalidate();
 
         // Fetch any changed contacts immediately
-        m_refreshRequired = true;
+        if (m_contactsUpdated) {
+            m_contactsUpdated = false;
+            m_refreshRequired = true;
+        }
         requestUpdate();
     }
 }
@@ -656,6 +701,7 @@ void SeasideCache::updateContacts(const QList<ContactIdType> &contactIds)
     // Maximum wait until we fetch all changes previously reported
     static const int MaxPostponementMs = 5000;
 
+    m_contactsUpdated = true;
     m_changedContacts.append(contactIds);
 
     if (m_fetchPostponed.isValid()) {
@@ -674,14 +720,22 @@ void SeasideCache::updateContacts(const QList<ContactIdType> &contactIds)
 
 void SeasideCache::contactsAvailable()
 {
+    QContactAbstractRequest *request = static_cast<QContactAbstractRequest *>(sender());
+
+    QList<QContact> contacts;
+    if (request == &m_fetchByIdRequest) {
+        contacts = m_fetchByIdRequest.contacts();
+    } else {
+        contacts = m_fetchRequest.contacts();
+    }
+
     if (m_fetchFilter == SeasideFilteredModel::FilterFavorites
             || m_fetchFilter == SeasideFilteredModel::FilterOnline
             || m_fetchFilter == SeasideFilteredModel::FilterAll) {
         // Part of an initial query.
-        appendContacts(m_fetchRequest.contacts());
+        appendContacts(contacts);
     } else {
         // An update.
-        const QList<QContact> contacts = m_fetchRequest.contacts();
         QList<QChar> modifiedGroups;
 
         for (int i = m_resultsRead; i < contacts.count(); ++i) {
@@ -785,6 +839,25 @@ void SeasideCache::contactIdsAvailable()
             m_cacheIndex,
             m_contactIdRequest.ids(),
             m_queryIndex);
+}
+
+void SeasideCache::relationshipsAvailable()
+{
+#ifdef USING_QTPIM
+    static const QString aggregatesRelationship = QContactRelationship::Aggregates();
+#else
+    static const QString aggregatesRelationship = QContactRelationship::Aggregates;
+#endif
+
+    foreach (const QContactRelationship &rel, m_relationshipsFetchRequest.relationships()) {
+        if (rel.relationshipType() == aggregatesRelationship) {
+#ifdef USING_QTPIM
+            m_constituentIds.append(SeasideFilteredModel::apiId(rel.second()));
+#else
+            m_constituentIds.append(rel.second().localId());
+#endif
+        }
+    }
 }
 
 void SeasideCache::finalizeUpdate(SeasideFilteredModel::FilterType filter)
@@ -916,6 +989,41 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
 {
     if (state != QContactAbstractRequest::FinishedState)
         return;
+
+    QContactAbstractRequest *request = static_cast<QContactAbstractRequest *>(sender());
+
+    if (request == &m_relationshipsFetchRequest) {
+        if (m_constituentIds.isEmpty()) {
+            // We didn't find any constituents - report the empty list
+            QContactId aggregateId = m_contactsToFetchConstituents.takeFirst();
+#ifdef USING_QTPIM
+            SeasidePerson *person = personById(aggregateId);
+#else
+            SeasidePerson *person = personById(aggregateId.localId());
+#endif
+            person->setConstituents(QList<int>());
+            emit person->constituentsChanged();
+        }
+    } else if (request == &m_fetchByIdRequest) {
+        if (!m_constituentIds.isEmpty()) {
+            // Report these results
+            QContactId aggregateId = m_contactsToFetchConstituents.takeFirst();
+#ifdef USING_QTPIM
+            SeasidePerson *person = personById(aggregateId);
+#else
+            SeasidePerson *person = personById(aggregateId.localId());
+#endif
+
+            QList<int> constituentIds;
+            foreach (const ContactIdType &id, m_constituentIds) {
+                constituentIds.append(SeasideFilteredModel::internalId(id));
+            }
+            m_constituentIds.clear();
+
+            person->setConstituents(constituentIds);
+            emit person->constituentsChanged();
+        }
+    }
 
     if (m_fetchFilter == SeasideFilteredModel::FilterFavorites) {
         // Next, query for all contacts

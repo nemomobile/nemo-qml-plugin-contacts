@@ -123,6 +123,8 @@ public:
         AccountIconPathsType,
         PresenceStatesType,
         PresenceMessagesType,
+        // Other
+        SyncTarget
     };
 
     enum PresenceState {
@@ -250,6 +252,13 @@ public:
     Q_PROPERTY(QStringList accountIconPaths READ accountIconPaths NOTIFY accountIconPathsChanged)
     QStringList accountIconPaths() const;
 
+    Q_PROPERTY(QString syncTarget READ syncTarget)
+    QString syncTarget() const;
+
+    Q_PROPERTY(QList<int> constituents READ constituents NOTIFY constituentsChanged)
+    QList<int> constituents() const;
+    void setConstituents(const QList<int> &constituents);
+
     Q_INVOKABLE void addAccount(const QString &path, const QString &uri, const QString &provider,
                                 const QString &iconPath = QString());
 
@@ -260,6 +269,8 @@ public:
     Q_INVOKABLE void setContactData(const QVariant &data) { setContact(data.value<QContact>()); }
 
     Q_INVOKABLE QString vCard() const;
+
+    Q_INVOKABLE void fetchConstituents();
 
     static QString generateDisplayLabel(
                 const QContact &mContact,
@@ -299,6 +310,7 @@ signals:
     void accountPathsChanged();
     void accountProvidersChanged();
     void accountIconPathsChanged();
+    void constituentsChanged();
 
 public slots:
     void recalculateDisplayLabel(SeasideFilteredModel::DisplayLabelOrder order = SeasideFilteredModel::FirstNameFirst);
@@ -308,8 +320,10 @@ private:
     explicit SeasidePerson(const QContact &contact, QObject *parent = 0);
     QContact mContact;
     QString mDisplayLabel;
+    QList<int> mConstituents;
     bool mComplete;
 
+    friend class SeasideCache;
     friend class tst_SeasidePerson;
     friend class SeasidePeopleModelPriv;
 };

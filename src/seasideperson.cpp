@@ -47,6 +47,7 @@
 #include <QContactUrl>
 #include <QContactPresence>
 #include <QContactGlobalPresence>
+#include <QContactSyncTarget>
 
 #include <QVersitWriter>
 #include <QVersitContactExporter>
@@ -908,6 +909,21 @@ QStringList SeasidePerson::accountIconPaths() const
     return rv;
 }
 
+QString SeasidePerson::syncTarget() const
+{
+    return mContact.detail<QContactSyncTarget>().syncTarget();
+}
+
+QList<int> SeasidePerson::constituents() const
+{
+    return mConstituents;
+}
+
+void SeasidePerson::setConstituents(const QList<int> &constituents)
+{
+    mConstituents = constituents;
+}
+
 void SeasidePerson::addAccount(const QString &path, const QString &uri, const QString &provider, const QString &iconPath)
 {
     QContactOnlineAccount detail;
@@ -1036,6 +1052,11 @@ QString SeasidePerson::vCard() const
     writer.waitForFinished();
 
     return QString::fromUtf8(vcard);
+}
+
+void SeasidePerson::fetchConstituents()
+{
+    SeasideCache::fetchConstituents(this);
 }
 
 SeasidePersonAttached *SeasidePerson::qmlAttachedProperties(QObject *object)
