@@ -115,6 +115,7 @@ public:
     Q_INVOKABLE SeasidePerson *personByRow(int row) const;
     Q_INVOKABLE SeasidePerson *personById(int id) const;
     Q_INVOKABLE SeasidePerson *personByPhoneNumber(const QString &msisdn) const;
+    Q_INVOKABLE SeasidePerson *personByEmailAddress(const QString &email) const;
     Q_INVOKABLE SeasidePerson *selfPerson() const;
     Q_INVOKABLE void removePerson(SeasidePerson *person);
 
