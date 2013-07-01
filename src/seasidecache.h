@@ -113,6 +113,7 @@ public:
     static SeasidePerson *person(SeasideCacheItem *item);
 
     static SeasidePerson *personByPhoneNumber(const QString &msisdn);
+    static SeasidePerson *personByEmailAddress(const QString &email);
     static bool savePerson(SeasidePerson *person);
     static void removePerson(SeasidePerson *person);
 
@@ -183,6 +184,7 @@ private:
     QBasicTimer m_fetchTimer;
     QHash<quint32, SeasideCacheItem> m_people;
     QHash<QString, quint32> m_phoneNumberIds;
+    QHash<QString, quint32> m_emailAddressIds;
     QHash<ContactIdType, QContact> m_contactsToSave;
     QHash<QChar, int> m_contactNameGroups;
     QList<QContact> m_contactsToCreate;

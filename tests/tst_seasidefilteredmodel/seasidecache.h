@@ -47,6 +47,7 @@ public:
     static SeasidePerson *person(SeasideCacheItem *item);
 
     static SeasidePerson *personByPhoneNumber(const QString &msisdn);
+    static SeasidePerson *personByEmailAddress(const QString &email);
     static bool savePerson(SeasidePerson *person);
     static void removePerson(SeasidePerson *person);
 
