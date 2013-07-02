@@ -437,6 +437,14 @@ SeasidePerson *SeasideCache::personByPhoneNumber(const QString &msisdn)
     return 0;
 }
 
+SeasidePerson *SeasideCache::personByEmailAddress(const QString &email)
+{
+    QHash<QString, quint32>::const_iterator it = instance->m_emailAddressIds.find(email.toLower());
+    if (it != instance->m_emailAddressIds.end())
+        return personById(*it);
+    return 0;
+}
+
 SeasidePerson *SeasideCache::selfPerson()
 {
     return personById(instance->m_manager.selfContactId());
@@ -777,7 +785,13 @@ void SeasideCache::contactsAvailable()
 
              QList<QContactPhoneNumber> phoneNumbers = contact.details<QContactPhoneNumber>();
              for (int j = 0; j < phoneNumbers.count(); ++j) {
-                 m_phoneNumberIds[phoneNumbers.at(j).number()] = iid;
+                 QString normalizedNumber = Normalization::normalizePhoneNumber(phoneNumbers.at(j).number());
+                 m_phoneNumberIds[normalizedNumber] = iid;
+             }
+
+             QList<QContactEmailAddress> emailAddresses = contact.details<QContactEmailAddress>();
+             for (int j = 0; j < emailAddresses.count(); ++j) {
+                 m_emailAddressIds[emailAddresses.at(j).emailAddress().toLower()] = iid;
              }
 
              if (m_fetchFilter == SeasideFilteredModel::FilterAll) {
@@ -973,6 +987,10 @@ void SeasideCache::appendContacts(const QList<QContact> &contacts)
                 foreach (const QContactPhoneNumber &phoneNumber, contact.details<QContactPhoneNumber>()) {
                     QString normalizedNumber = Normalization::normalizePhoneNumber(phoneNumber.number());
                     m_phoneNumberIds[normalizedNumber] = iid;
+                }
+
+                foreach (const QContactEmailAddress &emailAddress, contact.details<QContactEmailAddress>()) {
+                    m_emailAddressIds[emailAddress.emailAddress().toLower()] = iid;
                 }
             }
 

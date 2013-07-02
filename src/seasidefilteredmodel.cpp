@@ -535,6 +535,11 @@ SeasidePerson *SeasideFilteredModel::personByPhoneNumber(const QString &msisdn) 
     return SeasideCache::personByPhoneNumber(msisdn);
 }
 
+SeasidePerson *SeasideFilteredModel::personByEmailAddress(const QString &email) const
+{
+    return SeasideCache::personByEmailAddress(email);
+}
+
 SeasidePerson *SeasideFilteredModel::selfPerson() const
 {
     return SeasideCache::selfPerson();
