@@ -119,6 +119,8 @@ public:
 
     static void fetchConstituents(SeasidePerson *person);
 
+    static void fetchMergeCandidates(SeasidePerson *person);
+
     static int importContacts(const QString &path);
     static QString exportContacts();
 
@@ -191,6 +193,7 @@ private:
     QList<ContactIdType> m_contactsToRemove;
     QList<ContactIdType> m_changedContacts;
     QList<QContactId> m_contactsToFetchConstituents;
+    QList<QContactId> m_contactsToFetchCandidates;
     QList<SeasideNameGroupChangeListener*> m_nameGroupChangeListeners;
     QVector<ContactIdType> m_contacts[SeasideFilteredModel::FilterTypesCount];
     QList<SeasideFilteredModel *> m_models[SeasideFilteredModel::FilterTypesCount];
@@ -222,6 +225,7 @@ private:
     bool m_refreshRequired;
     bool m_contactsUpdated;
     QList<ContactIdType> m_constituentIds;
+    QList<ContactIdType> m_candidateIds;
 
     QElapsedTimer m_timer;
     QElapsedTimer m_fetchPostponed;

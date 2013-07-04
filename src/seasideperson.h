@@ -259,6 +259,10 @@ public:
     QList<int> constituents() const;
     void setConstituents(const QList<int> &constituents);
 
+    Q_PROPERTY(QList<int> mergeCandidates READ mergeCandidates NOTIFY mergeCandidatesChanged)
+    QList<int> mergeCandidates() const;
+    void setMergeCandidates(const QList<int> &candidates);
+
     Q_INVOKABLE void addAccount(const QString &path, const QString &uri, const QString &provider,
                                 const QString &iconPath = QString());
 
@@ -271,6 +275,8 @@ public:
     Q_INVOKABLE QString vCard() const;
 
     Q_INVOKABLE void fetchConstituents();
+
+    Q_INVOKABLE void fetchMergeCandidates();
 
     static QString generateDisplayLabel(
                 const QContact &mContact,
@@ -311,6 +317,7 @@ signals:
     void accountProvidersChanged();
     void accountIconPathsChanged();
     void constituentsChanged();
+    void mergeCandidatesChanged();
 
 public slots:
     void recalculateDisplayLabel(SeasideFilteredModel::DisplayLabelOrder order = SeasideFilteredModel::FirstNameFirst);
@@ -321,6 +328,7 @@ private:
     QContact mContact;
     QString mDisplayLabel;
     QList<int> mConstituents;
+    QList<int> mCandidates;
     bool mComplete;
 
     friend class SeasideCache;
