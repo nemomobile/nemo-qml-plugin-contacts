@@ -924,6 +924,16 @@ void SeasidePerson::setConstituents(const QList<int> &constituents)
     mConstituents = constituents;
 }
 
+QList<int> SeasidePerson::mergeCandidates() const
+{
+    return mCandidates;
+}
+
+void SeasidePerson::setMergeCandidates(const QList<int> &candidates)
+{
+    mCandidates = candidates;
+}
+
 void SeasidePerson::addAccount(const QString &path, const QString &uri, const QString &provider, const QString &iconPath)
 {
     QContactOnlineAccount detail;
@@ -1057,6 +1067,11 @@ QString SeasidePerson::vCard() const
 void SeasidePerson::fetchConstituents()
 {
     SeasideCache::fetchConstituents(this);
+}
+
+void SeasidePerson::fetchMergeCandidates()
+{
+    SeasideCache::fetchMergeCandidates(this);
 }
 
 SeasidePersonAttached *SeasidePerson::qmlAttachedProperties(QObject *object)

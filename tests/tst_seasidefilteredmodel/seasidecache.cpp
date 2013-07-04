@@ -360,6 +360,11 @@ void SeasideCache::fetchConstituents(SeasidePerson *person)
     emit person->constituentsChanged();
 }
 
+void SeasideCache::fetchMergeCandidates(SeasidePerson *person)
+{
+    emit person->mergeCandidatesChanged();
+}
+
 const QVector<SeasideCache::ContactIdType> *SeasideCache::contacts(SeasideFilteredModel::FilterType filterType)
 {
     return &instance->m_contacts[filterType];
