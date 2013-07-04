@@ -53,6 +53,8 @@ public:
 
     static void fetchConstituents(SeasidePerson *person);
 
+    static void fetchMergeCandidates(SeasidePerson *person);
+
     static const QVector<ContactIdType> *contacts(SeasideFilteredModel::FilterType filterType);
     static bool isPopulated(SeasideFilteredModel::FilterType filterType);
 

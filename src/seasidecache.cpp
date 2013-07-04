@@ -48,9 +48,11 @@
 
 #include <QContactAvatar>
 #include <QContactDetailFilter>
+#include <QContactDisplayLabel>
 #include <QContactEmailAddress>
 #include <QContactFavorite>
 #include <QContactName>
+#include <QContactNickname>
 #include <QContactOnlineAccount>
 #include <QContactOrganization>
 #include <QContactPhoneNumber>
@@ -544,6 +546,16 @@ void SeasideCache::fetchConstituents(SeasidePerson *person)
     }
 }
 
+void SeasideCache::fetchMergeCandidates(SeasidePerson *person)
+{
+    QContactId personId(person->contact().id());
+
+    if (!instance->m_contactsToFetchCandidates.contains(personId)) {
+        instance->m_contactsToFetchCandidates.append(personId);
+        instance->requestUpdate();
+    }
+}
+
 const QVector<SeasideCache::ContactIdType> *SeasideCache::contacts(SeasideFilteredModel::FilterType type)
 {
     return &instance->m_contacts[type];
@@ -552,6 +564,118 @@ const QVector<SeasideCache::ContactIdType> *SeasideCache::contacts(SeasideFilter
 bool SeasideCache::isPopulated(SeasideFilteredModel::FilterType filterType)
 {
     return instance->m_populated & (1 << filterType);
+}
+
+static QContactFilter filterForMergeCandidates(const QContact &contact)
+{
+    // Find any contacts that we might merge with the supplied contact
+    QContactFilter rv;
+
+    QContactName name(contact.detail<QContactName>());
+    QString firstName(name.firstName());
+    QString lastName(name.lastName());
+
+    if (firstName.isEmpty() && lastName.isEmpty()) {
+        // Use the displayLabel to match with
+        QString label(contact.detail<QContactDisplayLabel>().label());
+
+        // Partial match to first name
+        QContactDetailFilter firstNameFilter;
+        setDetailType<QContactName>(firstNameFilter, QContactName::FieldFirstName);
+        firstNameFilter.setMatchFlags(QContactFilter::MatchContains | QContactFilter::MatchFixedString);
+        firstNameFilter.setValue(label);
+        rv = rv | firstNameFilter;
+
+        // Partial match to last name
+        QContactDetailFilter lastNameFilter;
+        setDetailType<QContactName>(lastNameFilter, QContactName::FieldLastName);
+        lastNameFilter.setMatchFlags(QContactFilter::MatchContains | QContactFilter::MatchFixedString);
+        lastNameFilter.setValue(label);
+        rv = rv | lastNameFilter;
+
+        // Partial match to nickname
+        QContactDetailFilter nicknameFilter;
+        setDetailType<QContactNickname>(nicknameFilter, QContactNickname::FieldNickname);
+        nicknameFilter.setMatchFlags(QContactFilter::MatchContains | QContactFilter::MatchFixedString);
+        nicknameFilter.setValue(label);
+        rv = rv | nicknameFilter;
+    } else {
+        if (!firstName.isEmpty()) {
+            // Partial match to first name
+            QContactDetailFilter nameFilter;
+            setDetailType<QContactName>(nameFilter, QContactName::FieldFirstName);
+            nameFilter.setMatchFlags(QContactFilter::MatchContains | QContactFilter::MatchFixedString);
+            nameFilter.setValue(firstName);
+            rv = rv | nameFilter;
+
+            // Partial match to first name in the nickname
+            QContactDetailFilter nicknameFilter;
+            setDetailType<QContactNickname>(nicknameFilter, QContactNickname::FieldNickname);
+            nicknameFilter.setMatchFlags(QContactFilter::MatchContains | QContactFilter::MatchFixedString);
+            nicknameFilter.setValue(firstName);
+            rv = rv | nicknameFilter;
+        }
+        if (!lastName.isEmpty()) {
+            // Partial match to last name
+            QContactDetailFilter nameFilter;
+            setDetailType<QContactName>(nameFilter, QContactName::FieldLastName);
+            nameFilter.setMatchFlags(QContactFilter::MatchContains | QContactFilter::MatchFixedString);
+            nameFilter.setValue(lastName);
+            rv = rv | nameFilter;
+
+            // Partial match to last name in the nickname
+            QContactDetailFilter nicknameFilter;
+            setDetailType<QContactNickname>(nicknameFilter, QContactNickname::FieldNickname);
+            nicknameFilter.setMatchFlags(QContactFilter::MatchContains | QContactFilter::MatchFixedString);
+            nicknameFilter.setValue(lastName);
+            rv = rv | nicknameFilter;
+        }
+    }
+
+    // Phone number match
+    foreach (const QContactPhoneNumber &number, contact.details<QContactPhoneNumber>()) {
+        rv = rv | QContactPhoneNumber::match(number.number());
+    }
+
+    // Email address match
+    foreach (const QContactEmailAddress &emailAddress, contact.details<QContactEmailAddress>()) {
+        QString address(emailAddress.emailAddress());
+        int index = address.indexOf(QChar::fromLatin1('@'));
+        if (index > 0) {
+            // Match any address that is the same up to the @ symbol
+            address = address.left(index);
+        }
+
+        QContactDetailFilter filter;
+        setDetailType<QContactEmailAddress>(filter, QContactEmailAddress::FieldEmailAddress);
+        filter.setMatchFlags((index > 0 ? QContactFilter::MatchStartsWith : QContactFilter::MatchExactly) | QContactFilter::MatchFixedString);
+        filter.setValue(address);
+        rv = rv | filter;
+    }
+
+    // Account URI match
+    foreach (const QContactOnlineAccount &account, contact.details<QContactOnlineAccount>()) {
+        QString uri(account.accountUri());
+        int index = uri.indexOf(QChar::fromLatin1('@'));
+        if (index > 0) {
+            // Match any account URI that is the same up to the @ symbol
+            uri = uri.left(index);
+        }
+
+        QContactDetailFilter filter;
+        setDetailType<QContactOnlineAccount>(filter, QContactOnlineAccount::FieldAccountUri);
+        filter.setMatchFlags((index > 0 ? QContactFilter::MatchStartsWith : QContactFilter::MatchExactly) | QContactFilter::MatchFixedString);
+        filter.setValue(uri);
+        rv = rv | filter;
+    }
+
+    // Only return aggregate contact IDs
+    QContactDetailFilter syncTarget;
+    setDetailType<QContactSyncTarget>(syncTarget, QContactSyncTarget::FieldSyncTarget);
+    syncTarget.setValue(QString::fromLatin1("aggregate"));
+    rv = rv & syncTarget;
+
+    return rv;
 }
 
 bool SeasideCache::event(QEvent *event)
@@ -600,6 +724,17 @@ bool SeasideCache::event(QEvent *event)
 #endif
 
         m_relationshipsFetchRequest.start();
+    } else if (!m_contactsToFetchCandidates.isEmpty()) {
+#ifdef USING_QTPIM
+        ContactIdType contactId(m_contactsToFetchCandidates.first());
+#else
+        ContactIdType contactId(m_contactsToFetchCandidates.first().localId());
+#endif
+        const QContact contact(contactById(contactId));
+
+        // Find candidates to merge with this contact
+        m_contactIdRequest.setFilter(filterForMergeCandidates(contact));
+        m_contactIdRequest.start();
     } else if (!m_changedContacts.isEmpty()) {
         m_resultsRead = 0;
 
@@ -847,6 +982,11 @@ void SeasideCache::notifyNameGroupsChanged(const QList<QChar> &groups)
 
 void SeasideCache::contactIdsAvailable()
 {
+    if (!m_contactsToFetchCandidates.isEmpty()) {
+        m_candidateIds.append(m_contactIdRequest.ids());
+        return;
+    }
+
     synchronizeList(
             this,
             m_contacts[m_fetchFilter],
@@ -1011,7 +1151,7 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
     QContactAbstractRequest *request = static_cast<QContactAbstractRequest *>(sender());
 
     if (request == &m_relationshipsFetchRequest) {
-        if (m_constituentIds.isEmpty()) {
+        if (!m_contactsToFetchConstituents.isEmpty() && m_constituentIds.isEmpty()) {
             // We didn't find any constituents - report the empty list
             QContactId aggregateId = m_contactsToFetchConstituents.takeFirst();
 #ifdef USING_QTPIM
@@ -1023,7 +1163,7 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
             emit person->constituentsChanged();
         }
     } else if (request == &m_fetchByIdRequest) {
-        if (!m_constituentIds.isEmpty()) {
+        if (!m_contactsToFetchConstituents.isEmpty()) {
             // Report these results
             QContactId aggregateId = m_contactsToFetchConstituents.takeFirst();
 #ifdef USING_QTPIM
@@ -1040,6 +1180,31 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
 
             person->setConstituents(constituentIds);
             emit person->constituentsChanged();
+        }
+    } else if (request == &m_contactIdRequest) {
+        if (!m_contactsToFetchCandidates.isEmpty()) {
+            // Report these results
+            QContactId contactId = m_contactsToFetchCandidates.takeFirst();
+#ifdef USING_QTPIM
+            SeasidePerson *person = personById(contactId);
+#else
+            SeasidePerson *person = personById(contactId.localId());
+#endif
+
+            const quint32 contactIid = SeasideFilteredModel::internalId(contactId);
+
+            QList<int> candidateIds;
+            foreach (const ContactIdType &id, m_candidateIds) {
+                // Exclude the original source contact
+                const quint32 iid = SeasideFilteredModel::internalId(id);
+                if (iid != contactIid) {
+                    candidateIds.append(iid);
+                }
+            }
+            m_candidateIds.clear();
+
+            person->setMergeCandidates(candidateIds);
+            emit person->mergeCandidatesChanged();
         }
     }
 
