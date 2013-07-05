@@ -99,7 +99,7 @@ void tst_SeasideFilteredModel::populated()
     QCOMPARE(model.isPopulated(), false);
     QCOMPARE(spy.count(), 0);
 
-    cache.populate(SeasideFilteredModel::FilterFavorites);
+    cache.populate(SeasideCache::FilterFavorites);
 
     QCOMPARE(spy.count(), 0);
     model.setFilterType(SeasideFilteredModel::FilterFavorites);
@@ -110,7 +110,7 @@ void tst_SeasideFilteredModel::populated()
     QCOMPARE(model.isPopulated(), false);
     QCOMPARE(spy.count(), 2);
 
-    cache.populate(SeasideFilteredModel::FilterAll);
+    cache.populate(SeasideCache::FilterAll);
     QCOMPARE(model.isPopulated(), true);
     QCOMPARE(spy.count(), 3);
 }
@@ -417,9 +417,9 @@ void tst_SeasideFilteredModel::filterEmail()
 void tst_SeasideFilteredModel::rowsInserted()
 {
     // Remove the exitsting index values
-    cache.remove(SeasideFilteredModel::FilterAll, 0, 7);
+    cache.remove(SeasideCache::FilterAll, 0, 7);
 
-    cache.insert(SeasideFilteredModel::FilterAll, 0, QVector<ContactIdType>()
+    cache.insert(SeasideCache::FilterAll, 0, QVector<ContactIdType>()
             << cache.idAt(2) << cache.idAt(5));
 
     SeasideFilteredModel model;
@@ -430,7 +430,7 @@ void tst_SeasideFilteredModel::rowsInserted()
     QCOMPARE(model.rowCount(), 2);
 
     // 0 1 2 5
-    cache.insert(SeasideFilteredModel::FilterAll, 0, QVector<ContactIdType>()
+    cache.insert(SeasideCache::FilterAll, 0, QVector<ContactIdType>()
             << cache.idAt(0) << cache.idAt(1));
     QCOMPARE(model.rowCount(), 4);
     QCOMPARE(insertedSpy.count(), 1);
@@ -444,7 +444,7 @@ void tst_SeasideFilteredModel::rowsInserted()
     QCOMPARE(model.rowCount(), 1);
 
     // 1 3
-    cache.insert(SeasideFilteredModel::FilterAll, 3, QVector<ContactIdType>()
+    cache.insert(SeasideCache::FilterAll, 3, QVector<ContactIdType>()
             << cache.idAt(3) << cache.idAt(4));
     QCOMPARE(model.rowCount(), 2);
     QCOMPARE(insertedSpy.count(), 1);
@@ -462,7 +462,7 @@ void tst_SeasideFilteredModel::rowsRemoved()
     QCOMPARE(model.rowCount(), 7);
 
     // 2 3 4 5 6
-    cache.remove(SeasideFilteredModel::FilterAll, 0, 2);
+    cache.remove(SeasideCache::FilterAll, 0, 2);
     QCOMPARE(model.rowCount(), 5);
     QCOMPARE(removedSpy.count(), 1);
     QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0);
@@ -475,7 +475,7 @@ void tst_SeasideFilteredModel::rowsRemoved()
     removedSpy.clear();
 
     // 2 5
-    cache.remove(SeasideFilteredModel::FilterAll, 1, 2);
+    cache.remove(SeasideCache::FilterAll, 1, 2);
     QCOMPARE(model.rowCount(), 2);
     QCOMPARE(removedSpy.count(), 1);
     QCOMPARE(removedSpy.at(0).at(1).value<int>(), 1);
@@ -495,7 +495,7 @@ void tst_SeasideFilteredModel::dataChanged()
     QSignalSpy changedSpy(&model, SIGNAL(dataChanged(QModelIndex,QModelIndex)));
 
     // 0 1 2 3 4 5 6
-    cache.setFirstName(SeasideFilteredModel::FilterAll, 2, "Doug");
+    cache.setFirstName(SeasideCache::FilterAll, 2, "Doug");
     QCOMPARE(model.rowCount(), 7);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 0);
@@ -510,7 +510,7 @@ void tst_SeasideFilteredModel::dataChanged()
     removedSpy.clear();
     changedSpy.clear();
 
-    cache.setFirstName(SeasideFilteredModel::FilterAll, 2, "Aaron");
+    cache.setFirstName(SeasideCache::FilterAll, 2, "Aaron");
     QCOMPARE(model.rowCount(), 5);
     QCOMPARE(insertedSpy.count(), 1);
     QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 2);
@@ -521,7 +521,7 @@ void tst_SeasideFilteredModel::dataChanged()
     insertedSpy.clear();
 
     // 0 1 2 3 4 5
-    cache.setFirstName(SeasideFilteredModel::FilterAll, 2, "Doug");
+    cache.setFirstName(SeasideCache::FilterAll, 2, "Doug");
     QCOMPARE(model.rowCount(), 4);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
@@ -648,7 +648,7 @@ void tst_SeasideFilteredModel::searchByFirstNameCharacter()
     model.setFilterPattern("aaron");    // only first letter counts
     QCOMPARE(model.rowCount(), 4);
 
-    SeasideCacheItem *cacheItem = SeasideCache::cacheItemById(cache.idAt(0));
+    SeasideCache::CacheItem *cacheItem = SeasideCache::cacheItemById(cache.idAt(0));
 #ifdef USING_QTPIM
     QContactDisplayLabel displayLabel = cacheItem->contact.detail<QContactDisplayLabel>();
     displayLabel.setLabel("");

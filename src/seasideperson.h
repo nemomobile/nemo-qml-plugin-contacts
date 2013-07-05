@@ -47,7 +47,7 @@
 #include <QContactPresence>
 
 // Seaside
-#include "seasidefilteredmodel.h"
+#include "seasidecache.h"
 
 USE_CONTACTS_NAMESPACE
 
@@ -280,7 +280,7 @@ public:
 
     static QString generateDisplayLabel(
                 const QContact &mContact,
-                SeasideFilteredModel::DisplayLabelOrder order = SeasideFilteredModel::FirstNameFirst);
+                SeasideCache::DisplayLabelOrder order = SeasideCache::FirstNameFirst);
     static QString generateDisplayLabelFromNonNameDetails(const QContact &mContact);
 
     static SeasidePersonAttached *qmlAttachedProperties(QObject *object);
@@ -320,7 +320,7 @@ signals:
     void mergeCandidatesChanged();
 
 public slots:
-    void recalculateDisplayLabel(SeasideFilteredModel::DisplayLabelOrder order = SeasideFilteredModel::FirstNameFirst);
+    void recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order = SeasideCache::FirstNameFirst);
 
 private:
     // TODO: private class

@@ -158,7 +158,7 @@ void SeasidePerson::setMiddleName(const QString &name)
 }
 
 // small helper to avoid inconvenience
-QString SeasidePerson::generateDisplayLabel(const QContact &mContact, SeasideFilteredModel::DisplayLabelOrder order)
+QString SeasidePerson::generateDisplayLabel(const QContact &mContact, SeasideCache::DisplayLabelOrder order)
 {
     QContactName name = mContact.detail<QContactName>();
 
@@ -174,7 +174,7 @@ QString SeasidePerson::generateDisplayLabel(const QContact &mContact, SeasideFil
 
     QString nameStr1;
     QString nameStr2;
-    if (order == SeasideFilteredModel::LastNameFirst) {
+    if (order == SeasideCache::LastNameFirst) {
         nameStr1 = name.lastName();
         nameStr2 = name.firstName();
     } else {
@@ -248,7 +248,7 @@ QString SeasidePerson::generateDisplayLabelFromNonNameDetails(const QContact &mC
     return QString();
 }
 
-void SeasidePerson::recalculateDisplayLabel(SeasideFilteredModel::DisplayLabelOrder order)
+void SeasidePerson::recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order)
 {
     QString oldDisplayLabel = mDisplayLabel;
     QString newDisplayLabel = generateDisplayLabel(mContact, order);

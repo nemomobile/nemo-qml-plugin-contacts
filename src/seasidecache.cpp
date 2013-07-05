@@ -32,6 +32,7 @@
 #include "seasidecache.h"
 
 #include "seasideperson.h"
+
 #include "normalization_p.h"
 #include "synchronizelists_p.h"
 #include "constants_p.h"
@@ -129,6 +130,73 @@ void setDetailType(Filter &filter, Field field)
 #endif
 }
 
+SeasideCache::ContactIdType SeasideCache::apiId(const QContact &contact)
+{
+#ifdef USING_QTPIM
+    return contact.id();
+#else
+    return contact.id().localId();
+#endif
+}
+
+SeasideCache::ContactIdType SeasideCache::apiId(quint32 iid)
+{
+#ifdef USING_QTPIM
+    // Currently only works with qtcontacts-sqlite
+    QContactId contactId;
+    if (iid != 0) {
+        static const QString idStr(QString::fromLatin1("qtcontacts:org.nemomobile.contacts.sqlite::sql-%1"));
+        contactId = QContactId::fromString(idStr.arg(iid));
+        if (contactId.isNull()) {
+            qWarning() << "Unable to formulate valid ID from:" << iid;
+        }
+    }
+    return contactId;
+#else
+    return static_cast<ContactIdType>(iid);
+#endif
+}
+
+bool SeasideCache::validId(const ContactIdType &id)
+{
+#ifdef USING_QTPIM
+    return !id.isNull();
+#else
+    return (id != 0);
+#endif
+}
+
+quint32 SeasideCache::internalId(const QContact &contact)
+{
+    return internalId(contact.id());
+}
+
+quint32 SeasideCache::internalId(const QContactId &id)
+{
+#ifdef USING_QTPIM
+    // We need to be able to represent an ID as a 32-bit int; we could use
+    // hashing, but for now we will just extract the integral part of the ID
+    // string produced by qtcontacts-sqlite
+    if (!id.isNull()) {
+        QStringList components = id.toString().split(QChar::fromLatin1(':'));
+        const QString &idComponent = components.isEmpty() ? QString() : components.last();
+        if (idComponent.startsWith(QString::fromLatin1("sql-"))) {
+            return idComponent.mid(4).toUInt();
+        }
+    }
+    return 0;
+#else
+    return static_cast<quint32>(id.localId());
+#endif
+}
+
+#ifndef USING_QTPIM
+quint32 SeasideCache::internalId(QContactLocalId id)
+{
+    return static_cast<quint32>(id);
+}
+#endif
+
 SeasideCache::SeasideCache()
     : m_manager(managerName())
 #ifdef HAS_MLITE
@@ -139,8 +207,8 @@ SeasideCache::SeasideCache()
     , m_cacheIndex(0)
     , m_queryIndex(0)
     , m_appendIndex(0)
-    , m_fetchFilter(SeasideFilteredModel::FilterFavorites)
-    , m_displayLabelOrder(SeasideFilteredModel::FirstNameFirst)
+    , m_fetchFilter(FilterFavorites)
+    , m_displayLabelOrder(FirstNameFirst)
     , m_updatesPending(true)
     , m_refreshRequired(false)
     , m_contactsUpdated(false)
@@ -154,7 +222,7 @@ SeasideCache::SeasideCache()
     connect(&m_displayLabelOrderConf, SIGNAL(valueChanged()), this, SLOT(displayLabelOrderChanged()));
     QVariant displayLabelOrder = m_displayLabelOrderConf.value();
     if (displayLabelOrder.isValid())
-        m_displayLabelOrder = SeasideFilteredModel::DisplayLabelOrder(displayLabelOrder.toInt());
+        m_displayLabelOrder = static_cast<DisplayLabelOrder>(displayLabelOrder.toInt());
 #endif
 
 #ifdef USING_QTPIM
@@ -231,7 +299,7 @@ SeasideCache::SeasideCache()
     secondLabelOrder.setDirection(Qt::AscendingOrder);
     secondLabelOrder.setBlankPolicy(QContactSortOrder::BlanksFirst);
 
-    QList<QContactSortOrder> sorting = m_displayLabelOrder == SeasideFilteredModel::FirstNameFirst
+    QList<QContactSortOrder> sorting = m_displayLabelOrder == FirstNameFirst
             ? (QList<QContactSortOrder>() << firstLabelOrder << secondLabelOrder)
             : (QList<QContactSortOrder>() << secondLabelOrder << firstLabelOrder);
 
@@ -251,7 +319,7 @@ void SeasideCache::checkForExpiry()
 {
     if (instance->m_users.isEmpty()) {
         bool unused = true;
-        for (int i = 0; i < SeasideFilteredModel::FilterTypesCount; ++i) {
+        for (int i = 0; i < FilterTypesCount; ++i) {
             unused &= instance->m_models[i].isEmpty();
         }
         if (unused) {
@@ -260,21 +328,21 @@ void SeasideCache::checkForExpiry()
     }
 }
 
-void SeasideCache::registerModel(SeasideFilteredModel *model, SeasideFilteredModel::FilterType type)
+void SeasideCache::registerModel(ListModel *model, FilterType type)
 {
     if (!instance) {
         new SeasideCache;
     } else {
         instance->m_expiryTimer.stop();
-        for (int i = 0; i < SeasideFilteredModel::FilterTypesCount; ++i)
+        for (int i = 0; i < FilterTypesCount; ++i)
             instance->m_models[i].removeAll(model);
     }
     instance->m_models[type].append(model);
 }
 
-void SeasideCache::unregisterModel(SeasideFilteredModel *model)
+void SeasideCache::unregisterModel(ListModel *model)
 {
-    for (int i = 0; i < SeasideFilteredModel::FilterTypesCount; ++i)
+    for (int i = 0; i < FilterTypesCount; ++i)
         instance->m_models[i].removeAll(model);
 
     checkForExpiry();
@@ -311,7 +379,7 @@ void SeasideCache::unregisterNameGroupChangeListener(SeasideNameGroupChangeListe
     instance->m_nameGroupChangeListeners.removeAll(listener);
 }
 
-QChar SeasideCache::nameGroupForCacheItem(SeasideCacheItem *cacheItem)
+QChar SeasideCache::nameGroupForCacheItem(CacheItem *cacheItem)
 {
     if (!cacheItem)
         return QChar();
@@ -320,7 +388,7 @@ QChar SeasideCache::nameGroupForCacheItem(SeasideCacheItem *cacheItem)
     QString first;
     QString last;
     QContactName nameDetail = cacheItem->contact.detail<QContactName>();
-    if (SeasideCache::displayLabelOrder() == SeasideFilteredModel::FirstNameFirst) {
+    if (SeasideCache::displayLabelOrder() == FirstNameFirst) {
         first = nameDetail.firstName();
         last = nameDetail.lastName();
     } else {
@@ -365,30 +433,30 @@ QHash<QChar, int> SeasideCache::nameGroupCounts()
     return QHash<QChar, int>();
 }
 
-SeasideFilteredModel::DisplayLabelOrder SeasideCache::displayLabelOrder()
+SeasideCache::DisplayLabelOrder SeasideCache::displayLabelOrder()
 {
     return instance->m_displayLabelOrder;
 }
 
 int SeasideCache::contactId(const QContact &contact)
 {
-    quint32 internal = SeasideFilteredModel::internalId(contact);
+    quint32 internal = internalId(contact);
     return static_cast<int>(internal);
 }
 
 SeasidePerson *SeasideCache::personById(const ContactIdType &id)
 {
-    if (!SeasideFilteredModel::validId(id))
+    if (!validId(id))
         return 0;
 
-    quint32 iid = SeasideFilteredModel::internalId(id);
+    quint32 iid = internalId(id);
 
-    QHash<quint32, SeasideCacheItem>::iterator it = instance->m_people.find(iid);
+    QHash<quint32, CacheItem>::iterator it = instance->m_people.find(iid);
     if (it != instance->m_people.end()) {
         return person(&(*it));
     } else {
         // Insert a new item into the cache if the one doesn't exist.
-        SeasideCacheItem &cacheItem = instance->m_people[iid];
+        CacheItem &cacheItem = instance->m_people[iid];
 #ifdef USING_QTPIM
         cacheItem.contact.setId(id);
 #else
@@ -404,7 +472,7 @@ SeasidePerson *SeasideCache::personById(const ContactIdType &id)
 SeasidePerson *SeasideCache::personById(int id)
 {
     if (id != 0) {
-        QContactId contactId(SeasideFilteredModel::apiId(static_cast<quint32>(id)));
+        QContactId contactId(apiId(static_cast<quint32>(id)));
         if (!contactId.isNull()) {
             return personById(contactId);
         }
@@ -414,11 +482,11 @@ SeasidePerson *SeasideCache::personById(int id)
 }
 #endif
 
-SeasideCacheItem *SeasideCache::cacheItemById(const ContactIdType &id)
+SeasideCache::CacheItem *SeasideCache::cacheItemById(const ContactIdType &id)
 {
-    quint32 iid = SeasideFilteredModel::internalId(id);
+    quint32 iid = internalId(id);
 
-    QHash<quint32, SeasideCacheItem>::iterator it = instance->m_people.find(iid);
+    QHash<quint32, CacheItem>::iterator it = instance->m_people.find(iid);
     return it != instance->m_people.end()
             ? &(*it)
             : 0;
@@ -426,8 +494,8 @@ SeasideCacheItem *SeasideCache::cacheItemById(const ContactIdType &id)
 
 QContact SeasideCache::contactById(const ContactIdType &id)
 {
-    quint32 iid = SeasideFilteredModel::internalId(id);
-    return instance->m_people.value(iid, SeasideCacheItem()).contact;
+    quint32 iid = internalId(id);
+    return instance->m_people.value(iid, CacheItem()).contact;
 }
 
 SeasidePerson *SeasideCache::personByPhoneNumber(const QString &msisdn)
@@ -452,7 +520,7 @@ SeasidePerson *SeasideCache::selfPerson()
     return personById(instance->m_manager.selfContactId());
 }
 
-SeasidePerson *SeasideCache::person(SeasideCacheItem *cacheItem)
+SeasidePerson *SeasideCache::person(CacheItem *cacheItem)
 {
     if (!cacheItem->person) {
         cacheItem->person = new SeasidePerson(instance);
@@ -481,13 +549,13 @@ bool SeasideCache::savePerson(SeasidePerson *person)
 {
     QContact contact = person->contact();
 
-    ContactIdType id = SeasideFilteredModel::apiId(contact);
-    if (SeasideFilteredModel::validId(id)) {
+    ContactIdType id = apiId(contact);
+    if (validId(id)) {
         instance->m_contactsToSave[id] = contact;
 
-        instance->updateContactData(id, SeasideFilteredModel::FilterFavorites);
-        instance->updateContactData(id, SeasideFilteredModel::FilterOnline);
-        instance->updateContactData(id, SeasideFilteredModel::FilterAll);
+        instance->updateContactData(id, FilterFavorites);
+        instance->updateContactData(id, FilterOnline);
+        instance->updateContactData(id, FilterAll);
     } else {
         instance->m_contactsToCreate.append(contact);
     }
@@ -498,35 +566,35 @@ bool SeasideCache::savePerson(SeasidePerson *person)
 }
 
 void SeasideCache::updateContactData(
-        const ContactIdType &contactId, SeasideFilteredModel::FilterType filter)
+        const ContactIdType &contactId, FilterType filter)
 {
     int row = m_contacts[filter].indexOf(contactId);
 
-    QList<SeasideFilteredModel *> &models = m_models[filter];
+    QList<ListModel *> &models = m_models[filter];
     for (int i = 0; row != -1 && i < models.count(); ++i)
         models.at(i)->sourceDataChanged(row, row);
 }
 
 void SeasideCache::removePerson(SeasidePerson *person)
 {
-    ContactIdType id = SeasideFilteredModel::apiId(person->contact());
+    ContactIdType id = apiId(person->contact());
 
     instance->m_contactsToRemove.append(id);
-    instance->removeContactData(id, SeasideFilteredModel::FilterFavorites);
-    instance->removeContactData(id, SeasideFilteredModel::FilterOnline);
-    instance->removeContactData(id, SeasideFilteredModel::FilterAll);
+    instance->removeContactData(id, FilterFavorites);
+    instance->removeContactData(id, FilterOnline);
+    instance->removeContactData(id, FilterAll);
 
     instance->requestUpdate();
 }
 
 void SeasideCache::removeContactData(
-        const ContactIdType &contactId, SeasideFilteredModel::FilterType filter)
+        const ContactIdType &contactId, FilterType filter)
 {
     int row = m_contacts[filter].indexOf(contactId);
     if (row == -1)
         return;
 
-    QList<SeasideFilteredModel *> &models = m_models[filter];
+    QList<ListModel *> &models = m_models[filter];
     for (int i = 0; i < models.count(); ++i)
         models.at(i)->sourceAboutToRemoveItems(row, row);
 
@@ -556,12 +624,12 @@ void SeasideCache::fetchMergeCandidates(SeasidePerson *person)
     }
 }
 
-const QVector<SeasideCache::ContactIdType> *SeasideCache::contacts(SeasideFilteredModel::FilterType type)
+const QVector<SeasideCache::ContactIdType> *SeasideCache::contacts(FilterType type)
 {
     return &instance->m_contacts[type];
 }
 
-bool SeasideCache::isPopulated(SeasideFilteredModel::FilterType filterType)
+bool SeasideCache::isPopulated(FilterType filterType)
 {
     return instance->m_populated & (1 << filterType);
 }
@@ -758,7 +826,7 @@ bool SeasideCache::event(QEvent *event)
     } else if (m_refreshRequired) {
         m_resultsRead = 0;
         m_refreshRequired = false;
-        m_fetchFilter = SeasideFilteredModel::FilterFavorites;
+        m_fetchFilter = FilterFavorites;
 
         m_contactIdRequest.setFilter(QContactFavorite::match());
         m_contactIdRequest.start();
@@ -773,8 +841,8 @@ bool SeasideCache::event(QEvent *event)
             if (*it >= 0)
                 continue;
 
-            quint32 iid = SeasideFilteredModel::internalId(it.key());
-            QHash<quint32, SeasideCacheItem>::iterator cacheItem = m_people.find(iid);
+            quint32 iid = internalId(it.key());
+            QHash<quint32, CacheItem>::iterator cacheItem = m_people.find(iid);
             if (cacheItem != m_people.end()) {
                 delete cacheItem->person;
                 m_people.erase(cacheItem);
@@ -807,7 +875,7 @@ void SeasideCache::updateContacts()
 {
     QList<ContactIdType> contactIds;
 
-    typedef QHash<quint32, SeasideCacheItem>::iterator iterator;
+    typedef QHash<quint32, CacheItem>::iterator iterator;
     for (iterator it = m_people.begin(); it != m_people.end(); ++it) {
         if (it->hasCompleteContact)
             contactIds.append(it->apiId());
@@ -872,9 +940,9 @@ void SeasideCache::contactsAvailable()
         contacts = m_fetchRequest.contacts();
     }
 
-    if (m_fetchFilter == SeasideFilteredModel::FilterFavorites
-            || m_fetchFilter == SeasideFilteredModel::FilterOnline
-            || m_fetchFilter == SeasideFilteredModel::FilterAll) {
+    if (m_fetchFilter == FilterFavorites
+            || m_fetchFilter == FilterOnline
+            || m_fetchFilter == FilterAll) {
         // Part of an initial query.
         appendContacts(contacts);
     } else {
@@ -883,15 +951,15 @@ void SeasideCache::contactsAvailable()
 
         for (int i = m_resultsRead; i < contacts.count(); ++i) {
             QContact contact = contacts.at(i);
-            ContactIdType apiId = SeasideFilteredModel::apiId(contact);
-            quint32 iid = SeasideFilteredModel::internalId(contact);
+            ContactIdType apiId = SeasideCache::apiId(contact);
+            quint32 iid = internalId(contact);
 
-            SeasideCacheItem &item = m_people[iid];
+            CacheItem &item = m_people[iid];
             QContactName oldName = item.contact.detail<QContactName>();
             QContactName newName = contact.detail<QContactName>();
             QChar oldNameGroup;
 
-            if (m_fetchFilter == SeasideFilteredModel::FilterAll)
+            if (m_fetchFilter == FilterAll)
                 oldNameGroup = nameGroupForCacheItem(&item);
 
 #ifdef USING_QTPIM
@@ -929,7 +997,7 @@ void SeasideCache::contactsAvailable()
                  m_emailAddressIds[emailAddresses.at(j).emailAddress().toLower()] = iid;
              }
 
-             if (m_fetchFilter == SeasideFilteredModel::FilterAll) {
+             if (m_fetchFilter == FilterAll) {
                  // do this even if !roleDataChanged as name groups are affected by other display label changes
                  QChar newNameGroup = nameGroupForCacheItem(&item);
                  if (newNameGroup != oldNameGroup) {
@@ -939,9 +1007,9 @@ void SeasideCache::contactsAvailable()
              }
 
              if (roleDataChanged) {
-                instance->updateContactData(apiId, SeasideFilteredModel::FilterFavorites);
-                instance->updateContactData(apiId, SeasideFilteredModel::FilterOnline);
-                instance->updateContactData(apiId, SeasideFilteredModel::FilterAll);
+                instance->updateContactData(apiId, FilterFavorites);
+                instance->updateContactData(apiId, FilterOnline);
+                instance->updateContactData(apiId, FilterAll);
              }
         }
         m_resultsRead = contacts.count();
@@ -1006,7 +1074,7 @@ void SeasideCache::relationshipsAvailable()
     foreach (const QContactRelationship &rel, m_relationshipsFetchRequest.relationships()) {
         if (rel.relationshipType() == aggregatesRelationship) {
 #ifdef USING_QTPIM
-            m_constituentIds.append(SeasideFilteredModel::apiId(rel.second()));
+            m_constituentIds.append(apiId(rel.second()));
 #else
             m_constituentIds.append(rel.second().localId());
 #endif
@@ -1014,7 +1082,7 @@ void SeasideCache::relationshipsAvailable()
     }
 }
 
-void SeasideCache::finalizeUpdate(SeasideFilteredModel::FilterType filter)
+void SeasideCache::finalizeUpdate(FilterType filter)
 {
     const QList<ContactIdType> queryIds = m_contactIdRequest.ids();
     QVector<ContactIdType> &cacheIds = m_contacts[filter];
@@ -1033,17 +1101,17 @@ void SeasideCache::finalizeUpdate(SeasideFilteredModel::FilterType filter)
 }
 
 void SeasideCache::removeRange(
-        SeasideFilteredModel::FilterType filter, int index, int count)
+        FilterType filter, int index, int count)
 {
     QVector<ContactIdType> &cacheIds = m_contacts[filter];
-    QList<SeasideFilteredModel *> &models = m_models[filter];
+    QList<ListModel *> &models = m_models[filter];
     QList<QChar> modifiedNameGroups;
 
     for (int i = 0; i < models.count(); ++i)
         models[i]->sourceAboutToRemoveItems(index, index + count - 1);
 
     for (int i = 0; i < count; ++i) {
-        if (filter == SeasideFilteredModel::FilterAll) {
+        if (filter == FilterAll) {
             m_expiredContacts[cacheIds.at(index)] -= 1;
 
             removeFromContactNameGroup(nameGroupForCacheItem(cacheItemById(cacheIds.at(index))), &modifiedNameGroups);
@@ -1059,14 +1127,14 @@ void SeasideCache::removeRange(
 }
 
 int SeasideCache::insertRange(
-        SeasideFilteredModel::FilterType filter,
+        FilterType filter,
         int index,
         int count,
         const QList<ContactIdType> &queryIds,
         int queryIndex)
 {
     QVector<ContactIdType> &cacheIds = m_contacts[filter];
-    QList<SeasideFilteredModel *> &models = m_models[filter];
+    QList<ListModel *> &models = m_models[filter];
     QList<QChar> modifiedNameGroups;
 
     const ContactIdType selfId = m_manager.selfContactId();
@@ -1079,7 +1147,7 @@ int SeasideCache::insertRange(
         if (queryIds.at(queryIndex + i) == selfId)
             continue;
 
-        if (filter == SeasideFilteredModel::FilterAll) {
+        if (filter == FilterAll) {
             m_expiredContacts[queryIds.at(queryIndex + i)] += 1;
 
             addToContactNameGroup(nameGroupForCacheItem(cacheItemById(queryIds.at(queryIndex + i))), &modifiedNameGroups);
@@ -1100,7 +1168,7 @@ void SeasideCache::appendContacts(const QList<QContact> &contacts)
 {
     if (!contacts.isEmpty()) {
         QVector<ContactIdType> &cacheIds = m_contacts[m_fetchFilter];
-        QList<SeasideFilteredModel *> &models = m_models[m_fetchFilter];
+        QList<ListModel *> &models = m_models[m_fetchFilter];
 
         cacheIds.reserve(contacts.count());
 
@@ -1113,15 +1181,15 @@ void SeasideCache::appendContacts(const QList<QContact> &contacts)
 
             for (; m_appendIndex < contacts.count(); ++m_appendIndex) {
                 QContact contact = contacts.at(m_appendIndex);
-                ContactIdType apiId = SeasideFilteredModel::apiId(contact);
-                quint32 iid = SeasideFilteredModel::internalId(contact);
+                ContactIdType apiId = SeasideCache::apiId(contact);
+                quint32 iid = internalId(contact);
 
                 cacheIds.append(apiId);
-                SeasideCacheItem &cacheItem = m_people[iid];
+                CacheItem &cacheItem = m_people[iid];
                 cacheItem.contact = contact;
                 cacheItem.filterKey = QStringList();
 
-                if (m_fetchFilter == SeasideFilteredModel::FilterAll)
+                if (m_fetchFilter == FilterAll)
                     addToContactNameGroup(nameGroupForCacheItem(&cacheItem), 0);
 
                 foreach (const QContactPhoneNumber &phoneNumber, contact.details<QContactPhoneNumber>()) {
@@ -1174,7 +1242,7 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
 
             QList<int> constituentIds;
             foreach (const ContactIdType &id, m_constituentIds) {
-                constituentIds.append(SeasideFilteredModel::internalId(id));
+                constituentIds.append(internalId(id));
             }
             m_constituentIds.clear();
 
@@ -1191,12 +1259,12 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
             SeasidePerson *person = personById(contactId.localId());
 #endif
 
-            const quint32 contactIid = SeasideFilteredModel::internalId(contactId);
+            const quint32 contactIid = internalId(contactId);
 
             QList<int> candidateIds;
             foreach (const ContactIdType &id, m_candidateIds) {
                 // Exclude the original source contact
-                const quint32 iid = SeasideFilteredModel::internalId(id);
+                const quint32 iid = internalId(id);
                 if (iid != contactIid) {
                     candidateIds.append(iid);
                 }
@@ -1208,53 +1276,53 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
         }
     }
 
-    if (m_fetchFilter == SeasideFilteredModel::FilterFavorites) {
+    if (m_fetchFilter == FilterFavorites) {
         // Next, query for all contacts
-        m_fetchFilter = SeasideFilteredModel::FilterAll;
+        m_fetchFilter = FilterAll;
 
-        if (!isPopulated(SeasideFilteredModel::FilterFavorites)) {
+        if (!isPopulated(FilterFavorites)) {
             qDebug() << "Favorites queried in" << m_timer.elapsed() << "ms";
             m_appendIndex = 0;
             m_fetchRequest.setFilter(QContactFilter());
             m_fetchRequest.start();
-            makePopulated(SeasideFilteredModel::FilterFavorites);
+            makePopulated(FilterFavorites);
         } else {
-            finalizeUpdate(SeasideFilteredModel::FilterFavorites);
+            finalizeUpdate(FilterFavorites);
             m_contactIdRequest.setFilter(QContactFilter());
             m_contactIdRequest.start();
         }
-    } else if (m_fetchFilter == SeasideFilteredModel::FilterAll) {
+    } else if (m_fetchFilter == FilterAll) {
         // Next, query for online contacts
-        m_fetchFilter = SeasideFilteredModel::FilterOnline;
+        m_fetchFilter = FilterOnline;
 
-        if (!isPopulated(SeasideFilteredModel::FilterAll)) {
+        if (!isPopulated(FilterAll)) {
             qDebug() << "All queried in" << m_timer.elapsed() << "ms";
             // Not correct, but better than nothing...
             m_appendIndex = 0;
             m_fetchRequest.setFilter(QContactGlobalPresence::match(QContactPresence::PresenceAvailable));
             m_fetchRequest.start();
-            makePopulated(SeasideFilteredModel::FilterNone);
-            makePopulated(SeasideFilteredModel::FilterAll);
+            makePopulated(FilterNone);
+            makePopulated(FilterAll);
         } else {
-            finalizeUpdate(SeasideFilteredModel::FilterAll);
+            finalizeUpdate(FilterAll);
             m_contactIdRequest.setFilter(QContactGlobalPresence::match(QContactPresence::PresenceAvailable));
             m_contactIdRequest.start();
         }
-    } else if (m_fetchFilter == SeasideFilteredModel::FilterOnline) {
-        m_fetchFilter = SeasideFilteredModel::FilterNone;
+    } else if (m_fetchFilter == FilterOnline) {
+        m_fetchFilter = FilterNone;
 
         if (m_updatesPending) {
             QCoreApplication::postEvent(this, new QEvent(QEvent::UpdateRequest));
         }
 
-        if (!isPopulated(SeasideFilteredModel::FilterOnline)) {
+        if (!isPopulated(FilterOnline)) {
             qDebug() << "Online queried in" << m_timer.elapsed() << "ms";
             m_fetchRequest.setFetchHint(QContactFetchHint());
-            makePopulated(SeasideFilteredModel::FilterOnline);
+            makePopulated(FilterOnline);
         } else {
-            finalizeUpdate(SeasideFilteredModel::FilterOnline);
+            finalizeUpdate(FilterOnline);
         }
-    } else if (m_fetchFilter == SeasideFilteredModel::FilterNone) {
+    } else if (m_fetchFilter == FilterNone) {
         // Result of a specific query
         if (m_updatesPending) {
             QCoreApplication::postEvent(this, new QEvent(QEvent::UpdateRequest));
@@ -1262,11 +1330,11 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
     }
 }
 
-void SeasideCache::makePopulated(SeasideFilteredModel::FilterType filter)
+void SeasideCache::makePopulated(FilterType filter)
 {
     m_populated |= (1 << filter);
 
-    QList<SeasideFilteredModel *> &models = m_models[filter];
+    QList<ListModel *> &models = m_models[filter];
     for (int i = 0; i < models.count(); ++i)
         models.at(i)->makePopulated();
 }
@@ -1276,7 +1344,7 @@ void SeasideCache::displayLabelOrderChanged()
 #ifdef HAS_MLITE
     QVariant displayLabelOrder = m_displayLabelOrderConf.value();
     if (displayLabelOrder.isValid() && displayLabelOrder.toInt() != m_displayLabelOrder) {
-        m_displayLabelOrder = SeasideFilteredModel::DisplayLabelOrder(displayLabelOrder.toInt());
+        m_displayLabelOrder = static_cast<DisplayLabelOrder>(displayLabelOrder.toInt());
         QContactSortOrder firstNameOrder;
         setDetailType<QContactName>(firstNameOrder, QContactName::FieldFirstName);
         firstNameOrder.setCaseSensitivity(Qt::CaseInsensitive);
@@ -1289,17 +1357,17 @@ void SeasideCache::displayLabelOrderChanged()
         secondNameOrder.setDirection(Qt::AscendingOrder);
         secondNameOrder.setBlankPolicy(QContactSortOrder::BlanksFirst);
 
-        QList<QContactSortOrder> sorting = m_displayLabelOrder == SeasideFilteredModel::FirstNameFirst
+        QList<QContactSortOrder> sorting = m_displayLabelOrder == FirstNameFirst
                 ? (QList<QContactSortOrder>() << firstNameOrder << secondNameOrder)
                 : (QList<QContactSortOrder>() << secondNameOrder << firstNameOrder);
 
         m_fetchRequest.setSorting(sorting);
         m_contactIdRequest.setSorting(sorting);
 
-        typedef QHash<quint32, SeasideCacheItem>::iterator iterator;
+        typedef QHash<quint32, CacheItem>::iterator iterator;
         for (iterator it = m_people.begin(); it != m_people.end(); ++it) {
             if (it->person) {
-                it->person->recalculateDisplayLabel(SeasideFilteredModel::DisplayLabelOrder(m_displayLabelOrder));
+                it->person->recalculateDisplayLabel(static_cast<DisplayLabelOrder>(m_displayLabelOrder));
                 it->contact = it->person->contact();
             } else {
                 QContactName name = it->contact.detail<QContactName>();
@@ -1312,7 +1380,7 @@ void SeasideCache::displayLabelOrderChanged()
             }
         }
 
-        for (int i = 0; i < SeasideFilteredModel::FilterTypesCount; ++i) {
+        for (int i = 0; i < FilterTypesCount; ++i) {
             for (int j = 0; j < m_models[i].count(); ++j)
                 m_models[i].at(j)->updateDisplayLabelOrder();
         }
@@ -1357,16 +1425,16 @@ QString SeasideCache::exportContacts()
     QList<ContactIdType> contactsToFetch;
     contactsToFetch.reserve(instance->m_people.count());
 
-    const quint32 selfId = SeasideFilteredModel::internalId(instance->m_manager.selfContactId());
+    const quint32 selfId = internalId(instance->m_manager.selfContactId());
 
-    typedef QHash<quint32, SeasideCacheItem>::iterator iterator;
+    typedef QHash<quint32, CacheItem>::iterator iterator;
     for (iterator it = instance->m_people.begin(); it != instance->m_people.end(); ++it) {
         if (it.key() == selfId) {
             continue;
         } else if (it->hasCompleteContact) {
             contacts.append(it->contact);
         } else {
-            contactsToFetch.append(SeasideFilteredModel::apiId(it.key()));
+            contactsToFetch.append(apiId(it.key()));
         }
     }
 

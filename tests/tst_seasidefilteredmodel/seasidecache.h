@@ -2,49 +2,100 @@
 #define SEASIDECACHE_H
 
 #include <QContact>
+#include <QContactId>
 
-#include "seasidefilteredmodel.h"
+#include <QAbstractListModel>
+#include <QVector>
 
-struct SeasideCacheItem
-{
-    SeasideCacheItem() : person(0) {}
-    SeasideCacheItem(const QContact &contact) : contact(contact), person(0) {}
+USE_CONTACTS_NAMESPACE
 
-    QContact contact;
-    SeasidePerson *person;
-    QStringList filterKey;
-};
+class SeasidePerson;
 
 class SeasideCache : public QObject
 {
     Q_OBJECT
 public:
-    typedef SeasideFilteredModel::ContactIdType ContactIdType;
+#ifdef USING_QTPIM
+    typedef QContactId ContactIdType;
+#else
+    typedef QContactLocalId ContactIdType;
+#endif
 
+    enum FilterType {
+        FilterNone,
+        FilterAll,
+        FilterFavorites,
+        FilterOnline,
+        FilterTypesCount
+    };
+
+    enum DisplayLabelOrder {
+        FirstNameFirst,
+        LastNameFirst
+    };
+
+    struct CacheItem
+    {
+        CacheItem() : person(0) {}
+        CacheItem(const QContact &contact) : contact(contact), person(0) {}
+
+        QContact contact;
+        SeasidePerson *person;
+        QStringList filterKey;
+    };
+
+    class ListModel : public QAbstractListModel
+    {
+    public:
+        ListModel(QObject *parent = 0) : QAbstractListModel(parent) {}
+        virtual ~ListModel() {}
+
+        virtual void sourceAboutToRemoveItems(int begin, int end) = 0;
+        virtual void sourceItemsRemoved() = 0;
+
+        virtual void sourceAboutToInsertItems(int begin, int end) = 0;
+        virtual void sourceItemsInserted(int begin, int end) = 0;
+
+        virtual void sourceDataChanged(int begin, int end) = 0;
+
+        virtual void makePopulated() = 0;
+        virtual void updateDisplayLabelOrder() = 0;
+    };
+
+    static ContactIdType apiId(const QContact &contact);
+    static ContactIdType apiId(quint32 iid);
+
+    static bool validId(const ContactIdType &id);
+
+    static quint32 internalId(const QContact &contact);
+    static quint32 internalId(const QContactId &id);
+#ifndef USING_QTPIM
+    static quint32 internalId(QContactLocalId id);
+#endif
     SeasideCache();
     ~SeasideCache();
 
-    static void registerModel(SeasideFilteredModel *model, SeasideFilteredModel::FilterType type);
-    static void unregisterModel(SeasideFilteredModel *model);
+    static void registerModel(ListModel *model, FilterType type);
+    static void unregisterModel(ListModel *model);
 
     static void registerUser(QObject *user);
     static void unregisterUser(QObject *user);
 
-    static SeasideFilteredModel::DisplayLabelOrder displayLabelOrder();
+    static DisplayLabelOrder displayLabelOrder();
 
     static int contactId(const QContact &contact);
 
-    static SeasideCacheItem *cacheItemById(const ContactIdType &id);
+    static CacheItem *cacheItemById(const ContactIdType &id);
     static SeasidePerson *personById(const ContactIdType &id);
 #ifdef USING_QTPIM
     static SeasidePerson *personById(int id);
 #endif
     static SeasidePerson *selfPerson();
     static QContact contactById(const ContactIdType &id);
-    static QChar nameGroupForCacheItem(SeasideCacheItem *cacheItem);
+    static QChar nameGroupForCacheItem(CacheItem *cacheItem);
     static QList<QChar> allNameGroups();
 
-    static SeasidePerson *person(SeasideCacheItem *item);
+    static SeasidePerson *person(CacheItem *item);
 
     static SeasidePerson *personByPhoneNumber(const QString &msisdn);
     static SeasidePerson *personByEmailAddress(const QString &email);
@@ -55,27 +106,27 @@ public:
 
     static void fetchMergeCandidates(SeasidePerson *person);
 
-    static const QVector<ContactIdType> *contacts(SeasideFilteredModel::FilterType filterType);
-    static bool isPopulated(SeasideFilteredModel::FilterType filterType);
+    static const QVector<ContactIdType> *contacts(FilterType filterType);
+    static bool isPopulated(FilterType filterType);
 
-    void populate(SeasideFilteredModel::FilterType filterType);
-    void insert(SeasideFilteredModel::FilterType filterType, int index, const QVector<ContactIdType> &ids);
-    void remove(SeasideFilteredModel::FilterType filterType, int index, int count);
+    void populate(FilterType filterType);
+    void insert(FilterType filterType, int index, const QVector<ContactIdType> &ids);
+    void remove(FilterType filterType, int index, int count);
 
     static int importContacts(const QString &path);
     static QString exportContacts();
 
-    void setFirstName(SeasideFilteredModel::FilterType filterType, int index, const QString &name);
+    void setFirstName(FilterType filterType, int index, const QString &name);
 
     void reset();
 
-    static QVector<ContactIdType> getContactsForFilterType(SeasideFilteredModel::FilterType filterType);
+    static QVector<ContactIdType> getContactsForFilterType(FilterType filterType);
 
-    QVector<ContactIdType> m_contacts[SeasideFilteredModel::FilterTypesCount];
-    SeasideFilteredModel *m_models[SeasideFilteredModel::FilterTypesCount];
-    bool m_populated[SeasideFilteredModel::FilterTypesCount];
+    QVector<ContactIdType> m_contacts[FilterTypesCount];
+    ListModel *m_models[FilterTypesCount];
+    bool m_populated[FilterTypesCount];
 
-    QVector<SeasideCacheItem> m_cache;
+    QVector<CacheItem> m_cache;
 #ifdef USING_QTPIM
     QHash<ContactIdType, int> m_cacheIndices;
 #endif
