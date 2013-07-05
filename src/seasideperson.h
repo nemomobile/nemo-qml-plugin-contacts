@@ -277,8 +277,10 @@ public:
 
     Q_INVOKABLE QString vCard() const;
 
-    Q_INVOKABLE void fetchConstituents();
+    Q_INVOKABLE void aggregateInto(SeasidePerson *person);
+    Q_INVOKABLE void disaggregateFrom(SeasidePerson *person);
 
+    Q_INVOKABLE void fetchConstituents();
     Q_INVOKABLE void fetchMergeCandidates();
 
     QString getDisplayLabel() const;
@@ -288,6 +290,7 @@ public:
 
     void constituentsFetched(const QList<int> &ids);
     void mergeCandidatesFetched(const QList<int> &ids);
+    void aggregationOperationCompleted();
 
     static QString generateDisplayLabel(
                 const QContact &mContact,
@@ -329,6 +332,7 @@ signals:
     void accountIconPathsChanged();
     void constituentsChanged();
     void mergeCandidatesChanged();
+    void aggregationOperationFinished();
 
 public slots:
     void recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order = SeasideCache::FirstNameFirst) const;
