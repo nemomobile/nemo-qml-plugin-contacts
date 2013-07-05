@@ -495,7 +495,7 @@ void tst_SeasideFilteredModel::dataChanged()
     QSignalSpy changedSpy(&model, SIGNAL(dataChanged(QModelIndex,QModelIndex)));
 
     // 0 1 2 3 4 5 6
-    cache.setDisplayName(SeasideFilteredModel::FilterAll, 2, "Doug");
+    cache.setFirstName(SeasideFilteredModel::FilterAll, 2, "Doug");
     QCOMPARE(model.rowCount(), 7);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 0);
@@ -510,7 +510,7 @@ void tst_SeasideFilteredModel::dataChanged()
     removedSpy.clear();
     changedSpy.clear();
 
-    cache.setDisplayName(SeasideFilteredModel::FilterAll, 2, "Aaron Johns");
+    cache.setFirstName(SeasideFilteredModel::FilterAll, 2, "Aaron");
     QCOMPARE(model.rowCount(), 5);
     QCOMPARE(insertedSpy.count(), 1);
     QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 2);
@@ -521,7 +521,7 @@ void tst_SeasideFilteredModel::dataChanged()
     insertedSpy.clear();
 
     // 0 1 2 3 4 5
-    cache.setDisplayName(SeasideFilteredModel::FilterAll, 2, "Doug");
+    cache.setFirstName(SeasideFilteredModel::FilterAll, 2, "Doug");
     QCOMPARE(model.rowCount(), 4);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);

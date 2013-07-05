@@ -388,16 +388,15 @@ bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
 
     // search forwards over the label components for each filter word, making
     // sure to find all filter words before considering it a match.
-    int j = 0;
     for (int i = 0; i < m_filterParts.size(); i++) {
         bool found = false;
-        for (; j < item->filterKey.size(); j++) {
+        const QString &part(m_filterParts.at(i));
+        for (int j = 0; j < item->filterKey.size(); j++) {
             // TODO: for good i18n, we need to search insensitively taking
             // diacritics into account, QString's functions alone aren't good
             // enough
-            if (item->filterKey.at(j).startsWith(m_filterParts.at(i), Qt::CaseInsensitive)) {
+            if (item->filterKey.at(j).startsWith(part, Qt::CaseInsensitive)) {
                 found = true;
-                j++;
                 break;
             }
         }
@@ -635,9 +634,11 @@ void SeasideFilteredModel::sourceAboutToRemoveItems(int begin, int end)
                 // The filtered contacts intersect the removed items, scan ahead and find the
                 // total number that intersect.
                 int count = 0;
-                while (f + count < m_filteredContactIds.count() && r <= end) {
-                    r = m_referenceContactIds->indexOf(m_filteredContactIds.at(f + count), r);
+                while (r <= end) {
                     ++count;
+                    if (f + count >= m_filteredContactIds.count())
+                        break;
+                    r = m_referenceContactIds->indexOf(m_filteredContactIds.at(f + count), r);
                 }
 
                 beginRemoveRows(QModelIndex(), f, f + count - 1);
