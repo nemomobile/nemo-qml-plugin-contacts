@@ -45,8 +45,6 @@
 #include <QContactPresence>
 #include <QContactOrganization>
 #include <QContactUrl>
-#include <QContactPresence>
-#include <QContactGlobalPresence>
 #include <QContactSyncTarget>
 
 #include <QVersitWriter>
@@ -78,7 +76,6 @@ SeasidePerson::SeasidePerson(QObject *parent)
     : QObject(parent)
     , mComplete(true)
 {
-
 }
 
 SeasidePerson::SeasidePerson(const QContact &contact, QObject *parent)
@@ -160,92 +157,12 @@ void SeasidePerson::setMiddleName(const QString &name)
 // small helper to avoid inconvenience
 QString SeasidePerson::generateDisplayLabel(const QContact &mContact, SeasideCache::DisplayLabelOrder order)
 {
-    QContactName name = mContact.detail<QContactName>();
-
-#ifdef USING_QTPIM
-    QString customLabel = name.value<QString>(QContactName__FieldCustomLabel);
-#else
-    QString customLabel = name.customLabel();
-#endif
-    if (!customLabel.isNull())
-        return customLabel;
-
-    QString displayLabel;
-
-    QString nameStr1;
-    QString nameStr2;
-    if (order == SeasideCache::LastNameFirst) {
-        nameStr1 = name.lastName();
-        nameStr2 = name.firstName();
-    } else {
-        nameStr1 = name.firstName();
-        nameStr2 = name.lastName();
-    }
-
-    if (!nameStr1.isNull())
-        displayLabel.append(nameStr1);
-
-    if (!nameStr2.isNull()) {
-        if (!displayLabel.isEmpty())
-            displayLabel.append(" ");
-        displayLabel.append(nameStr2);
-    }
-
-    if (!displayLabel.isEmpty()) {
-        return displayLabel;
-    }
-
-    displayLabel = generateDisplayLabelFromNonNameDetails(mContact);
-    if (!displayLabel.isEmpty()) {
-        return displayLabel;
-    }
-
-    return "(Unnamed)"; // TODO: localisation
+    return SeasideCache::generateDisplayLabel(mContact, order);
 }
 
 QString SeasidePerson::generateDisplayLabelFromNonNameDetails(const QContact &mContact)
 {
-    foreach (const QContactNickname& nickname, mContact.details<QContactNickname>()) {
-        if (!nickname.nickname().isNull()) {
-            return nickname.nickname();
-        }
-    }
-
-    foreach (const QContactGlobalPresence& gp, mContact.details<QContactGlobalPresence>()) {
-        // should only be one of these, but qtct is strange, and doesn't list it as a unique detail in the schema...
-        if (!gp.nickname().isNull()) {
-            return gp.nickname();
-        }
-    }
-
-    foreach (const QContactPresence& presence, mContact.details<QContactPresence>()) {
-        if (!presence.nickname().isNull()) {
-            return presence.nickname();
-        }
-    }
-
-    foreach (const QContactOnlineAccount& account, mContact.details<QContactOnlineAccount>()) {
-        if (!account.accountUri().isNull()) {
-            return account.accountUri();
-        }
-    }
-
-    foreach (const QContactEmailAddress& email, mContact.details<QContactEmailAddress>()) {
-        if (!email.emailAddress().isNull()) {
-            return email.emailAddress();
-        }
-    }
-
-    QContactOrganization company = mContact.detail<QContactOrganization>();
-    if (!company.name().isNull())
-        return company.name();
-
-    foreach (const QContactPhoneNumber& phone, mContact.details<QContactPhoneNumber>()) {
-        if (!phone.number().isNull())
-            return phone.number();
-    }
-
-    return QString();
+    return SeasideCache::generateDisplayLabelFromNonNameDetails(mContact);
 }
 
 void SeasidePerson::recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order)

@@ -402,7 +402,7 @@ QChar SeasideCache::nameGroupForCacheItem(CacheItem *cacheItem)
     } else {
         QString displayLabel = (cacheItem->person)
                 ? cacheItem->person->displayLabel()
-                : SeasidePerson::generateDisplayLabel(cacheItem->contact);
+                : generateDisplayLabel(cacheItem->contact);
         if (!displayLabel.isEmpty())
             group = displayLabel[0].toUpper();
     }
@@ -410,7 +410,7 @@ QChar SeasideCache::nameGroupForCacheItem(CacheItem *cacheItem)
     // XXX temporary workaround for non-latin names: use non-name details to try to find a
     // latin character group
     if (!group.isNull() && group.toLatin1() != group) {
-        QString displayLabel = SeasidePerson::generateDisplayLabelFromNonNameDetails(cacheItem->contact);
+        QString displayLabel = generateDisplayLabelFromNonNameDetails(cacheItem->contact);
         if (!displayLabel.isEmpty())
             group = displayLabel[0].toUpper();
     }
@@ -632,6 +632,97 @@ const QVector<SeasideCache::ContactIdType> *SeasideCache::contacts(FilterType ty
 bool SeasideCache::isPopulated(FilterType filterType)
 {
     return instance->m_populated & (1 << filterType);
+}
+
+// small helper to avoid inconvenience
+QString SeasideCache::generateDisplayLabel(const QContact &contact, DisplayLabelOrder order)
+{
+    QContactName name = contact.detail<QContactName>();
+
+#ifdef USING_QTPIM
+    QString customLabel = name.value<QString>(QContactName__FieldCustomLabel);
+#else
+    QString customLabel = name.customLabel();
+#endif
+    if (!customLabel.isNull())
+        return customLabel;
+
+    QString displayLabel;
+
+    QString nameStr1;
+    QString nameStr2;
+    if (order == LastNameFirst) {
+        nameStr1 = name.lastName();
+        nameStr2 = name.firstName();
+    } else {
+        nameStr1 = name.firstName();
+        nameStr2 = name.lastName();
+    }
+
+    if (!nameStr1.isNull())
+        displayLabel.append(nameStr1);
+
+    if (!nameStr2.isNull()) {
+        if (!displayLabel.isEmpty())
+            displayLabel.append(" ");
+        displayLabel.append(nameStr2);
+    }
+
+    if (!displayLabel.isEmpty()) {
+        return displayLabel;
+    }
+
+    displayLabel = generateDisplayLabelFromNonNameDetails(contact);
+    if (!displayLabel.isEmpty()) {
+        return displayLabel;
+    }
+
+    return "(Unnamed)"; // TODO: localisation
+}
+
+QString SeasideCache::generateDisplayLabelFromNonNameDetails(const QContact &contact)
+{
+    foreach (const QContactNickname& nickname, contact.details<QContactNickname>()) {
+        if (!nickname.nickname().isNull()) {
+            return nickname.nickname();
+        }
+    }
+
+    foreach (const QContactGlobalPresence& gp, contact.details<QContactGlobalPresence>()) {
+        // should only be one of these, but qtct is strange, and doesn't list it as a unique detail in the schema...
+        if (!gp.nickname().isNull()) {
+            return gp.nickname();
+        }
+    }
+
+    foreach (const QContactPresence& presence, contact.details<QContactPresence>()) {
+        if (!presence.nickname().isNull()) {
+            return presence.nickname();
+        }
+    }
+
+    foreach (const QContactOnlineAccount& account, contact.details<QContactOnlineAccount>()) {
+        if (!account.accountUri().isNull()) {
+            return account.accountUri();
+        }
+    }
+
+    foreach (const QContactEmailAddress& email, contact.details<QContactEmailAddress>()) {
+        if (!email.emailAddress().isNull()) {
+            return email.emailAddress();
+        }
+    }
+
+    QContactOrganization company = contact.detail<QContactOrganization>();
+    if (!company.name().isNull())
+        return company.name();
+
+    foreach (const QContactPhoneNumber& phone, contact.details<QContactPhoneNumber>()) {
+        if (!phone.number().isNull())
+            return phone.number();
+    }
+
+    return QString();
 }
 
 static QContactFilter filterForMergeCandidates(const QContact &contact)
@@ -1372,9 +1463,9 @@ void SeasideCache::displayLabelOrderChanged()
             } else {
                 QContactName name = it->contact.detail<QContactName>();
 #ifdef USING_QTPIM
-                name.setValue(QContactName__FieldCustomLabel, SeasidePerson::generateDisplayLabel(it->contact));
+                name.setValue(QContactName__FieldCustomLabel, generateDisplayLabel(it->contact));
 #else
-                name.setCustomLabel(SeasidePerson::generateDisplayLabel(it->contact));
+                name.setCustomLabel(generateDisplayLabel(it->contact));
 #endif
                 it->contact.saveDetail(&name);
             }

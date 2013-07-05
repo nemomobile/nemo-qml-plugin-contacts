@@ -365,7 +365,7 @@ QChar SeasideCache::nameGroupForCacheItem(CacheItem *cacheItem)
     } else {
         QString displayLabel = (cacheItem->person)
                 ? cacheItem->person->displayLabel()
-                : SeasidePerson::generateDisplayLabel(cacheItem->contact);
+                : generateDisplayLabel(cacheItem->contact);
         if (!displayLabel.isEmpty())
             group = displayLabel[0].toUpper();
     }
@@ -373,7 +373,7 @@ QChar SeasideCache::nameGroupForCacheItem(CacheItem *cacheItem)
     // XXX temporary workaround for non-latin names: use non-name details to try to find a
     // latin character group
     if (!group.isNull() && group.toLatin1() != group) {
-        QString displayLabel = SeasidePerson::generateDisplayLabelFromNonNameDetails(cacheItem->contact);
+        QString displayLabel = generateDisplayLabelFromNonNameDetails(cacheItem->contact);
         if (!displayLabel.isEmpty())
             group = displayLabel[0].toUpper();
     }
@@ -440,6 +440,16 @@ const QVector<SeasideCache::ContactIdType> *SeasideCache::contacts(FilterType fi
 bool SeasideCache::isPopulated(FilterType filterType)
 {
     return instance->m_populated[filterType];
+}
+
+QString SeasideCache::generateDisplayLabel(const QContact &contact, DisplayLabelOrder order)
+{
+    return QString();
+}
+
+QString SeasideCache::generateDisplayLabelFromNonNameDetails(const QContact &contact)
+{
+    return QString();
 }
 
 SeasideCache::DisplayLabelOrder SeasideCache::displayLabelOrder()

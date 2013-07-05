@@ -109,6 +109,9 @@ public:
     static const QVector<ContactIdType> *contacts(FilterType filterType);
     static bool isPopulated(FilterType filterType);
 
+    static QString generateDisplayLabel(const QContact &contact, DisplayLabelOrder order = FirstNameFirst);
+    static QString generateDisplayLabelFromNonNameDetails(const QContact &contact);
+
     void populate(FilterType filterType);
     void insert(FilterType filterType, int index, const QVector<ContactIdType> &ids);
     void remove(FilterType filterType, int index, int count);

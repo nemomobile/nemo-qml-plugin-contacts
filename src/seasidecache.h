@@ -177,6 +177,9 @@ public:
     static const QVector<ContactIdType> *contacts(FilterType filterType);
     static bool isPopulated(FilterType filterType);
 
+    static QString generateDisplayLabel(const QContact &contact, DisplayLabelOrder order = FirstNameFirst);
+    static QString generateDisplayLabelFromNonNameDetails(const QContact &contact);
+
     bool event(QEvent *event);
 
     // For synchronizeLists()
