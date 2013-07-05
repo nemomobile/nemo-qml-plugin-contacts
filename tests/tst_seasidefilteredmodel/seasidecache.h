@@ -65,7 +65,7 @@ public:
     static int importContacts(const QString &path);
     static QString exportContacts();
 
-    void setDisplayName(SeasideFilteredModel::FilterType filterType, int index, const QString &name);
+    void setFirstName(SeasideFilteredModel::FilterType filterType, int index, const QString &name);
 
     void reset();
 
