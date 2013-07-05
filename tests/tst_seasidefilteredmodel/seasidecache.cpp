@@ -43,23 +43,21 @@ struct Contact
 {
     const char *firstName;
     const char *lastName;
-    const char *fullName;
     const bool isFavorite;
     const bool isOnline;
     const char *email;
     const char *avatar;
-
 };
 
 static const Contact contactsData[] =
 {
-/*1*/   { "Aaron",  "Aaronson", "Aaron Aaronson", false, false, "aaronaa@example.com", 0 },
-/*2*/   { "Aaron",  "Arthur",   "Aaron Arthur",   false, true,  "aaronar@example.com", 0 },
-/*3*/   { "Aaron",  "Johns",    "Aaron Johns",    true,  false, "johns@example.com", 0 },
-/*4*/   { "Arthur", "Johns",    "Arthur Johns",   false, true,  "arthur1.johnz@example.org", 0 },
-/*5*/   { "Jason",  "Aaronson", "Jason Aaronson", false, false, "jay@examplez.org", 0 },
-/*6*/   { "Joe",    "Johns",    "Joe Johns",      true,  true,  "jj@examplez.org", "file:///cache/joe.jpg" },
-/*7*/   { "Robin",  "Burchell", "Robin Burchell", true,  false, 0, 0 }
+/*1*/   { "Aaron",  "Aaronson", false, false, "aaronaa@example.com", 0 },
+/*2*/   { "Aaron",  "Arthur",   false, true,  "aaronar@example.com", 0 },
+/*3*/   { "Aaron",  "Johns",    true,  false, "johns@example.com", 0 },
+/*4*/   { "Arthur", "Johns",    false, true,  "arthur1.johnz@example.org", 0 },
+/*5*/   { "Jason",  "Aaronson", false, false, "jay@examplez.org", 0 },
+/*6*/   { "Joe",    "Johns",    true,  true,  "jj@examplez.org", "file:///cache/joe.jpg" },
+/*7*/   { "Robin",  "Burchell", true,  false, 0, 0 }
 };
 
 static QList<QChar> getAllContactNameGroups()
@@ -139,10 +137,12 @@ void SeasideCache::reset()
         QContactName name;
         name.setFirstName(QLatin1String(contactsData[i].firstName));
         name.setLastName(QLatin1String(contactsData[i].lastName));
+
+        QString fullName = name.firstName() + QChar::fromLatin1(' ') + name.lastName();
 #ifdef USING_QTPIM
-        name.setValue(QContactName__FieldCustomLabel, QLatin1String(contactsData[i].fullName));
+        name.setValue(QContactName__FieldCustomLabel, fullName);
 #else
-        name.setCustomLabel(QLatin1String(contactsData[i].fullName));
+        name.setCustomLabel(fullName);
 #endif
         contact.saveDetail(&name);
 
@@ -421,7 +421,7 @@ QString SeasideCache::exportContacts()
     return QString();
 }
 
-void SeasideCache::setDisplayName(SeasideFilteredModel::FilterType filterType, int index, const QString &displayName)
+void SeasideCache::setFirstName(SeasideFilteredModel::FilterType filterType, int index, const QString &firstName)
 {
 #ifdef USING_QTPIM
     SeasideCacheItem &cacheItem = m_cache[m_cacheIndices[m_contacts[filterType].at(index)]];
@@ -430,10 +430,13 @@ void SeasideCache::setDisplayName(SeasideFilteredModel::FilterType filterType, i
 #endif
 
     QContactName name = cacheItem.contact.detail<QContactName>();
+    name.setFirstName(firstName);
+
+    QString fullName = name.firstName() + QChar::fromLatin1(' ') + name.lastName();
 #ifdef USING_QTPIM
-    name.setValue(QContactName__FieldCustomLabel, displayName);
+    name.setValue(QContactName__FieldCustomLabel, fullName);
 #else
-    name.setCustomLabel(displayName);
+    name.setCustomLabel(fullName);
 #endif
     cacheItem.contact.saveDetail(&name);
 
