@@ -34,13 +34,25 @@ public:
         LastNameFirst
     };
 
+    struct ItemData
+    {
+        virtual ~ItemData() {}
+
+        virtual QString getDisplayLabel() const;
+        virtual void displayLabelOrderChanged(DisplayLabelOrder order) = 0;
+
+        virtual void contactFetched(const QContact &contact) = 0;
+        virtual void constituentsFetched(const QList<int> &ids) = 0;
+        virtual void mergeCandidatesFetched(const QList<int> &ids) = 0;
+    };
+
     struct CacheItem
     {
-        CacheItem() : person(0) {}
-        CacheItem(const QContact &contact) : contact(contact), person(0) {}
+        CacheItem() : data(0) {}
+        CacheItem(const QContact &contact) : contact(contact), data(0) {}
 
         QContact contact;
-        SeasidePerson *person;
+        ItemData *data;
         QStringList filterKey;
     };
 
@@ -85,26 +97,24 @@ public:
 
     static int contactId(const QContact &contact);
 
-    static CacheItem *cacheItemById(const ContactIdType &id);
-    static SeasidePerson *personById(const ContactIdType &id);
+    static CacheItem *existingItem(const ContactIdType &id);
+    static CacheItem *itemById(const ContactIdType &id);
 #ifdef USING_QTPIM
-    static SeasidePerson *personById(int id);
+    static CacheItem *itemById(int id);
 #endif
-    static SeasidePerson *selfPerson();
+    static ContactIdType selfContactId();
     static QContact contactById(const ContactIdType &id);
     static QChar nameGroupForCacheItem(CacheItem *cacheItem);
     static QList<QChar> allNameGroups();
 
-    static SeasidePerson *person(CacheItem *item);
+    static CacheItem *itemByPhoneNumber(const QString &msisdn);
+    static CacheItem *itemByEmailAddress(const QString &email);
+    static bool saveContact(const QContact &contact);
+    static void removeContact(const QContact &contact);
 
-    static SeasidePerson *personByPhoneNumber(const QString &msisdn);
-    static SeasidePerson *personByEmailAddress(const QString &email);
-    static bool savePerson(SeasidePerson *person);
-    static void removePerson(SeasidePerson *person);
+    static void fetchConstituents(const QContact &contact);
 
-    static void fetchConstituents(SeasidePerson *person);
-
-    static void fetchMergeCandidates(SeasidePerson *person);
+    static void fetchMergeCandidates(const QContact &contact);
 
     static const QVector<ContactIdType> *contacts(FilterType filterType);
     static bool isPopulated(FilterType filterType);

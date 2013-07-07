@@ -30,7 +30,6 @@
  */
 
 #include "seasidecache.h"
-#include "seasideperson.h"
 #include "constants_p.h"
 
 #include <QContactName>
@@ -287,7 +286,7 @@ int SeasideCache::contactId(const QContact &contact)
     return static_cast<int>(internal);
 }
 
-SeasideCache::CacheItem *SeasideCache::cacheItemById(const ContactIdType &id)
+SeasideCache::CacheItem *SeasideCache::existingItem(const ContactIdType &id)
 {
 #ifdef USING_QTPIM
     if (instance->m_cacheIndices.contains(id)) {
@@ -301,22 +300,22 @@ SeasideCache::CacheItem *SeasideCache::cacheItemById(const ContactIdType &id)
     return 0;
 }
 
-SeasidePerson *SeasideCache::personById(const ContactIdType &id)
+SeasideCache::CacheItem *SeasideCache::itemById(const ContactIdType &id)
 {
 #ifdef USING_QTPIM
     if (instance->m_cacheIndices.contains(id)) {
-        return person(&instance->m_cache[instance->m_cacheIndices[id]]);
+        return &instance->m_cache[instance->m_cacheIndices[id]];
     }
 #else
     if (id > 0 && id <= instance->m_cache.count()) {
-        return person(&instance->m_cache[id - 1]);
+        return &instance->m_cache[id - 1];
     }
 #endif
     return 0;
 }
 
 #ifdef USING_QTPIM
-SeasidePerson *SeasideCache::personById(int id)
+SeasideCache::CacheItem *SeasideCache::itemById(int id)
 {
     if (id == 0)
         return 0;
@@ -329,7 +328,7 @@ SeasidePerson *SeasideCache::personById(int id)
         return 0;
     }
 
-    return personById(contactId);
+    return itemById(contactId);
 }
 #endif
 
@@ -363,8 +362,8 @@ QChar SeasideCache::nameGroupForCacheItem(CacheItem *cacheItem)
     } else if (!last.isEmpty()) {
         group = last[0].toUpper();
     } else {
-        QString displayLabel = (cacheItem->person)
-                ? cacheItem->person->displayLabel()
+        QString displayLabel = (cacheItem->data)
+                ? cacheItem->data->getDisplayLabel()
                 : generateDisplayLabel(cacheItem->contact);
         if (!displayLabel.isEmpty())
             group = displayLabel[0].toUpper();
@@ -389,47 +388,46 @@ QList<QChar> SeasideCache::allNameGroups()
     return QList<QChar>();
 }
 
-SeasidePerson *SeasideCache::person(CacheItem *item)
-{
-    if (!item->person) {
-        item->person = new SeasidePerson(instance);
-        item->person->setContact(item->contact);
-    }
-    return item->person;
-}
-
-SeasidePerson *SeasideCache::personByPhoneNumber(const QString &)
+SeasideCache::CacheItem *SeasideCache::itemByPhoneNumber(const QString &)
 {
     return 0;
 }
 
-SeasidePerson *SeasideCache::personByEmailAddress(const QString &)
+SeasideCache::CacheItem *SeasideCache::itemByEmailAddress(const QString &)
 {
     return 0;
 }
 
-SeasidePerson *SeasideCache::selfPerson()
+SeasideCache::ContactIdType SeasideCache::selfContactId()
 {
-    return 0;
+    return SeasideCache::ContactIdType();
 }
 
-bool SeasideCache::savePerson(SeasidePerson *)
+bool SeasideCache::saveContact(const QContact &)
 {
     return false;
 }
 
-void SeasideCache::removePerson(SeasidePerson *)
+void SeasideCache::removeContact(const QContact &)
 {
 }
 
-void SeasideCache::fetchConstituents(SeasidePerson *person)
+void SeasideCache::fetchConstituents(const QContact &contact)
 {
-    emit person->constituentsChanged();
+    if (SeasideCache::CacheItem *item = itemById(contact.id())) {
+        if (item->data) {
+            item->data->constituentsFetched(QList<int>());
+        }
+    }
 }
 
-void SeasideCache::fetchMergeCandidates(SeasidePerson *person)
+void SeasideCache::fetchMergeCandidates(const QContact &contact)
 {
-    emit person->mergeCandidatesChanged();
+    if (SeasideCache::CacheItem *item = itemById(contact.id())) {
+        if (item->data) {
+            item->data->mergeCandidatesFetched(QList<int>());
+        }
+    }
 }
 
 const QVector<SeasideCache::ContactIdType> *SeasideCache::contacts(FilterType filterType)
@@ -442,12 +440,12 @@ bool SeasideCache::isPopulated(FilterType filterType)
     return instance->m_populated[filterType];
 }
 
-QString SeasideCache::generateDisplayLabel(const QContact &contact, DisplayLabelOrder order)
+QString SeasideCache::generateDisplayLabel(const QContact &, DisplayLabelOrder)
 {
     return QString();
 }
 
-QString SeasideCache::generateDisplayLabelFromNonNameDetails(const QContact &contact)
+QString SeasideCache::generateDisplayLabelFromNonNameDetails(const QContact &)
 {
     return QString();
 }

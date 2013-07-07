@@ -31,8 +31,6 @@
 
 #include "seasidecache.h"
 
-#include "seasideperson.h"
-
 #include "normalization_p.h"
 #include "synchronizelists_p.h"
 #include "constants_p.h"
@@ -273,16 +271,7 @@ SeasideCache::SeasideCache()
             | QContactFetchHint::NoActionPreferences
             | QContactFetchHint::NoBinaryBlobs);
 
-    /* Possibly too aggressive - this filters out details we may need, such as nickname.
-       Remove until performance testing indicates it is worthwhile.
-    fetchHint.setDetailDefinitionsHint(QStringList()
-            << QContactName::DefinitionName
-            << QContactAvatar::DefinitionName
-            << QContactPhoneNumber::DefinitionName
-            << QContactEmailAddress::DefinitionName
-            << QContactOrganization::DefinitionName
-            << QContactOnlineAccount::DefinitionName);
-    */
+    // Note: no restriction on detail definitions - the cache should contain the entire contact
 
     m_fetchRequest.setFetchHint(fetchHint);
     m_fetchRequest.setFilter(QContactFavorite::match());
@@ -400,8 +389,8 @@ QChar SeasideCache::nameGroupForCacheItem(CacheItem *cacheItem)
     } else if (!last.isEmpty()) {
         group = last[0].toUpper();
     } else {
-        QString displayLabel = (cacheItem->person)
-                ? cacheItem->person->displayLabel()
+        QString displayLabel = (cacheItem->data)
+                ? cacheItem->data->getDisplayLabel()
                 : generateDisplayLabel(cacheItem->contact);
         if (!displayLabel.isEmpty())
             group = displayLabel[0].toUpper();
@@ -444,37 +433,46 @@ int SeasideCache::contactId(const QContact &contact)
     return static_cast<int>(internal);
 }
 
-SeasidePerson *SeasideCache::personById(const ContactIdType &id)
+SeasideCache::CacheItem *SeasideCache::itemById(const ContactIdType &id)
 {
     if (!validId(id))
         return 0;
 
     quint32 iid = internalId(id);
 
+    CacheItem *item = 0;
+
     QHash<quint32, CacheItem>::iterator it = instance->m_people.find(iid);
     if (it != instance->m_people.end()) {
-        return person(&(*it));
+        item = &(*it);
     } else {
         // Insert a new item into the cache if the one doesn't exist.
-        CacheItem &cacheItem = instance->m_people[iid];
+        item = &(instance->m_people[iid]);
 #ifdef USING_QTPIM
-        cacheItem.contact.setId(id);
+        item->contact.setId(id);
 #else
         QContactId contactId;
         contactId.setLocalId(id);
-        cacheItem.contact.setId(contactId);
+        item->contact.setId(contactId);
 #endif
-        return person(&cacheItem);
     }
+
+    if (item->contactState == ContactAbsent) {
+        item->contactState = ContactRequested;
+        instance->m_changedContacts.append(item->apiId());
+        instance->fetchContacts();
+    }
+
+    return item;
 }
 
 #ifdef USING_QTPIM
-SeasidePerson *SeasideCache::personById(int id)
+SeasideCache::CacheItem *SeasideCache::itemById(int id)
 {
     if (id != 0) {
         QContactId contactId(apiId(static_cast<quint32>(id)));
         if (!contactId.isNull()) {
-            return personById(contactId);
+            return itemById(contactId);
         }
     }
 
@@ -482,7 +480,7 @@ SeasidePerson *SeasideCache::personById(int id)
 }
 #endif
 
-SeasideCache::CacheItem *SeasideCache::cacheItemById(const ContactIdType &id)
+SeasideCache::CacheItem *SeasideCache::existingItem(const ContactIdType &id)
 {
     quint32 iid = internalId(id);
 
@@ -498,44 +496,26 @@ QContact SeasideCache::contactById(const ContactIdType &id)
     return instance->m_people.value(iid, CacheItem()).contact;
 }
 
-SeasidePerson *SeasideCache::personByPhoneNumber(const QString &msisdn)
+SeasideCache::CacheItem *SeasideCache::itemByPhoneNumber(const QString &msisdn)
 {
     QString normalizedNumber = Normalization::normalizePhoneNumber(msisdn);
     QHash<QString, quint32>::const_iterator it = instance->m_phoneNumberIds.find(normalizedNumber);
     if (it != instance->m_phoneNumberIds.end())
-        return personById(*it);
+        return itemById(*it);
     return 0;
 }
 
-SeasidePerson *SeasideCache::personByEmailAddress(const QString &email)
+SeasideCache::CacheItem *SeasideCache::itemByEmailAddress(const QString &email)
 {
     QHash<QString, quint32>::const_iterator it = instance->m_emailAddressIds.find(email.toLower());
     if (it != instance->m_emailAddressIds.end())
-        return personById(*it);
+        return itemById(*it);
     return 0;
 }
 
-SeasidePerson *SeasideCache::selfPerson()
+SeasideCache::ContactIdType SeasideCache::selfContactId()
 {
-    return personById(instance->m_manager.selfContactId());
-}
-
-SeasidePerson *SeasideCache::person(CacheItem *cacheItem)
-{
-    if (!cacheItem->person) {
-        cacheItem->person = new SeasidePerson(instance);
-        cacheItem->person->setContact(cacheItem->contact);
-        cacheItem->filterKey.clear();
-
-        if (!cacheItem->hasCompleteContact) {
-            // the name is a little incomplete, it's has complete or has requested complete contact.
-            cacheItem->person->setComplete(false);
-            cacheItem->hasCompleteContact = true;
-            instance->m_changedContacts.append(cacheItem->apiId());
-            instance->fetchContacts();
-        }
-    }
-    return cacheItem->person;
+    return instance->m_manager.selfContactId();
 }
 
 void SeasideCache::requestUpdate()
@@ -545,10 +525,8 @@ void SeasideCache::requestUpdate()
     m_updatesPending = true;
 }
 
-bool SeasideCache::savePerson(SeasidePerson *person)
+bool SeasideCache::saveContact(const QContact &contact)
 {
-    QContact contact = person->contact();
-
     ContactIdType id = apiId(contact);
     if (validId(id)) {
         instance->m_contactsToSave[id] = contact;
@@ -575,9 +553,9 @@ void SeasideCache::updateContactData(
         models.at(i)->sourceDataChanged(row, row);
 }
 
-void SeasideCache::removePerson(SeasidePerson *person)
+void SeasideCache::removeContact(const QContact &contact)
 {
-    ContactIdType id = apiId(person->contact());
+    ContactIdType id = apiId(contact);
 
     instance->m_contactsToRemove.append(id);
     instance->removeContactData(id, FilterFavorites);
@@ -604,9 +582,9 @@ void SeasideCache::removeContactData(
         models.at(i)->sourceItemsRemoved();
 }
 
-void SeasideCache::fetchConstituents(SeasidePerson *person)
+void SeasideCache::fetchConstituents(const QContact &contact)
 {
-    QContactId personId(person->contact().id());
+    QContactId personId(contact.id());
 
     if (!instance->m_contactsToFetchConstituents.contains(personId)) {
         instance->m_contactsToFetchConstituents.append(personId);
@@ -614,9 +592,9 @@ void SeasideCache::fetchConstituents(SeasidePerson *person)
     }
 }
 
-void SeasideCache::fetchMergeCandidates(SeasidePerson *person)
+void SeasideCache::fetchMergeCandidates(const QContact &contact)
 {
-    QContactId personId(person->contact().id());
+    QContactId personId(contact.id());
 
     if (!instance->m_contactsToFetchCandidates.contains(personId)) {
         instance->m_contactsToFetchCandidates.append(personId);
@@ -935,7 +913,7 @@ bool SeasideCache::event(QEvent *event)
             quint32 iid = internalId(it.key());
             QHash<quint32, CacheItem>::iterator cacheItem = m_people.find(iid);
             if (cacheItem != m_people.end()) {
-                delete cacheItem->person;
+                delete cacheItem->data;
                 m_people.erase(cacheItem);
             }
         }
@@ -968,7 +946,7 @@ void SeasideCache::updateContacts()
 
     typedef QHash<quint32, CacheItem>::iterator iterator;
     for (iterator it = m_people.begin(); it != m_people.end(); ++it) {
-        if (it->hasCompleteContact)
+        if (it->contactState != ContactAbsent)
             contactIds.append(it->apiId());
     }
 
@@ -1070,11 +1048,10 @@ void SeasideCache::contactsAvailable()
                     || contact.detail<QContactAvatar>().imageUrl() != item.contact.detail<QContactAvatar>().imageUrl();
 
             item.contact = contact;
-            item.hasCompleteContact = true;
-            if (item.person) {
-                item.person->setContact(contact);
-                item.person->setComplete(true);
-                item.filterKey.clear();
+            item.contactState = ContactFetched;
+            item.filterKey.clear();
+            if (item.data) {
+                item.data->contactFetched(item.contact);
             }
 
              QList<QContactPhoneNumber> phoneNumbers = contact.details<QContactPhoneNumber>();
@@ -1205,7 +1182,7 @@ void SeasideCache::removeRange(
         if (filter == FilterAll) {
             m_expiredContacts[cacheIds.at(index)] -= 1;
 
-            removeFromContactNameGroup(nameGroupForCacheItem(cacheItemById(cacheIds.at(index))), &modifiedNameGroups);
+            removeFromContactNameGroup(nameGroupForCacheItem(existingItem(cacheIds.at(index))), &modifiedNameGroups);
         }
 
         cacheIds.remove(index);
@@ -1241,7 +1218,7 @@ int SeasideCache::insertRange(
         if (filter == FilterAll) {
             m_expiredContacts[queryIds.at(queryIndex + i)] += 1;
 
-            addToContactNameGroup(nameGroupForCacheItem(cacheItemById(queryIds.at(queryIndex + i))), &modifiedNameGroups);
+            addToContactNameGroup(nameGroupForCacheItem(existingItem(queryIds.at(queryIndex + i))), &modifiedNameGroups);
         }
 
         cacheIds.insert(index + i, queryIds.at(queryIndex + i));
@@ -1314,21 +1291,22 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
             // We didn't find any constituents - report the empty list
             QContactId aggregateId = m_contactsToFetchConstituents.takeFirst();
 #ifdef USING_QTPIM
-            SeasidePerson *person = personById(aggregateId);
+            CacheItem *cacheItem = itemById(aggregateId);
 #else
-            SeasidePerson *person = personById(aggregateId.localId());
+            CacheItem *cacheItem = itemById(aggregateId.localId());
 #endif
-            person->setConstituents(QList<int>());
-            emit person->constituentsChanged();
+            if (cacheItem->data) {
+                cacheItem->data->constituentsFetched(QList<int>());
+            }
         }
     } else if (request == &m_fetchByIdRequest) {
         if (!m_contactsToFetchConstituents.isEmpty()) {
             // Report these results
             QContactId aggregateId = m_contactsToFetchConstituents.takeFirst();
 #ifdef USING_QTPIM
-            SeasidePerson *person = personById(aggregateId);
+            CacheItem *cacheItem = itemById(aggregateId);
 #else
-            SeasidePerson *person = personById(aggregateId.localId());
+            CacheItem *cacheItem = itemById(aggregateId.localId());
 #endif
 
             QList<int> constituentIds;
@@ -1337,17 +1315,18 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
             }
             m_constituentIds.clear();
 
-            person->setConstituents(constituentIds);
-            emit person->constituentsChanged();
+            if (cacheItem->data) {
+                cacheItem->data->constituentsFetched(constituentIds);
+            }
         }
     } else if (request == &m_contactIdRequest) {
         if (!m_contactsToFetchCandidates.isEmpty()) {
             // Report these results
             QContactId contactId = m_contactsToFetchCandidates.takeFirst();
 #ifdef USING_QTPIM
-            SeasidePerson *person = personById(contactId);
+            CacheItem *cacheItem = itemById(contactId);
 #else
-            SeasidePerson *person = personById(contactId.localId());
+            CacheItem *cacheItem = itemById(contactId.localId());
 #endif
 
             const quint32 contactIid = internalId(contactId);
@@ -1362,8 +1341,9 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
             }
             m_candidateIds.clear();
 
-            person->setMergeCandidates(candidateIds);
-            emit person->mergeCandidatesChanged();
+            if (cacheItem->data) {
+                cacheItem->data->mergeCandidatesFetched(candidateIds);
+            }
         }
     }
 
@@ -1457,9 +1437,10 @@ void SeasideCache::displayLabelOrderChanged()
 
         typedef QHash<quint32, CacheItem>::iterator iterator;
         for (iterator it = m_people.begin(); it != m_people.end(); ++it) {
-            if (it->person) {
-                it->person->recalculateDisplayLabel(static_cast<DisplayLabelOrder>(m_displayLabelOrder));
-                it->contact = it->person->contact();
+            if (it->data) {
+                it->data->displayLabelOrderChanged(m_displayLabelOrder);
+                // TODO: get rid of contact duplication between person and item
+                //it->contact = it->person->contact();
             } else {
                 QContactName name = it->contact.detail<QContactName>();
 #ifdef USING_QTPIM
@@ -1522,7 +1503,7 @@ QString SeasideCache::exportContacts()
     for (iterator it = instance->m_people.begin(); it != instance->m_people.end(); ++it) {
         if (it.key() == selfId) {
             continue;
-        } else if (it->hasCompleteContact) {
+        } else if (it->contactState == ContactFetched) {
             contacts.append(it->contact);
         } else {
             contactsToFetch.append(apiId(it.key()));

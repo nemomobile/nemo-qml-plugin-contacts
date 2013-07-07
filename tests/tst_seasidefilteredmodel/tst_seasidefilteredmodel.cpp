@@ -648,7 +648,7 @@ void tst_SeasideFilteredModel::searchByFirstNameCharacter()
     model.setFilterPattern("aaron");    // only first letter counts
     QCOMPARE(model.rowCount(), 4);
 
-    SeasideCache::CacheItem *cacheItem = SeasideCache::cacheItemById(cache.idAt(0));
+    SeasideCache::CacheItem *cacheItem = SeasideCache::existingItem(cache.idAt(0));
 #ifdef USING_QTPIM
     QContactDisplayLabel displayLabel = cacheItem->contact.detail<QContactDisplayLabel>();
     displayLabel.setLabel("");

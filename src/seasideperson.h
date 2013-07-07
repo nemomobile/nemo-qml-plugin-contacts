@@ -71,7 +71,7 @@ signals:
     void selfPersonChanged();
 };
 
-class SeasidePerson : public QObject
+class SeasidePerson : public QObject, public SeasideCache::ItemData
 {
     Q_OBJECT
     Q_ENUMS(DetailType)
@@ -160,10 +160,10 @@ public:
     void setMiddleName(const QString &name);
 
     Q_PROPERTY(QString sectionBucket READ sectionBucket NOTIFY displayLabelChanged)
-    QString sectionBucket();
+    QString sectionBucket() const;
 
     Q_PROPERTY(QString displayLabel READ displayLabel NOTIFY displayLabelChanged)
-    QString displayLabel();
+    QString displayLabel() const;
 
     Q_PROPERTY(QString companyName READ companyName WRITE setCompanyName NOTIFY companyNameChanged)
     QString companyName() const;
@@ -278,6 +278,13 @@ public:
 
     Q_INVOKABLE void fetchMergeCandidates();
 
+    QString getDisplayLabel() const;
+    void displayLabelOrderChanged(SeasideCache::DisplayLabelOrder order);
+
+    void contactFetched(const QContact &contact);
+    void constituentsFetched(const QList<int> &ids);
+    void mergeCandidatesFetched(const QList<int> &ids);
+
     static QString generateDisplayLabel(
                 const QContact &mContact,
                 SeasideCache::DisplayLabelOrder order = SeasideCache::FirstNameFirst);
@@ -320,13 +327,13 @@ signals:
     void mergeCandidatesChanged();
 
 public slots:
-    void recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order = SeasideCache::FirstNameFirst);
+    void recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order = SeasideCache::FirstNameFirst) const;
 
 private:
     // TODO: private class
     explicit SeasidePerson(const QContact &contact, QObject *parent = 0);
     QContact mContact;
-    QString mDisplayLabel;
+    mutable QString mDisplayLabel;
     QList<int> mConstituents;
     QList<int> mCandidates;
     bool mComplete;

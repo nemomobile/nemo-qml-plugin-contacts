@@ -153,6 +153,8 @@ private:
     void updateIndex();
     void updateContactData(const ContactIdType &contactId, FilterType filter);
 
+    SeasidePerson *personFromItem(SeasideCache::CacheItem *item) const;
+
     QVector<ContactIdType> m_filteredContactIds;
     const QVector<ContactIdType> *m_contactIds;
     const QVector<ContactIdType> *m_referenceContactIds;

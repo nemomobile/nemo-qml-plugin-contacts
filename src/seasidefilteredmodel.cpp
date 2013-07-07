@@ -270,7 +270,7 @@ bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
     if (m_filterParts.isEmpty())
         return true;
 
-    SeasideCache::CacheItem *item = SeasideCache::cacheItemById(contactId);
+    SeasideCache::CacheItem *item = SeasideCache::existingItem(contactId);
     if (!item)
         return false;
 
@@ -430,10 +430,10 @@ void SeasideFilteredModel::populateIndex()
 QVariantMap SeasideFilteredModel::get(int row) const
 {
     // needed for SectionScroller.
-    SeasideCache::CacheItem *cacheItem = SeasideCache::cacheItemById(m_contactIds->at(row));
+    SeasideCache::CacheItem *cacheItem = SeasideCache::existingItem(m_contactIds->at(row));
     QString sectionBucket;
-    if (cacheItem && cacheItem->person) {
-        sectionBucket = cacheItem->person->sectionBucket();
+    if (cacheItem && cacheItem->data) {
+        sectionBucket = static_cast<SeasidePerson *>(cacheItem->data)->sectionBucket();
     } else if (cacheItem) {
 #ifdef USING_QTPIM
         QString displayLabel = cacheItem->contact.detail<QContactName>().value<QString>(QContactName__FieldCustomLabel);
@@ -450,37 +450,37 @@ QVariantMap SeasideFilteredModel::get(int row) const
 
 bool SeasideFilteredModel::savePerson(SeasidePerson *person)
 {
-    return SeasideCache::savePerson(person);
+    return SeasideCache::saveContact(person->contact());
 }
 
 SeasidePerson *SeasideFilteredModel::personByRow(int row) const
 {
-    return SeasideCache::personById(m_contactIds->at(row));
+    return personFromItem(SeasideCache::itemById(m_contactIds->at(row)));
 }
 
 SeasidePerson *SeasideFilteredModel::personById(int id) const
 {
-    return SeasideCache::personById(id);
+    return personFromItem(SeasideCache::itemById(id));
 }
 
 SeasidePerson *SeasideFilteredModel::personByPhoneNumber(const QString &msisdn) const
 {
-    return SeasideCache::personByPhoneNumber(msisdn);
+    return personFromItem(SeasideCache::itemByPhoneNumber(msisdn));
 }
 
 SeasidePerson *SeasideFilteredModel::personByEmailAddress(const QString &email) const
 {
-    return SeasideCache::personByEmailAddress(email);
+    return personFromItem(SeasideCache::itemByEmailAddress(email));
 }
 
 SeasidePerson *SeasideFilteredModel::selfPerson() const
 {
-    return SeasideCache::selfPerson();
+    return personFromItem(SeasideCache::itemById(SeasideCache::selfContactId()));
 }
 
 void SeasideFilteredModel::removePerson(SeasidePerson *person)
 {
-    SeasideCache::removePerson(person);
+    SeasideCache::removeContact(person->contact());
 }
 
 QModelIndex SeasideFilteredModel::index(const QModelIndex &parent, int row, int column) const
@@ -502,7 +502,7 @@ QVariant SeasideFilteredModel::data(const QModelIndex &index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    SeasideCache::CacheItem *cacheItem = SeasideCache::cacheItemById(m_contactIds->at(index.row()));
+    SeasideCache::CacheItem *cacheItem = SeasideCache::existingItem(m_contactIds->at(index.row()));
     if (!cacheItem)
         return QVariant();
 
@@ -518,7 +518,7 @@ QVariant SeasideFilteredModel::data(const QModelIndex &index, int role) const
         return avatarUrl.isEmpty()
                 ? QUrl(QLatin1String("image://theme/icon-m-telephony-contact-avatar"))
                 : avatarUrl;
-    } else if (role != PersonRole && !cacheItem->person) {  // Display or Section Bucket.
+    } else if (role != PersonRole && !cacheItem->data) {  // Display or Section Bucket.
 #ifdef USING_QTPIM
         QString displayLabel = cacheItem->contact.detail<QContactName>().value<QString>(QContactName__FieldCustomLabel);
 #else
@@ -530,7 +530,7 @@ QVariant SeasideFilteredModel::data(const QModelIndex &index, int role) const
                 : displayLabel.at(0).toUpper();
     }
 
-    SeasidePerson *person = SeasideCache::person(cacheItem);
+    SeasidePerson *person = personFromItem(cacheItem);
 
     switch (role) {
     case Qt::DisplayRole:
@@ -701,3 +701,23 @@ QString SeasideFilteredModel::exportContacts()
 {
     return SeasideCache::exportContacts();
 }
+
+SeasidePerson *SeasideFilteredModel::personFromItem(SeasideCache::CacheItem *item) const
+{
+    if (!item)
+        return 0;
+
+    if (!item->data) {
+        SeasidePerson *person = new SeasidePerson(const_cast<SeasideFilteredModel *>(this));
+        if (item->contact.id() != QContactId()) {
+            person->contactFetched(item->contact);
+        }
+        if (item->contactState != SeasideCache::ContactFetched) {
+            person->setComplete(false);
+        }
+        item->data = person;
+    }
+
+    return static_cast<SeasidePerson *>(item->data);
+}
+

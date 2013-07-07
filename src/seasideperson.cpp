@@ -69,7 +69,16 @@ SeasidePersonAttached::~SeasidePersonAttached()
 
 SeasidePerson *SeasidePersonAttached::selfPerson() const
 {
-    return SeasideCache::selfPerson();
+    SeasideCache::CacheItem *item = SeasideCache::itemById(SeasideCache::selfContactId());
+    if (!item->data) {
+        SeasidePerson *person = new SeasidePerson(const_cast<SeasidePersonAttached *>(this));
+        if (item->contact.id() != QContactId()) {
+            person->contactFetched(item->contact);
+        }
+        item->data = person;
+    }
+
+    return static_cast<SeasidePerson *>(item->data);
 }
 
 SeasidePerson::SeasidePerson(QObject *parent)
@@ -165,20 +174,20 @@ QString SeasidePerson::generateDisplayLabelFromNonNameDetails(const QContact &mC
     return SeasideCache::generateDisplayLabelFromNonNameDetails(mContact);
 }
 
-void SeasidePerson::recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order)
+void SeasidePerson::recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order) const
 {
     QString oldDisplayLabel = mDisplayLabel;
     QString newDisplayLabel = generateDisplayLabel(mContact, order);
 
     if (oldDisplayLabel != newDisplayLabel) {
         mDisplayLabel = newDisplayLabel;
-        emit displayLabelChanged();
+        emit const_cast<SeasidePerson*>(this)->displayLabelChanged();
 
         // TODO: If required, store this to the contact backend to prevent later recalculation
     }
 }
 
-QString SeasidePerson::displayLabel()
+QString SeasidePerson::displayLabel() const
 {
     if (mDisplayLabel.isEmpty()) {
         recalculateDisplayLabel();
@@ -187,7 +196,7 @@ QString SeasidePerson::displayLabel()
     return mDisplayLabel;
 }
 
-QString SeasidePerson::sectionBucket()
+QString SeasidePerson::sectionBucket() const
 {
     if (displayLabel().isEmpty())
         return QString();
@@ -983,12 +992,40 @@ QString SeasidePerson::vCard() const
 
 void SeasidePerson::fetchConstituents()
 {
-    SeasideCache::fetchConstituents(this);
+    SeasideCache::fetchConstituents(contact());
 }
 
 void SeasidePerson::fetchMergeCandidates()
 {
-    SeasideCache::fetchMergeCandidates(this);
+    SeasideCache::fetchMergeCandidates(contact());
+}
+
+void SeasidePerson::contactFetched(const QContact &contact)
+{
+    setContact(contact);
+    setComplete(true);
+}
+
+QString SeasidePerson::getDisplayLabel() const
+{
+    return displayLabel();
+}
+
+void SeasidePerson::displayLabelOrderChanged(SeasideCache::DisplayLabelOrder order)
+{
+    recalculateDisplayLabel(order);
+}
+
+void SeasidePerson::constituentsFetched(const QList<int> &ids)
+{
+    setConstituents(ids);
+    emit constituentsChanged();
+}
+
+void SeasidePerson::mergeCandidatesFetched(const QList<int> &ids)
+{
+    setMergeCandidates(ids);
+    emit mergeCandidatesChanged();
 }
 
 SeasidePersonAttached *SeasidePerson::qmlAttachedProperties(QObject *object)
