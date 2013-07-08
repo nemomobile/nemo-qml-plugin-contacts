@@ -126,7 +126,7 @@ public:
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role) const;
 
-    // SeasideProxyModel compatibilty naming.
+    // Backward-compatibilty:
     Q_INVOKABLE void setFilter(FilterType type) { setFilterType(type); }
     Q_INVOKABLE void search(const QString &pattern) { setFilterPattern(pattern); }
 
