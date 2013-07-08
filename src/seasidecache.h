@@ -219,16 +219,15 @@ private slots:
     void contactIdsAvailable();
     void relationshipsAvailable();
     void requestStateChanged(QContactAbstractRequest::State state);
-#ifdef USING_QTPIM
-    void contactsRemoved(const QList<QContactId> &contactIds);
-#else
-    void contactsRemoved(const QList<QContactLocalId> &contactIds);
-#endif
     void updateContacts();
 #ifdef USING_QTPIM
-    void updateContacts(const QList<QContactId> &contactIds);
+    void contactsAdded(const QList<QContactId> &contactIds);
+    void contactsChanged(const QList<QContactId> &contactIds);
+    void contactsRemoved(const QList<QContactId> &contactIds);
 #else
-    void updateContacts(const QList<QContactLocalId> &contactIds);
+    void contactsAdded(const QList<QContactLocalId> &contactIds);
+    void contactsChanged(const QList<QContactLocalId> &contactIds);
+    void contactsRemoved(const QList<QContactLocalId> &contactIds);
 #endif
     void displayLabelOrderChanged();
 
@@ -238,9 +237,12 @@ private:
 
     static void checkForExpiry();
 
+    void keepPopulated();
+
     void requestUpdate();
     void appendContacts(const QList<QContact> &contacts);
     void fetchContacts();
+    void updateContacts(const QList<QContactId> &contactIds);
 
     void finalizeUpdate(FilterType filter);
     void removeRange(FilterType filter, int index, int count);
@@ -297,6 +299,7 @@ private:
     int m_appendIndex;
     FilterType m_fetchFilter;
     DisplayLabelOrder m_displayLabelOrder;
+    bool m_keepPopulated;
     bool m_updatesPending;
     bool m_fetchActive;
     bool m_refreshRequired;

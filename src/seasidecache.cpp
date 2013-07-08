@@ -210,9 +210,10 @@ SeasideCache::SeasideCache()
     , m_cacheIndex(0)
     , m_queryIndex(0)
     , m_appendIndex(0)
-    , m_fetchFilter(FilterFavorites)
+    , m_fetchFilter(FilterNone)
     , m_displayLabelOrder(FirstNameFirst)
-    , m_updatesPending(true)
+    , m_keepPopulated(false)
+    , m_updatesPending(false)
     , m_refreshRequired(false)
     , m_contactsUpdated(false)
 {
@@ -230,18 +231,18 @@ SeasideCache::SeasideCache()
 
 #ifdef USING_QTPIM
     connect(&m_manager, SIGNAL(dataChanged()), this, SLOT(updateContacts()));
-    connect(&m_manager, SIGNAL(contactsChanged(QList<QContactId>)),
-            this, SLOT(updateContacts(QList<QContactId>)));
     connect(&m_manager, SIGNAL(contactsAdded(QList<QContactId>)),
-            this, SLOT(updateContacts(QList<QContactId>)));
+            this, SLOT(contactsAdded(QList<QContactId>)));
+    connect(&m_manager, SIGNAL(contactsChanged(QList<QContactId>)),
+            this, SLOT(contactsChanged(QList<QContactId>)));
     connect(&m_manager, SIGNAL(contactsRemoved(QList<QContactId>)),
             this, SLOT(contactsRemoved(QList<QContactId>)));
 #else
     connect(&m_manager, SIGNAL(dataChanged()), this, SLOT(updateContacts()));
-    connect(&m_manager, SIGNAL(contactsChanged(QList<QContactLocalId>)),
-            this, SLOT(updateContacts(QList<QContactLocalId>)));
     connect(&m_manager, SIGNAL(contactsAdded(QList<QContactLocalId>)),
-            this, SLOT(updateContacts(QList<QContactLocalId>)));
+            this, SLOT(contactsAdded(QList<QContactLocalId>)));
+    connect(&m_manager, SIGNAL(contactsChanged(QList<QContactLocalId>)),
+            this, SLOT(contactsChanged(QList<QContactLocalId>)));
     connect(&m_manager, SIGNAL(contactsRemoved(QList<QContactLocalId>)),
             this, SLOT(contactsRemoved(QList<QContactLocalId>)));
 #endif
@@ -281,9 +282,6 @@ SeasideCache::SeasideCache()
     m_fetchRequest.setFetchHint(fetchHint);
 
     setSortOrder(m_displayLabelOrder);
-
-    m_fetchRequest.setFilter(QContactFavorite::match());
-    m_fetchRequest.start();
 }
 
 SeasideCache::~SeasideCache()
@@ -315,6 +313,7 @@ void SeasideCache::registerModel(ListModel *model, FilterType type)
             instancePtr->m_models[i].removeAll(model);
     }
     instancePtr->m_models[type].append(model);
+    instancePtr->keepPopulated();
 }
 
 void SeasideCache::unregisterModel(ListModel *model)
@@ -923,10 +922,46 @@ void SeasideCache::timerEvent(QTimerEvent *event)
     }
 }
 
-void SeasideCache::contactsRemoved(const QList<ContactIdType> &)
+void SeasideCache::contactsAdded(const QList<ContactIdType> &ids)
 {
-    m_refreshRequired = true;
-    requestUpdate();
+    if (m_keepPopulated) {
+        updateContacts(ids);
+    }
+}
+
+void SeasideCache::contactsChanged(const QList<ContactIdType> &ids)
+{
+    if (m_keepPopulated) {
+        updateContacts(ids);
+    } else {
+        // Update these contacts if they're already in the cache
+        QList<ContactIdType> presentIds;
+        foreach (const ContactIdType &id, ids) {
+            if (existingItem(id)) {
+                presentIds.append(id);
+            }
+        }
+    }
+}
+
+void SeasideCache::contactsRemoved(const QList<ContactIdType> &ids)
+{
+    if (m_keepPopulated) {
+        m_refreshRequired = true;
+        requestUpdate();
+    } else {
+        // Remove these contacts if they're already in the cache
+        bool present = false;
+        foreach (const ContactIdType &id, ids) {
+            if (existingItem(id)) {
+                present = true;
+                m_expiredContacts[id] += -1;
+            }
+        }
+        if (present) {
+            requestUpdate();
+        }
+    }
 }
 
 void SeasideCache::updateContacts()
@@ -956,7 +991,10 @@ void SeasideCache::fetchContacts()
         // Fetch any changed contacts immediately
         if (m_contactsUpdated) {
             m_contactsUpdated = false;
-            m_refreshRequired = true;
+            if (m_keepPopulated) {
+                // Refresh our contact sets in case sorting has changed
+                m_refreshRequired = true;
+            }
         }
         requestUpdate();
     }
@@ -970,20 +1008,22 @@ void SeasideCache::updateContacts(const QList<ContactIdType> &contactIds)
     // Maximum wait until we fetch all changes previously reported
     static const int MaxPostponementMs = 5000;
 
-    m_contactsUpdated = true;
-    m_changedContacts.append(contactIds);
+    if (!contactIds.isEmpty()) {
+        m_contactsUpdated = true;
+        m_changedContacts.append(contactIds);
 
-    if (m_fetchPostponed.isValid()) {
-        // We are waiting to accumulate further changes
-        int remainder = MaxPostponementMs - m_fetchPostponed.elapsed();
-        if (remainder > 0) {
-            // We can postpone further
-            m_fetchTimer.start(std::min(remainder, PostponementIntervalMs), this);
+        if (m_fetchPostponed.isValid()) {
+            // We are waiting to accumulate further changes
+            int remainder = MaxPostponementMs - m_fetchPostponed.elapsed();
+            if (remainder > 0) {
+                // We can postpone further
+                m_fetchTimer.start(std::min(remainder, PostponementIntervalMs), this);
+            }
+        } else {
+            // Wait for further changes before we query for the ones we have now
+            m_fetchPostponed.restart();
+            m_fetchTimer.start(PostponementIntervalMs, this);
         }
-    } else {
-        // Wait for further changes before we query for the ones we have now
-        m_fetchPostponed.restart();
-        m_fetchTimer.start(PostponementIntervalMs, this);
     }
 }
 
@@ -1544,5 +1584,16 @@ QString SeasideCache::exportContacts()
     // TODO: thread
     writer.waitForFinished();
     return vcard.fileName();
+}
+
+void SeasideCache::keepPopulated()
+{
+    if (!m_keepPopulated) {
+        m_keepPopulated = true;
+
+        // Start a query to fully populate the cache
+        m_refreshRequired = true;
+        requestUpdate();
+    }
 }
 
