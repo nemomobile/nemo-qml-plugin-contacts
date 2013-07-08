@@ -48,6 +48,14 @@
 
 #include <QtDebug>
 
+struct FilterData : public SeasideCache::ModelData
+{
+    // Store additional filter keys with the cache item
+    QStringList filterKey;
+
+    void contactChanged(const QContact &) { filterKey.clear(); }
+};
+
 // We could squeeze a little more performance out of QVector by inserting all the items in a
 // single hit, but tests are more important right now.
 static void insert(
@@ -281,8 +289,11 @@ bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
     //
     // TODO: i18n will require different splitting for thai and possibly
     // other locales, see MBreakIterator
-
-    if (item->filterKey.isEmpty()) {
+    if (!item->modelData) {
+        item->modelData = new FilterData;
+    }
+    FilterData *filterData = static_cast<FilterData *>(item->modelData);
+    if (filterData->filterKey.isEmpty()) {
         QSet<QString> matchTokens;
 
         QContactName name = item->contact.detail<QContactName>();
@@ -317,7 +328,7 @@ bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
         foreach (const QContactPresence &detail, item->contact.details<QContactPresence>())
             insert(matchTokens, splitWords(detail.nickname()));
 
-        item->filterKey = matchTokens.toList();
+        filterData->filterKey = matchTokens.toList();
     }
 
     // search forwards over the label components for each filter word, making
@@ -325,11 +336,11 @@ bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
     for (int i = 0; i < m_filterParts.size(); i++) {
         bool found = false;
         const QString &part(m_filterParts.at(i));
-        for (int j = 0; j < item->filterKey.size(); j++) {
+        for (int j = 0; j < filterData->filterKey.size(); j++) {
             // TODO: for good i18n, we need to search insensitively taking
             // diacritics into account, QString's functions alone aren't good
             // enough
-            if (item->filterKey.at(j).startsWith(part, Qt::CaseInsensitive)) {
+            if (filterData->filterKey.at(j).startsWith(part, Qt::CaseInsensitive)) {
                 found = true;
                 break;
             }
@@ -432,8 +443,8 @@ QVariantMap SeasideFilteredModel::get(int row) const
     // needed for SectionScroller.
     SeasideCache::CacheItem *cacheItem = SeasideCache::existingItem(m_contactIds->at(row));
     QString sectionBucket;
-    if (cacheItem && cacheItem->data) {
-        sectionBucket = static_cast<SeasidePerson *>(cacheItem->data)->sectionBucket();
+    if (cacheItem && cacheItem->itemData) {
+        sectionBucket = static_cast<SeasidePerson *>(cacheItem->itemData)->sectionBucket();
     } else if (cacheItem) {
 #ifdef USING_QTPIM
         QString displayLabel = cacheItem->contact.detail<QContactName>().value<QString>(QContactName__FieldCustomLabel);
@@ -518,7 +529,7 @@ QVariant SeasideFilteredModel::data(const QModelIndex &index, int role) const
         return avatarUrl.isEmpty()
                 ? QUrl(QLatin1String("image://theme/icon-m-telephony-contact-avatar"))
                 : avatarUrl;
-    } else if (role != PersonRole && !cacheItem->data) {  // Display or Section Bucket.
+    } else if (role != PersonRole && !cacheItem->itemData) {  // Display or Section Bucket.
 #ifdef USING_QTPIM
         QString displayLabel = cacheItem->contact.detail<QContactName>().value<QString>(QContactName__FieldCustomLabel);
 #else
@@ -707,10 +718,10 @@ SeasidePerson *SeasideFilteredModel::personFromItem(SeasideCache::CacheItem *ite
     if (!item)
         return 0;
 
-    if (!item->data) {
-        item->data = new SeasidePerson(&item->contact, (item->contactState == SeasideCache::ContactFetched), SeasideCache::instance());
+    if (!item->itemData) {
+        item->itemData = new SeasidePerson(&item->contact, (item->contactState == SeasideCache::ContactFetched), SeasideCache::instance());
     }
 
-    return static_cast<SeasidePerson *>(item->data);
+    return static_cast<SeasidePerson *>(item->itemData);
 }
 

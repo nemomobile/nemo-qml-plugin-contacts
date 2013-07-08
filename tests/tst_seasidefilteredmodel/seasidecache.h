@@ -47,14 +47,21 @@ public:
         virtual void mergeCandidatesFetched(const QList<int> &ids) = 0;
     };
 
+    struct ModelData
+    {
+        virtual ~ModelData() {}
+
+        virtual void contactChanged(const QContact &) = 0;
+    };
+
     struct CacheItem
     {
-        CacheItem() : data(0) {}
-        CacheItem(const QContact &contact) : contact(contact), data(0) {}
+        CacheItem() : itemData(0), modelData(0) {}
+        CacheItem(const QContact &contact) : contact(contact), itemData(0), modelData(0) {}
 
         QContact contact;
-        ItemData *data;
-        QStringList filterKey;
+        ItemData *itemData;
+        ModelData *modelData;
     };
 
     class ListModel : public QAbstractListModel

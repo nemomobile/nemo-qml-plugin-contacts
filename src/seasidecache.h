@@ -111,16 +111,23 @@ public:
         virtual void mergeCandidatesFetched(const QList<int> &ids) = 0;
     };
 
+    struct ModelData
+    {
+        virtual ~ModelData() {}
+
+        virtual void contactChanged(const QContact &newContact) = 0;
+    };
+
     struct CacheItem
     {
-        CacheItem() : data(0), contactState(ContactAbsent) {}
-        CacheItem(const QContact &contact) : contact(contact), data(0), contactState(ContactAbsent) {}
+        CacheItem() : itemData(0), modelData(0), contactState(ContactAbsent) {}
+        CacheItem(const QContact &contact) : contact(contact), itemData(0), modelData(0), contactState(ContactAbsent) {}
 
         ContactIdType apiId() const { return SeasideCache::apiId(contact); }
 
         QContact contact;
-        ItemData *data;
-        QStringList filterKey;
+        ItemData *itemData;
+        ModelData *modelData;
         ContactState contactState;
     };
 

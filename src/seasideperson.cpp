@@ -70,11 +70,11 @@ SeasidePersonAttached::~SeasidePersonAttached()
 SeasidePerson *SeasidePersonAttached::selfPerson() const
 {
     SeasideCache::CacheItem *item = SeasideCache::itemById(SeasideCache::selfContactId());
-    if (!item->data) {
-        item->data = new SeasidePerson(&item->contact, (item->contactState == SeasideCache::ContactFetched), SeasideCache::instance());
+    if (!item->itemData) {
+        item->itemData = new SeasidePerson(&item->contact, (item->contactState == SeasideCache::ContactFetched), SeasideCache::instance());
     }
 
-    return static_cast<SeasidePerson *>(item->data);
+    return static_cast<SeasidePerson *>(item->itemData);
 }
 
 SeasidePerson::SeasidePerson(QObject *parent)

@@ -367,8 +367,8 @@ QChar SeasideCache::nameGroupForCacheItem(CacheItem *cacheItem)
     } else if (!last.isEmpty()) {
         group = last[0].toUpper();
     } else {
-        QString displayLabel = (cacheItem->data)
-                ? cacheItem->data->getDisplayLabel()
+        QString displayLabel = (cacheItem->itemData)
+                ? cacheItem->itemData->getDisplayLabel()
                 : generateDisplayLabel(cacheItem->contact);
         if (!displayLabel.isEmpty())
             group = displayLabel[0].toUpper();
@@ -420,8 +420,8 @@ void SeasideCache::removeContact(const QContact &)
 void SeasideCache::fetchConstituents(const QContact &contact)
 {
     if (SeasideCache::CacheItem *item = itemById(contact.id())) {
-        if (item->data) {
-            item->data->constituentsFetched(QList<int>());
+        if (item->itemData) {
+            item->itemData->constituentsFetched(QList<int>());
         }
     }
 }
@@ -429,8 +429,8 @@ void SeasideCache::fetchConstituents(const QContact &contact)
 void SeasideCache::fetchMergeCandidates(const QContact &contact)
 {
     if (SeasideCache::CacheItem *item = itemById(contact.id())) {
-        if (item->data) {
-            item->data->mergeCandidatesFetched(QList<int>());
+        if (item->itemData) {
+            item->itemData->mergeCandidatesFetched(QList<int>());
         }
     }
 }
@@ -520,7 +520,9 @@ void SeasideCache::setFirstName(FilterType filterType, int index, const QString 
 #endif
     cacheItem.contact.saveDetail(&name);
 
-    cacheItem.filterKey = QStringList();
+    if (cacheItem.modelData) {
+        cacheItem.modelData->contactChanged(cacheItem.contact);
+    }
 
     if (m_models[filterType])
         m_models[filterType]->sourceDataChanged(index, index);

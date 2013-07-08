@@ -394,8 +394,8 @@ QChar SeasideCache::nameGroupForCacheItem(CacheItem *cacheItem)
     } else if (!last.isEmpty()) {
         group = last[0].toUpper();
     } else {
-        QString displayLabel = (cacheItem->data)
-                ? cacheItem->data->getDisplayLabel()
+        QString displayLabel = (cacheItem->itemData)
+                ? cacheItem->itemData->getDisplayLabel()
                 : generateDisplayLabel(cacheItem->contact);
         if (!displayLabel.isEmpty())
             group = displayLabel[0].toUpper();
@@ -918,7 +918,8 @@ bool SeasideCache::event(QEvent *event)
             quint32 iid = internalId(it.key());
             QHash<quint32, CacheItem>::iterator cacheItem = m_people.find(iid);
             if (cacheItem != m_people.end()) {
-                delete cacheItem->data;
+                delete cacheItem->itemData;
+                delete cacheItem->modelData;
                 m_people.erase(cacheItem);
             }
         }
@@ -1052,12 +1053,14 @@ void SeasideCache::contactsAvailable()
             const bool roleDataChanged = newName != oldName
                     || contact.detail<QContactAvatar>().imageUrl() != item.contact.detail<QContactAvatar>().imageUrl();
 
-            if (item.data) {
-                item.data->updateContact(contact, &item.contact);
+            if (item.modelData) {
+                item.modelData->contactChanged(contact);
+            }
+            if (item.itemData) {
+                item.itemData->updateContact(contact, &item.contact);
             } else {
                 item.contact = contact;
             }
-            item.filterKey.clear();
             item.contactState = ContactFetched;
 
              QList<QContactPhoneNumber> phoneNumbers = contact.details<QContactPhoneNumber>();
@@ -1262,7 +1265,6 @@ void SeasideCache::appendContacts(const QList<QContact> &contacts)
                 CacheItem &cacheItem = m_people[iid];
                 cacheItem.contact = contact;
                 cacheItem.contactState = ContactFetched;
-                cacheItem.filterKey = QStringList();
 
                 if (m_fetchFilter == FilterAll)
                     addToContactNameGroup(nameGroupForCacheItem(&cacheItem), 0);
@@ -1302,8 +1304,8 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
 #else
             CacheItem *cacheItem = itemById(aggregateId.localId());
 #endif
-            if (cacheItem->data) {
-                cacheItem->data->constituentsFetched(QList<int>());
+            if (cacheItem->itemData) {
+                cacheItem->itemData->constituentsFetched(QList<int>());
             }
         }
     } else if (request == &m_fetchByIdRequest) {
@@ -1322,8 +1324,8 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
             }
             m_constituentIds.clear();
 
-            if (cacheItem->data) {
-                cacheItem->data->constituentsFetched(constituentIds);
+            if (cacheItem->itemData) {
+                cacheItem->itemData->constituentsFetched(constituentIds);
             }
         }
     } else if (request == &m_contactIdRequest) {
@@ -1348,8 +1350,8 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
             }
             m_candidateIds.clear();
 
-            if (cacheItem->data) {
-                cacheItem->data->mergeCandidatesFetched(candidateIds);
+            if (cacheItem->itemData) {
+                cacheItem->itemData->mergeCandidatesFetched(candidateIds);
             }
         }
     }
@@ -1444,8 +1446,8 @@ void SeasideCache::displayLabelOrderChanged()
 
         typedef QHash<quint32, CacheItem>::iterator iterator;
         for (iterator it = m_people.begin(); it != m_people.end(); ++it) {
-            if (it->data) {
-                it->data->displayLabelOrderChanged(m_displayLabelOrder);
+            if (it->itemData) {
+                it->itemData->displayLabelOrderChanged(m_displayLabelOrder);
             } else {
                 QContactName name = it->contact.detail<QContactName>();
 #ifdef USING_QTPIM
