@@ -1052,12 +1052,13 @@ void SeasideCache::contactsAvailable()
             const bool roleDataChanged = newName != oldName
                     || contact.detail<QContactAvatar>().imageUrl() != item.contact.detail<QContactAvatar>().imageUrl();
 
-            item.contact = contact;
-            item.contactState = ContactFetched;
-            item.filterKey.clear();
             if (item.data) {
-                item.data->contactFetched(item.contact);
+                item.data->updateContact(contact, &item.contact);
+            } else {
+                item.contact = contact;
             }
+            item.filterKey.clear();
+            item.contactState = ContactFetched;
 
              QList<QContactPhoneNumber> phoneNumbers = contact.details<QContactPhoneNumber>();
              for (int j = 0; j < phoneNumbers.count(); ++j) {
@@ -1260,6 +1261,7 @@ void SeasideCache::appendContacts(const QList<QContact> &contacts)
                 cacheIds.append(apiId);
                 CacheItem &cacheItem = m_people[iid];
                 cacheItem.contact = contact;
+                cacheItem.contactState = ContactFetched;
                 cacheItem.filterKey = QStringList();
 
                 if (m_fetchFilter == FilterAll)
@@ -1444,8 +1446,6 @@ void SeasideCache::displayLabelOrderChanged()
         for (iterator it = m_people.begin(); it != m_people.end(); ++it) {
             if (it->data) {
                 it->data->displayLabelOrderChanged(m_displayLabelOrder);
-                // TODO: get rid of contact duplication between person and item
-                //it->contact = it->person->contact();
             } else {
                 QContactName name = it->contact.detail<QContactName>();
 #ifdef USING_QTPIM

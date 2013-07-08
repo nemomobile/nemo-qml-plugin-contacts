@@ -708,14 +708,7 @@ SeasidePerson *SeasideFilteredModel::personFromItem(SeasideCache::CacheItem *ite
         return 0;
 
     if (!item->data) {
-        SeasidePerson *person = new SeasidePerson(SeasideCache::instance());
-        if (item->contact.id() != QContactId()) {
-            person->contactFetched(item->contact);
-        }
-        if (item->contactState != SeasideCache::ContactFetched) {
-            person->setComplete(false);
-        }
-        item->data = person;
+        item->data = new SeasidePerson(&item->contact, (item->contactState == SeasideCache::ContactFetched), SeasideCache::instance());
     }
 
     return static_cast<SeasidePerson *>(item->data);

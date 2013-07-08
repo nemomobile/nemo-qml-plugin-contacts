@@ -41,7 +41,8 @@ public:
         virtual QString getDisplayLabel() const;
         virtual void displayLabelOrderChanged(DisplayLabelOrder order) = 0;
 
-        virtual void contactFetched(const QContact &contact) = 0;
+        virtual void updateContact(const QContact &newContact, QContact *oldContact) = 0;
+
         virtual void constituentsFetched(const QList<int> &ids) = 0;
         virtual void mergeCandidatesFetched(const QList<int> &ids) = 0;
     };

@@ -138,6 +138,9 @@ public:
     };
 
     explicit SeasidePerson(QObject *parent = 0);
+    explicit SeasidePerson(const QContact &contact, QObject *parent = 0);
+    SeasidePerson(QContact *contact, bool complete, QObject *parent = 0);
+
     ~SeasidePerson();
 
     Q_PROPERTY(int id READ id NOTIFY contactChanged)
@@ -281,7 +284,8 @@ public:
     QString getDisplayLabel() const;
     void displayLabelOrderChanged(SeasideCache::DisplayLabelOrder order);
 
-    void contactFetched(const QContact &contact);
+    void updateContact(const QContact &newContact, QContact *oldContact);
+
     void constituentsFetched(const QList<int> &ids);
     void mergeCandidatesFetched(const QList<int> &ids);
 
@@ -330,13 +334,12 @@ public slots:
     void recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order = SeasideCache::FirstNameFirst) const;
 
 private:
-    // TODO: private class
-    explicit SeasidePerson(const QContact &contact, QObject *parent = 0);
-    QContact mContact;
+    QContact *mContact;
     mutable QString mDisplayLabel;
     QList<int> mConstituents;
     QList<int> mCandidates;
     bool mComplete;
+    bool mDeleteContact;
 
     friend class SeasideCache;
     friend class tst_SeasidePerson;

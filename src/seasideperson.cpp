@@ -71,11 +71,7 @@ SeasidePerson *SeasidePersonAttached::selfPerson() const
 {
     SeasideCache::CacheItem *item = SeasideCache::itemById(SeasideCache::selfContactId());
     if (!item->data) {
-        SeasidePerson *person = new SeasidePerson(SeasideCache::instance());
-        if (item->contact.id() != QContactId()) {
-            person->contactFetched(item->contact);
-        }
-        item->data = person;
+        item->data = new SeasidePerson(&item->contact, (item->contactState == SeasideCache::ContactFetched), SeasideCache::instance());
     }
 
     return static_cast<SeasidePerson *>(item->data);
@@ -83,26 +79,40 @@ SeasidePerson *SeasidePersonAttached::selfPerson() const
 
 SeasidePerson::SeasidePerson(QObject *parent)
     : QObject(parent)
+    , mContact(new QContact)
     , mComplete(true)
+    , mDeleteContact(true)
 {
 }
 
 SeasidePerson::SeasidePerson(const QContact &contact, QObject *parent)
     : QObject(parent)
-    , mContact(contact)
+    , mContact(new QContact(contact))
     , mComplete(true)
+    , mDeleteContact(true)
+{
+}
+
+SeasidePerson::SeasidePerson(QContact *contact, bool complete, QObject *parent)
+    : QObject(parent)
+    , mContact(contact)
+    , mComplete(complete)
+    , mDeleteContact(false)
 {
 }
 
 SeasidePerson::~SeasidePerson()
 {
     emit contactRemoved();
+
+    if (mDeleteContact)
+        delete mContact;
 }
 
 // QT5: this needs to change type
 int SeasidePerson::id() const
 {
-    return SeasideCache::contactId(mContact);
+    return SeasideCache::contactId(*mContact);
 }
 
 bool SeasidePerson::isComplete() const
@@ -120,64 +130,64 @@ void SeasidePerson::setComplete(bool complete)
 
 QString SeasidePerson::firstName() const
 {
-    QContactName nameDetail = mContact.detail<QContactName>();
+    QContactName nameDetail = mContact->detail<QContactName>();
     return nameDetail.firstName();
 }
 
 void SeasidePerson::setFirstName(const QString &name)
 {
-    QContactName nameDetail = mContact.detail<QContactName>();
+    QContactName nameDetail = mContact->detail<QContactName>();
     nameDetail.setFirstName(name);
-    mContact.saveDetail(&nameDetail);
+    mContact->saveDetail(&nameDetail);
     emit firstNameChanged();
     recalculateDisplayLabel();
 }
 
 QString SeasidePerson::lastName() const
 {
-    QContactName nameDetail = mContact.detail<QContactName>();
+    QContactName nameDetail = mContact->detail<QContactName>();
     return nameDetail.lastName();
 }
 
 void SeasidePerson::setLastName(const QString &name)
 {
-    QContactName nameDetail = mContact.detail<QContactName>();
+    QContactName nameDetail = mContact->detail<QContactName>();
     nameDetail.setLastName(name);
-    mContact.saveDetail(&nameDetail);
+    mContact->saveDetail(&nameDetail);
     emit lastNameChanged();
     recalculateDisplayLabel();
 }
 
 QString SeasidePerson::middleName() const
 {
-    QContactName nameDetail = mContact.detail<QContactName>();
+    QContactName nameDetail = mContact->detail<QContactName>();
     return nameDetail.middleName();
 }
 
 void SeasidePerson::setMiddleName(const QString &name)
 {
-    QContactName nameDetail = mContact.detail<QContactName>();
+    QContactName nameDetail = mContact->detail<QContactName>();
     nameDetail.setMiddleName(name);
-    mContact.saveDetail(&nameDetail);
+    mContact->saveDetail(&nameDetail);
     emit middleNameChanged();
     recalculateDisplayLabel();
 }
 
 // small helper to avoid inconvenience
-QString SeasidePerson::generateDisplayLabel(const QContact &mContact, SeasideCache::DisplayLabelOrder order)
+QString SeasidePerson::generateDisplayLabel(const QContact &contact, SeasideCache::DisplayLabelOrder order)
 {
-    return SeasideCache::generateDisplayLabel(mContact, order);
+    return SeasideCache::generateDisplayLabel(contact, order);
 }
 
-QString SeasidePerson::generateDisplayLabelFromNonNameDetails(const QContact &mContact)
+QString SeasidePerson::generateDisplayLabelFromNonNameDetails(const QContact &contact)
 {
-    return SeasideCache::generateDisplayLabelFromNonNameDetails(mContact);
+    return SeasideCache::generateDisplayLabelFromNonNameDetails(contact);
 }
 
 void SeasidePerson::recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order) const
 {
     QString oldDisplayLabel = mDisplayLabel;
-    QString newDisplayLabel = generateDisplayLabel(mContact, order);
+    QString newDisplayLabel = generateDisplayLabel(*mContact, order);
 
     if (oldDisplayLabel != newDisplayLabel) {
         mDisplayLabel = newDisplayLabel;
@@ -211,64 +221,64 @@ QString SeasidePerson::sectionBucket() const
 
 QString SeasidePerson::companyName() const
 {
-    QContactOrganization company = mContact.detail<QContactOrganization>();
+    QContactOrganization company = mContact->detail<QContactOrganization>();
     return company.name();
 }
 
 void SeasidePerson::setCompanyName(const QString &name)
 {
-    QContactOrganization companyNameDetail = mContact.detail<QContactOrganization>();
+    QContactOrganization companyNameDetail = mContact->detail<QContactOrganization>();
     companyNameDetail.setName(name);
-    mContact.saveDetail(&companyNameDetail);
+    mContact->saveDetail(&companyNameDetail);
     emit companyNameChanged();
 }
 
 QString SeasidePerson::nickname() const
 {
-    QContactNickname nameDetail = mContact.detail<QContactNickname>();
+    QContactNickname nameDetail = mContact->detail<QContactNickname>();
     return nameDetail.nickname();
 }
 
 void SeasidePerson::setNickname(const QString &name)
 {
-    QContactNickname nameDetail = mContact.detail<QContactNickname>();
+    QContactNickname nameDetail = mContact->detail<QContactNickname>();
     nameDetail.setNickname(name);
-    mContact.saveDetail(&nameDetail);
+    mContact->saveDetail(&nameDetail);
     emit nicknameChanged();
     recalculateDisplayLabel();
 }
 
 QString SeasidePerson::title() const
 {
-    QContactName nameDetail = mContact.detail<QContactName>();
+    QContactName nameDetail = mContact->detail<QContactName>();
     return nameDetail.prefix();
 }
 
 void SeasidePerson::setTitle(const QString &name)
 {
-    QContactName nameDetail = mContact.detail<QContactName>();
+    QContactName nameDetail = mContact->detail<QContactName>();
     nameDetail.setPrefix(name);
-    mContact.saveDetail(&nameDetail);
+    mContact->saveDetail(&nameDetail);
     emit titleChanged();
 }
 
 bool SeasidePerson::favorite() const
 {
-    QContactFavorite favoriteDetail = mContact.detail<QContactFavorite>();
+    QContactFavorite favoriteDetail = mContact->detail<QContactFavorite>();
     return favoriteDetail.isFavorite();
 }
 
 void SeasidePerson::setFavorite(bool favorite)
 {
-    QContactFavorite favoriteDetail = mContact.detail<QContactFavorite>();
+    QContactFavorite favoriteDetail = mContact->detail<QContactFavorite>();
     favoriteDetail.setFavorite(favorite);
-    mContact.saveDetail(&favoriteDetail);
+    mContact->saveDetail(&favoriteDetail);
     emit favoriteChanged();
 }
 
 QUrl SeasidePerson::avatarPath() const
 {
-    QContactAvatar avatarDetail = mContact.detail<QContactAvatar>();
+    QContactAvatar avatarDetail = mContact->detail<QContactAvatar>();
     QUrl avatarUrl = avatarDetail.imageUrl();
     if (avatarUrl.isEmpty())
         return QUrl("image://theme/icon-m-telephony-contact-avatar");
@@ -277,9 +287,9 @@ QUrl SeasidePerson::avatarPath() const
 
 void SeasidePerson::setAvatarPath(QUrl avatarPath)
 {
-    QContactAvatar avatarDetail = mContact.detail<QContactAvatar>();
+    QContactAvatar avatarDetail = mContact->detail<QContactAvatar>();
     avatarDetail.setImageUrl(QUrl(avatarPath));
-    mContact.saveDetail(&avatarDetail);
+    mContact->saveDetail(&avatarDetail);
     emit avatarPathChanged();
 }
 
@@ -369,18 +379,18 @@ void setPropertyFieldFromList(QContact &contact, F field, V newValueList)
 
 QStringList SeasidePerson::phoneNumbers() const
 {
-    return listPropertyFromDetailField<QContactPhoneNumber>(mContact, QContactPhoneNumber::FieldNumber);
+    return listPropertyFromDetailField<QContactPhoneNumber>(*mContact, QContactPhoneNumber::FieldNumber);
 }
 
 void SeasidePerson::setPhoneNumbers(const QStringList &phoneNumbers)
 {
-    setPropertyFieldFromList<QContactPhoneNumber>(mContact, QContactPhoneNumber::FieldNumber, phoneNumbers);
+    setPropertyFieldFromList<QContactPhoneNumber>(*mContact, QContactPhoneNumber::FieldNumber, phoneNumbers);
     emit phoneNumbersChanged();
 }
 
 QList<int> SeasidePerson::phoneNumberTypes() const
 {
-    const QList<QContactPhoneNumber> &numbers = mContact.details<QContactPhoneNumber>();
+    const QList<QContactPhoneNumber> &numbers = mContact->details<QContactPhoneNumber>();
     QList<int> types;
     types.reserve((numbers.length()));
 
@@ -416,7 +426,7 @@ void setPhoneNumberType(QContactPhoneNumber &phoneNumber, const QString &type) {
 
 void SeasidePerson::setPhoneNumberType(int which, SeasidePerson::DetailType type)
 {
-    const QList<QContactPhoneNumber> &numbers = mContact.details<QContactPhoneNumber>();
+    const QList<QContactPhoneNumber> &numbers = mContact->details<QContactPhoneNumber>();
     if (which >= numbers.length()) {
         qWarning() << "Unable to set type for phone number: invalid index specified. Aborting.";
         return;
@@ -442,24 +452,24 @@ void SeasidePerson::setPhoneNumberType(int which, SeasidePerson::DetailType type
         qWarning() << "Warning: Could not save phone type '" << type << "'";
     }
 
-    mContact.saveDetail(&number);
+    mContact->saveDetail(&number);
     emit phoneNumberTypesChanged();
 }
 
 QStringList SeasidePerson::emailAddresses() const
 {
-    return listPropertyFromDetailField<QContactEmailAddress>(mContact, QContactEmailAddress::FieldEmailAddress);
+    return listPropertyFromDetailField<QContactEmailAddress>(*mContact, QContactEmailAddress::FieldEmailAddress);
 }
 
 void SeasidePerson::setEmailAddresses(const QStringList &emailAddresses)
 {
-    setPropertyFieldFromList<QContactEmailAddress>(mContact, QContactEmailAddress::FieldEmailAddress, emailAddresses);
+    setPropertyFieldFromList<QContactEmailAddress>(*mContact, QContactEmailAddress::FieldEmailAddress, emailAddresses);
     emit emailAddressesChanged();
 }
 
 QList<int> SeasidePerson::emailAddressTypes() const
 {
-    const QList<QContactEmailAddress> &emails = mContact.details<QContactEmailAddress>();
+    const QList<QContactEmailAddress> &emails = mContact->details<QContactEmailAddress>();
     QList<int> types;
     types.reserve((emails.length()));
 
@@ -480,7 +490,7 @@ QList<int> SeasidePerson::emailAddressTypes() const
 
 void SeasidePerson::setEmailAddressType(int which, SeasidePerson::DetailType type)
 {
-    const QList<QContactEmailAddress> &emails = mContact.details<QContactEmailAddress>();
+    const QList<QContactEmailAddress> &emails = mContact->details<QContactEmailAddress>();
 
     if (which >= emails.length()) {
         qWarning() << "Unable to set type for email address: invalid index specified. Aborting.";
@@ -498,7 +508,7 @@ void SeasidePerson::setEmailAddressType(int which, SeasidePerson::DetailType typ
         qWarning() << "Warning: Could not save email type '" << type << "'";
     }
 
-    mContact.saveDetail(&email);
+    mContact->saveDetail(&email);
     emit emailAddressTypesChanged();
 }
 
@@ -506,7 +516,7 @@ void SeasidePerson::setEmailAddressType(int which, SeasidePerson::DetailType typ
 QStringList SeasidePerson::addresses() const
 {
     QStringList retn;
-    const QList<QContactAddress> &addresses = mContact.details<QContactAddress>();
+    const QList<QContactAddress> &addresses = mContact->details<QContactAddress>();
     foreach (const QContactAddress &address, addresses) {
         QString currAddressStr;
         currAddressStr.append(address.street());
@@ -538,11 +548,11 @@ void SeasidePerson::setAddresses(const QStringList &addresses)
         }
     }
 
-    const QList<QContactAddress> &oldDetailList = mContact.details<QContactAddress>();
+    const QList<QContactAddress> &oldDetailList = mContact->details<QContactAddress>();
     if (oldDetailList.count() != splitStrings.count()) {
         /* remove all current details, recreate new ones */
         foreach (QContactAddress oldAddress, oldDetailList)
-            mContact.removeDetail(&oldAddress);
+            mContact->removeDetail(&oldAddress);
         foreach (const QStringList &split, splitStrings) {
             QContactAddress newAddress;
             newAddress.setStreet(split.at(0));
@@ -551,7 +561,7 @@ void SeasidePerson::setAddresses(const QStringList &addresses)
             newAddress.setPostcode(split.at(3));
             newAddress.setCountry(split.at(4));
             newAddress.setPostOfficeBox(split.at(5));
-            mContact.saveDetail(&newAddress);
+            mContact->saveDetail(&newAddress);
         }
     } else {
         /* overwrite existing details */
@@ -564,7 +574,7 @@ void SeasidePerson::setAddresses(const QStringList &addresses)
             oldAddress.setPostcode(split.at(3));
             oldAddress.setCountry(split.at(4));
             oldAddress.setPostOfficeBox(split.at(5));
-            mContact.saveDetail(&oldAddress);
+            mContact->saveDetail(&oldAddress);
         }
     }
 
@@ -573,7 +583,7 @@ void SeasidePerson::setAddresses(const QStringList &addresses)
 
 QList<int> SeasidePerson::addressTypes() const
 {
-    const QList<QContactAddress> &addresses = mContact.details<QContactAddress>();
+    const QList<QContactAddress> &addresses = mContact->details<QContactAddress>();
     QList<int> types;
     types.reserve((addresses.length()));
 
@@ -594,7 +604,7 @@ QList<int> SeasidePerson::addressTypes() const
 
 void SeasidePerson::setAddressType(int which, SeasidePerson::DetailType type)
 {
-    const QList<QContactAddress> &addresses = mContact.details<QContactAddress>();
+    const QList<QContactAddress> &addresses = mContact->details<QContactAddress>();
 
     if (which >= addresses.length()) {
         qWarning() << "Unable to set type for address: invalid index specified. Aborting.";
@@ -612,24 +622,24 @@ void SeasidePerson::setAddressType(int which, SeasidePerson::DetailType type)
         qWarning() << "Warning: Could not save address type '" << type << "'";
     }
 
-    mContact.saveDetail(&address);
+    mContact->saveDetail(&address);
     emit addressTypesChanged();
 }
 
 QStringList SeasidePerson::websites() const
 {
-    return listPropertyFromDetailField<QContactUrl>(mContact, QContactUrl::FieldUrl);
+    return listPropertyFromDetailField<QContactUrl>(*mContact, QContactUrl::FieldUrl);
 }
 
 void SeasidePerson::setWebsites(const QStringList &websites)
 {
-    setPropertyFieldFromList<QContactUrl>(mContact, QContactUrl::FieldUrl, websites);
+    setPropertyFieldFromList<QContactUrl>(*mContact, QContactUrl::FieldUrl, websites);
     emit websitesChanged();
 }
 
 QList<int> SeasidePerson::websiteTypes() const
 {
-    const QList<QContactUrl> &urls = mContact.details<QContactUrl>();
+    const QList<QContactUrl> &urls = mContact->details<QContactUrl>();
     QList<int> types;
     types.reserve((urls.length()));
 
@@ -650,7 +660,7 @@ QList<int> SeasidePerson::websiteTypes() const
 
 void SeasidePerson::setWebsiteType(int which, SeasidePerson::DetailType type)
 {
-    const QList<QContactUrl> &urls = mContact.details<QContactUrl>();
+    const QList<QContactUrl> &urls = mContact->details<QContactUrl>();
 
     if (which >= urls.length()) {
         qWarning() << "Unable to set type for website: invalid index specified. Aborting.";
@@ -668,20 +678,20 @@ void SeasidePerson::setWebsiteType(int which, SeasidePerson::DetailType type)
         qWarning() << "Warning: Could not save website type '" << type << "'";
     }
 
-    mContact.saveDetail(&url);
+    mContact->saveDetail(&url);
     emit websiteTypesChanged();
 }
 
 QDateTime SeasidePerson::birthday() const
 {
-    return mContact.detail<QContactBirthday>().dateTime();
+    return mContact->detail<QContactBirthday>().dateTime();
 }
 
 void SeasidePerson::setBirthday(const QDateTime &bd)
 {
-    QContactBirthday birthday = mContact.detail<QContactBirthday>();
+    QContactBirthday birthday = mContact->detail<QContactBirthday>();
     birthday.setDateTime(bd);
-    mContact.saveDetail(&birthday);
+    mContact->saveDetail(&birthday);
     emit birthdayChanged();
 }
 
@@ -692,14 +702,14 @@ void SeasidePerson::resetBirthday()
 
 QDateTime SeasidePerson::anniversary() const
 {
-    return mContact.detail<QContactAnniversary>().originalDateTime();
+    return mContact->detail<QContactAnniversary>().originalDateTime();
 }
 
 void SeasidePerson::setAnniversary(const QDateTime &av)
 {
-    QContactAnniversary anniv = mContact.detail<QContactAnniversary>();
+    QContactAnniversary anniv = mContact->detail<QContactAnniversary>();
     anniv.setOriginalDateTime(av);
-    mContact.saveDetail(&anniv);
+    mContact->saveDetail(&anniv);
     emit anniversaryChanged();
 }
 
@@ -710,7 +720,7 @@ void SeasidePerson::resetAnniversary()
 
 SeasidePerson::PresenceState SeasidePerson::globalPresenceState() const
 {
-    return static_cast<SeasidePerson::PresenceState>(mContact.detail<QContactGlobalPresence>().presenceState());
+    return static_cast<SeasidePerson::PresenceState>(mContact->detail<QContactGlobalPresence>().presenceState());
 }
 
 namespace { // Helper functions
@@ -771,7 +781,7 @@ QList<int> SeasidePerson::presenceStates() const
 {
     QList<int> rv;
 
-    foreach (const QContactPresence &presence, inAccountOrder(mContact.details<QContactPresence>(), mContact.details<QContactOnlineAccount>())) {
+    foreach (const QContactPresence &presence, inAccountOrder(mContact->details<QContactPresence>(), mContact->details<QContactOnlineAccount>())) {
         if (!presence.isEmpty()) {
             rv.append(static_cast<int>(presence.presenceState()));
         } else {
@@ -786,7 +796,7 @@ QStringList SeasidePerson::presenceMessages() const
 {
     QStringList rv;
 
-    foreach (const QContactPresence &presence, inAccountOrder(mContact.details<QContactPresence>(), mContact.details<QContactOnlineAccount>())) {
+    foreach (const QContactPresence &presence, inAccountOrder(mContact->details<QContactPresence>(), mContact->details<QContactOnlineAccount>())) {
         if (!presence.isEmpty()) {
             rv.append(presence.customMessage());
         } else {
@@ -799,19 +809,19 @@ QStringList SeasidePerson::presenceMessages() const
 
 QStringList SeasidePerson::accountUris() const
 {
-    return listPropertyFromDetailField<QContactOnlineAccount>(mContact, QContactOnlineAccount::FieldAccountUri);
+    return listPropertyFromDetailField<QContactOnlineAccount>(*mContact, QContactOnlineAccount::FieldAccountUri);
 }
 
 QStringList SeasidePerson::accountPaths() const
 {
-    return listPropertyFromDetailField<QContactOnlineAccount>(mContact, QContactOnlineAccount__FieldAccountPath);
+    return listPropertyFromDetailField<QContactOnlineAccount>(*mContact, QContactOnlineAccount__FieldAccountPath);
 }
 
 QStringList SeasidePerson::accountProviders() const
 {
     QStringList rv;
 
-    foreach (const QContactOnlineAccount &account, mContact.details<QContactOnlineAccount>()) {
+    foreach (const QContactOnlineAccount &account, mContact->details<QContactOnlineAccount>()) {
         // Include the provider value for each account returned by accountPaths
         if (account.hasValue(QContactOnlineAccount__FieldAccountPath)) {
             rv.append(account.serviceProvider());
@@ -825,7 +835,7 @@ QStringList SeasidePerson::accountIconPaths() const
 {
     QStringList rv;
 
-    foreach (const QContactOnlineAccount &account, mContact.details<QContactOnlineAccount>()) {
+    foreach (const QContactOnlineAccount &account, mContact->details<QContactOnlineAccount>()) {
         // Include the icon path value for each account returned by accountPaths
         if (account.hasValue(QContactOnlineAccount__FieldAccountPath)) {
             rv.append(account.value<QString>(QContactOnlineAccount__FieldAccountIconPath));
@@ -837,7 +847,7 @@ QStringList SeasidePerson::accountIconPaths() const
 
 QString SeasidePerson::syncTarget() const
 {
-    return mContact.detail<QContactSyncTarget>().syncTarget();
+    return mContact->detail<QContactSyncTarget>().syncTarget();
 }
 
 QList<int> SeasidePerson::constituents() const
@@ -868,29 +878,29 @@ void SeasidePerson::addAccount(const QString &path, const QString &uri, const QS
     detail.setServiceProvider(provider);
     detail.setValue(QContactOnlineAccount__FieldAccountIconPath, iconPath);
 
-    mContact.saveDetail(&detail);
+    mContact->saveDetail(&detail);
 
     QContactPresence presence;
     presence.setLinkedDetailUris(QStringList() << detail.detailUri());
     
-    mContact.saveDetail(&presence);
+    mContact->saveDetail(&presence);
 }
 
 QContact SeasidePerson::contact() const
 {
-    return mContact;
+    return *mContact;
 }
 
 void SeasidePerson::setContact(const QContact &contact)
 {
-    QContact oldContact = mContact;
-    mContact = contact;
+    QContact oldContact = *mContact;
+    *mContact = contact;
 
-    if (oldContact.id() != mContact.id())
+    if (oldContact.id() != mContact->id())
         emit contactChanged();
 
     QContactName oldName = oldContact.detail<QContactName>();
-    QContactName newName = mContact.detail<QContactName>();
+    QContactName newName = mContact->detail<QContactName>();
 
     if (oldName.firstName() != newName.firstName())
         emit firstNameChanged();
@@ -899,31 +909,31 @@ void SeasidePerson::setContact(const QContact &contact)
         emit lastNameChanged();
 
     QContactOrganization oldCompany = oldContact.detail<QContactOrganization>();
-    QContactOrganization newCompany = mContact.detail<QContactOrganization>();
+    QContactOrganization newCompany = mContact->detail<QContactOrganization>();
 
     if (oldCompany.name() != newCompany.name())
         emit companyNameChanged();
 
     QContactFavorite oldFavorite = oldContact.detail<QContactFavorite>();
-    QContactFavorite newFavorite = mContact.detail<QContactFavorite>();
+    QContactFavorite newFavorite = mContact->detail<QContactFavorite>();
 
     if (oldFavorite.isFavorite() != newFavorite.isFavorite())
         emit favoriteChanged();
 
     QContactAvatar oldAvatar = oldContact.detail<QContactAvatar>();
-    QContactAvatar newAvatar = mContact.detail<QContactAvatar>();
+    QContactAvatar newAvatar = mContact->detail<QContactAvatar>();
 
     if (oldAvatar.imageUrl() != newAvatar.imageUrl())
         emit avatarPathChanged();
 
     QContactGlobalPresence oldPresence = oldContact.detail<QContactGlobalPresence>();
-    QContactGlobalPresence newPresence = mContact.detail<QContactGlobalPresence>();
+    QContactGlobalPresence newPresence = mContact->detail<QContactGlobalPresence>();
 
     if (oldPresence.presenceState() != newPresence.presenceState())
         emit globalPresenceStateChanged();
 
     QList<QContactPresence> oldPresences = oldContact.details<QContactPresence>();
-    QList<QContactPresence> newPresences = mContact.details<QContactPresence>();
+    QList<QContactPresence> newPresences = mContact->details<QContactPresence>();
 
     {
         bool statesChanged = false;
@@ -974,7 +984,7 @@ void SeasidePerson::setContact(const QContact &contact)
 QString SeasidePerson::vCard() const
 {
     QVersitContactExporter exporter;
-    if (!exporter.exportContacts(QList<QContact>() << mContact, QVersitDocument::VCard21Type)) {
+    if (!exporter.exportContacts(QList<QContact>() << *mContact, QVersitDocument::VCard21Type)) {
         qWarning() << Q_FUNC_INFO << "Failed to create vCard: " << exporter.errorMap();
         return QString();
     }
@@ -1000,9 +1010,11 @@ void SeasidePerson::fetchMergeCandidates()
     SeasideCache::fetchMergeCandidates(contact());
 }
 
-void SeasidePerson::contactFetched(const QContact &contact)
+void SeasidePerson::updateContact(const QContact &newContact, QContact *oldContact)
 {
-    setContact(contact);
+    Q_ASSERT(oldContact == mContact);
+
+    setContact(newContact);
     setComplete(true);
 }
 
