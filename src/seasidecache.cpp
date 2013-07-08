@@ -279,27 +279,10 @@ SeasideCache::SeasideCache()
     // Note: no restriction on detail definitions - the cache should contain the entire contact
 
     m_fetchRequest.setFetchHint(fetchHint);
+
+    setSortOrder(m_displayLabelOrder);
+
     m_fetchRequest.setFilter(QContactFavorite::match());
-
-    QContactSortOrder firstLabelOrder;
-    setDetailType<QContactName>(firstLabelOrder, QContactName::FieldFirstName);
-    firstLabelOrder.setCaseSensitivity(Qt::CaseInsensitive);
-    firstLabelOrder.setDirection(Qt::AscendingOrder);
-    firstLabelOrder.setBlankPolicy(QContactSortOrder::BlanksFirst);
-
-    QContactSortOrder secondLabelOrder;
-    setDetailType<QContactName>(secondLabelOrder, QContactName::FieldLastName);
-    secondLabelOrder.setCaseSensitivity(Qt::CaseInsensitive);
-    secondLabelOrder.setDirection(Qt::AscendingOrder);
-    secondLabelOrder.setBlankPolicy(QContactSortOrder::BlanksFirst);
-
-    QList<QContactSortOrder> sorting = m_displayLabelOrder == FirstNameFirst
-            ? (QList<QContactSortOrder>() << firstLabelOrder << secondLabelOrder)
-            : (QList<QContactSortOrder>() << secondLabelOrder << firstLabelOrder);
-
-    m_fetchRequest.setSorting(sorting);
-    m_contactIdRequest.setSorting(sorting);
-
     m_fetchRequest.start();
 }
 
@@ -1419,30 +1402,36 @@ void SeasideCache::makePopulated(FilterType filter)
         models.at(i)->makePopulated();
 }
 
+void SeasideCache::setSortOrder(DisplayLabelOrder order)
+{
+    QContactSortOrder firstNameOrder;
+    setDetailType<QContactName>(firstNameOrder, QContactName::FieldFirstName);
+    firstNameOrder.setCaseSensitivity(Qt::CaseInsensitive);
+    firstNameOrder.setDirection(Qt::AscendingOrder);
+    firstNameOrder.setBlankPolicy(QContactSortOrder::BlanksFirst);
+
+    QContactSortOrder lastNameOrder;
+    setDetailType<QContactName>(lastNameOrder, QContactName::FieldLastName);
+    lastNameOrder.setCaseSensitivity(Qt::CaseInsensitive);
+    lastNameOrder.setDirection(Qt::AscendingOrder);
+    lastNameOrder.setBlankPolicy(QContactSortOrder::BlanksFirst);
+
+    QList<QContactSortOrder> sorting = (order == FirstNameFirst)
+            ? (QList<QContactSortOrder>() << firstNameOrder << lastNameOrder)
+            : (QList<QContactSortOrder>() << lastNameOrder << firstNameOrder);
+
+    m_fetchRequest.setSorting(sorting);
+    m_contactIdRequest.setSorting(sorting);
+}
+
 void SeasideCache::displayLabelOrderChanged()
 {
 #ifdef HAS_MLITE
     QVariant displayLabelOrder = m_displayLabelOrderConf.value();
     if (displayLabelOrder.isValid() && displayLabelOrder.toInt() != m_displayLabelOrder) {
         m_displayLabelOrder = static_cast<DisplayLabelOrder>(displayLabelOrder.toInt());
-        QContactSortOrder firstNameOrder;
-        setDetailType<QContactName>(firstNameOrder, QContactName::FieldFirstName);
-        firstNameOrder.setCaseSensitivity(Qt::CaseInsensitive);
-        firstNameOrder.setDirection(Qt::AscendingOrder);
-        firstNameOrder.setBlankPolicy(QContactSortOrder::BlanksFirst);
 
-        QContactSortOrder secondNameOrder;
-        setDetailType<QContactName>(secondNameOrder, QContactName::FieldLastName);
-        secondNameOrder.setCaseSensitivity(Qt::CaseInsensitive);
-        secondNameOrder.setDirection(Qt::AscendingOrder);
-        secondNameOrder.setBlankPolicy(QContactSortOrder::BlanksFirst);
-
-        QList<QContactSortOrder> sorting = m_displayLabelOrder == FirstNameFirst
-                ? (QList<QContactSortOrder>() << firstNameOrder << secondNameOrder)
-                : (QList<QContactSortOrder>() << secondNameOrder << firstNameOrder);
-
-        m_fetchRequest.setSorting(sorting);
-        m_contactIdRequest.setSorting(sorting);
+        setSortOrder(m_displayLabelOrder);
 
         typedef QHash<quint32, CacheItem>::iterator iterator;
         for (iterator it = m_people.begin(); it != m_people.end(); ++it) {

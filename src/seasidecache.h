@@ -212,6 +212,7 @@ public:
 
 protected:
     void timerEvent(QTimerEvent *event);
+    void setSortOrder(DisplayLabelOrder order);
 
 private slots:
     void contactsAvailable();
