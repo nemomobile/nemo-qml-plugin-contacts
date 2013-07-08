@@ -32,8 +32,8 @@
 #ifndef SEASIDEFILTEREDMODEL_H
 #define SEASIDEFILTEREDMODEL_H
 
+#include "seasidecache.h"
 
-#include <QAbstractListModel>
 #include <QStringList>
 #include <QVector>
 
@@ -43,7 +43,7 @@ class SeasidePerson;
 
 USE_CONTACTS_NAMESPACE
 
-class SeasideFilteredModel : public QAbstractListModel
+class SeasideFilteredModel : public SeasideCache::ListModel
 {
     Q_OBJECT
     Q_PROPERTY(bool populated READ isPopulated NOTIFY populatedChanged)
@@ -55,16 +55,16 @@ class SeasideFilteredModel : public QAbstractListModel
     Q_ENUMS(FilterType DisplayLabelOrder)
 public:
     enum FilterType {
-        FilterNone,
-        FilterAll,
-        FilterFavorites,
-        FilterOnline,
-        FilterTypesCount
+        FilterNone = SeasideCache::FilterNone,
+        FilterAll = SeasideCache::FilterAll,
+        FilterFavorites = SeasideCache::FilterFavorites,
+        FilterOnline = SeasideCache::FilterOnline,
+        FilterTypesCount = SeasideCache::FilterTypesCount
     };
 
     enum DisplayLabelOrder {
-        FirstNameFirst,
-        LastNameFirst
+        FirstNameFirst = SeasideCache::FirstNameFirst,
+        LastNameFirst = SeasideCache::LastNameFirst
     };
 
     enum PeopleRoles {
@@ -75,22 +75,7 @@ public:
         PersonRole
     };
 
-#ifdef USING_QTPIM
-    typedef QContactId ContactIdType;
-#else
-    typedef QContactLocalId ContactIdType;
-#endif
-
-    static ContactIdType apiId(const QContact &contact);
-    static ContactIdType apiId(quint32 iid);
-
-    static bool validId(const ContactIdType &id);
-
-    static quint32 internalId(const QContact &contact);
-    static quint32 internalId(const QContactId &id);
-#ifndef USING_QTPIM
-    static quint32 internalId(QContactLocalId id);
-#endif
+    typedef SeasideCache::ContactIdType ContactIdType;
 
     SeasideFilteredModel(QObject *parent = 0);
     ~SeasideFilteredModel();
@@ -130,18 +115,6 @@ public:
     Q_INVOKABLE void setFilter(FilterType type) { setFilterType(type); }
     Q_INVOKABLE void search(const QString &pattern) { setFilterPattern(pattern); }
 
-    // For SeasideCache.
-    void sourceAboutToRemoveItems(int begin, int end);
-    void sourceItemsRemoved();
-
-    void sourceAboutToInsertItems(int begin, int end);
-    void sourceItemsInserted(int begin, int end);
-
-    void sourceDataChanged(int begin, int end);
-
-    void makePopulated();
-    void updateDisplayLabelOrder();
-
     bool filterId(const ContactIdType &contactId) const;
 
     // For synchronizeLists()
@@ -153,6 +126,18 @@ public:
     virtual
 #endif
     QHash<int, QByteArray> roleNames() const;
+
+    // Implementations for SeasideCache::ListModel:
+    void sourceAboutToRemoveItems(int begin, int end);
+    void sourceItemsRemoved();
+
+    void sourceAboutToInsertItems(int begin, int end);
+    void sourceItemsInserted(int begin, int end);
+
+    void sourceDataChanged(int begin, int end);
+
+    void makePopulated();
+    void updateDisplayLabelOrder();
 
 signals:
     void populatedChanged();
@@ -166,7 +151,9 @@ private:
     void populateIndex();
     void refineIndex();
     void updateIndex();
-    void updateContactData(const ContactIdType &contactId, SeasideFilteredModel::FilterType filter);
+    void updateContactData(const ContactIdType &contactId, FilterType filter);
+
+    SeasidePerson *personFromItem(SeasideCache::CacheItem *item) const;
 
     QVector<ContactIdType> m_filteredContactIds;
     const QVector<ContactIdType> *m_contactIds;
