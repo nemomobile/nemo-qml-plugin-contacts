@@ -71,7 +71,7 @@ SeasidePerson *SeasidePersonAttached::selfPerson() const
 {
     SeasideCache::CacheItem *item = SeasideCache::itemById(SeasideCache::selfContactId());
     if (!item->data) {
-        SeasidePerson *person = new SeasidePerson(const_cast<SeasidePersonAttached *>(this));
+        SeasidePerson *person = new SeasidePerson(SeasideCache::instance());
         if (item->contact.id() != QContactId()) {
             person->contactFetched(item->contact);
         }

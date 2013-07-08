@@ -74,6 +74,8 @@ public:
         virtual void updateDisplayLabelOrder() = 0;
     };
 
+    static SeasideCache *instance();
+
     static ContactIdType apiId(const QContact &contact);
     static ContactIdType apiId(quint32 iid);
 
@@ -144,7 +146,7 @@ public:
     QHash<ContactIdType, int> m_cacheIndices;
 #endif
 
-    static SeasideCache *instance;
+    static SeasideCache *instancePtr;
     static QList<QChar> allContactNameGroups;
 
     ContactIdType idAt(int index) const;

@@ -95,8 +95,13 @@ static QList<QChar> getAllContactNameGroups()
     return groups;
 }
 
-SeasideCache *SeasideCache::instance = 0;
+SeasideCache *SeasideCache::instancePtr = 0;
 QList<QChar> SeasideCache::allContactNameGroups = getAllContactNameGroups();
+
+SeasideCache *SeasideCache::instance()
+{
+    return instancePtr;
+}
 
 SeasideCache::ContactIdType SeasideCache::apiId(const QContact &contact)
 {
@@ -167,7 +172,7 @@ quint32 SeasideCache::internalId(QContactLocalId id)
 
 SeasideCache::SeasideCache()
 {
-    instance = this;
+    instancePtr = this;
     for (int i = 0; i < FilterTypesCount; ++i) {
         m_models[i] = 0;
         m_populated[i] = false;
@@ -244,7 +249,7 @@ QVector<SeasideCache::ContactIdType> SeasideCache::getContactsForFilterType(Filt
             (filterType == FilterFavorites && contactsData[i].isFavorite) ||
             (filterType == FilterOnline && contactsData[i].isOnline)) {
 #ifdef USING_QTPIM
-            ids.append(instance->m_cache[i].contact.id());
+            ids.append(instancePtr->m_cache[i].contact.id());
 #else
             ids.append(i + 1);
 #endif
@@ -256,20 +261,20 @@ QVector<SeasideCache::ContactIdType> SeasideCache::getContactsForFilterType(Filt
 
 SeasideCache::~SeasideCache()
 {
-    instance = 0;
+    instancePtr = 0;
 }
 
 void SeasideCache::registerModel(ListModel *model, FilterType type)
 {
     for (int i = 0; i < FilterTypesCount; ++i)
-        instance->m_models[i] = 0;
-    instance->m_models[type] = model;
+        instancePtr->m_models[i] = 0;
+    instancePtr->m_models[type] = model;
 }
 
 void SeasideCache::unregisterModel(ListModel *)
 {
     for (int i = 0; i < FilterTypesCount; ++i)
-        instance->m_models[i] = 0;
+        instancePtr->m_models[i] = 0;
 }
 
 void SeasideCache::registerUser(QObject *)
@@ -289,12 +294,12 @@ int SeasideCache::contactId(const QContact &contact)
 SeasideCache::CacheItem *SeasideCache::existingItem(const ContactIdType &id)
 {
 #ifdef USING_QTPIM
-    if (instance->m_cacheIndices.contains(id)) {
-        return &instance->m_cache[instance->m_cacheIndices[id]];
+    if (instancePtr->m_cacheIndices.contains(id)) {
+        return &instancePtr->m_cache[instancePtr->m_cacheIndices[id]];
     }
 #else
-    if (id > 0 && id <= instance->m_cache.count()) {
-        return &instance->m_cache[id - 1];
+    if (id > 0 && id <= instancePtr->m_cache.count()) {
+        return &instancePtr->m_cache[id - 1];
     }
 #endif
     return 0;
@@ -303,12 +308,12 @@ SeasideCache::CacheItem *SeasideCache::existingItem(const ContactIdType &id)
 SeasideCache::CacheItem *SeasideCache::itemById(const ContactIdType &id)
 {
 #ifdef USING_QTPIM
-    if (instance->m_cacheIndices.contains(id)) {
-        return &instance->m_cache[instance->m_cacheIndices[id]];
+    if (instancePtr->m_cacheIndices.contains(id)) {
+        return &instancePtr->m_cache[instancePtr->m_cacheIndices[id]];
     }
 #else
-    if (id > 0 && id <= instance->m_cache.count()) {
-        return &instance->m_cache[id - 1];
+    if (id > 0 && id <= instancePtr->m_cache.count()) {
+        return &instancePtr->m_cache[id - 1];
     }
 #endif
     return 0;
@@ -335,9 +340,9 @@ SeasideCache::CacheItem *SeasideCache::itemById(int id)
 QContact SeasideCache::contactById(const ContactIdType &id)
 {
 #ifdef USING_QTPIM
-    return instance->m_cache[instance->m_cacheIndices[id]].contact;
+    return instancePtr->m_cache[instancePtr->m_cacheIndices[id]].contact;
 #else
-    return instance->m_cache[id - 1].contact;
+    return instancePtr->m_cache[id - 1].contact;
 #endif
 }
 
@@ -432,12 +437,12 @@ void SeasideCache::fetchMergeCandidates(const QContact &contact)
 
 const QVector<SeasideCache::ContactIdType> *SeasideCache::contacts(FilterType filterType)
 {
-    return &instance->m_contacts[filterType];
+    return &instancePtr->m_contacts[filterType];
 }
 
 bool SeasideCache::isPopulated(FilterType filterType)
 {
-    return instance->m_populated[filterType];
+    return instancePtr->m_populated[filterType];
 }
 
 QString SeasideCache::generateDisplayLabel(const QContact &, DisplayLabelOrder)

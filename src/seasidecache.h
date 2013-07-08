@@ -141,6 +141,8 @@ public:
         virtual void updateDisplayLabelOrder() = 0;
     };
 
+    static SeasideCache *instance();
+
     static ContactIdType apiId(const QContact &contact);
     static ContactIdType apiId(quint32 iid);
 
@@ -296,7 +298,7 @@ private:
     QElapsedTimer m_timer;
     QElapsedTimer m_fetchPostponed;
 
-    static SeasideCache *instance;
+    static SeasideCache *instancePtr;
     static QList<QChar> allContactNameGroups;
 };
 
