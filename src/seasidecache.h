@@ -49,27 +49,16 @@
 
 #include <QBasicTimer>
 #include <QSet>
+#include <QVector>
 
 #include <QElapsedTimer>
+#include <QAbstractListModel>
 
 #ifdef HAS_MLITE
 #include <mgconfitem.h>
 #endif
 
-#include "seasidefilteredmodel.h"
-
-struct SeasideCacheItem
-{
-    SeasideCacheItem() : person(0), hasCompleteContact(false) {}
-    SeasideCacheItem(const QContact &contact) : contact(contact), person(0), hasCompleteContact(false) {}
-
-    SeasideFilteredModel::ContactIdType apiId() const { return SeasideFilteredModel::apiId(contact); }
-
-    QContact contact;
-    SeasidePerson *person;
-    QStringList filterKey;
-    bool hasCompleteContact;
-};
+USE_CONTACTS_NAMESPACE
 
 class SeasideNameGroupChangeListener
 {
@@ -84,10 +73,97 @@ class SeasideCache : public QObject
 {
     Q_OBJECT
 public:
-    typedef SeasideFilteredModel::ContactIdType ContactIdType;
+#ifdef USING_QTPIM
+    typedef QContactId ContactIdType;
+#else
+    typedef QContactLocalId ContactIdType;
+#endif
 
-    static void registerModel(SeasideFilteredModel *model, SeasideFilteredModel::FilterType type);
-    static void unregisterModel(SeasideFilteredModel *model);
+    enum FilterType {
+        FilterNone,
+        FilterAll,
+        FilterFavorites,
+        FilterOnline,
+        FilterTypesCount
+    };
+
+    enum DisplayLabelOrder {
+        FirstNameFirst,
+        LastNameFirst
+    };
+
+    enum ContactState {
+        ContactAbsent,
+        ContactRequested,
+        ContactFetched
+    };
+
+    struct ItemData
+    {
+        virtual ~ItemData() {}
+
+        virtual QString getDisplayLabel() const = 0;
+        virtual void displayLabelOrderChanged(DisplayLabelOrder order) = 0;
+
+        virtual void updateContact(const QContact &newContact, QContact *oldContact) = 0;
+
+        virtual void constituentsFetched(const QList<int> &ids) = 0;
+        virtual void mergeCandidatesFetched(const QList<int> &ids) = 0;
+    };
+
+    struct ModelData
+    {
+        virtual ~ModelData() {}
+
+        virtual void contactChanged(const QContact &newContact) = 0;
+    };
+
+    struct CacheItem
+    {
+        CacheItem() : itemData(0), modelData(0), contactState(ContactAbsent) {}
+        CacheItem(const QContact &contact) : contact(contact), itemData(0), modelData(0), contactState(ContactAbsent) {}
+
+        ContactIdType apiId() const { return SeasideCache::apiId(contact); }
+
+        QContact contact;
+        ItemData *itemData;
+        ModelData *modelData;
+        ContactState contactState;
+    };
+
+    class ListModel : public QAbstractListModel
+    {
+    public:
+        ListModel(QObject *parent = 0) : QAbstractListModel(parent) {}
+        virtual ~ListModel() {}
+
+        virtual void sourceAboutToRemoveItems(int begin, int end) = 0;
+        virtual void sourceItemsRemoved() = 0;
+
+        virtual void sourceAboutToInsertItems(int begin, int end) = 0;
+        virtual void sourceItemsInserted(int begin, int end) = 0;
+
+        virtual void sourceDataChanged(int begin, int end) = 0;
+
+        virtual void makePopulated() = 0;
+        virtual void updateDisplayLabelOrder() = 0;
+    };
+
+    static SeasideCache *instance();
+
+    static ContactIdType apiId(const QContact &contact);
+    static ContactIdType apiId(quint32 iid);
+
+    static bool validId(const ContactIdType &id);
+
+    static quint32 internalId(const QContact &contact);
+    static quint32 internalId(const QContactId &id);
+#ifndef USING_QTPIM
+    static quint32 internalId(QContactLocalId id);
+#endif
+
+    static void registerModel(ListModel *model, FilterType type);
+    static void unregisterModel(ListModel *model);
 
     static void registerUser(QObject *user);
     static void unregisterUser(QObject *user);
@@ -95,37 +171,37 @@ public:
     static void registerNameGroupChangeListener(SeasideNameGroupChangeListener *listener);
     static void unregisterNameGroupChangeListener(SeasideNameGroupChangeListener *listener);
 
-    static SeasideFilteredModel::DisplayLabelOrder displayLabelOrder();
+    static DisplayLabelOrder displayLabelOrder();
 
     static int contactId(const QContact &contact);
 
-    static SeasideCacheItem *cacheItemById(const ContactIdType &id);
-    static SeasidePerson *personById(const ContactIdType &id);
+    static CacheItem *existingItem(const ContactIdType &id);
+    static CacheItem *itemById(const ContactIdType &id);
 #ifdef USING_QTPIM
-    static SeasidePerson *personById(int id);
+    static CacheItem *itemById(int id);
 #endif
-    static SeasidePerson *selfPerson();
+    static ContactIdType selfContactId();
     static QContact contactById(const ContactIdType &id);
-    static QChar nameGroupForCacheItem(SeasideCacheItem *cacheItem);
+    static QChar nameGroupForCacheItem(CacheItem *cacheItem);
     static QList<QChar> allNameGroups();
     static QHash<QChar, int> nameGroupCounts();
 
-    static SeasidePerson *person(SeasideCacheItem *item);
+    static CacheItem *itemByPhoneNumber(const QString &msisdn);
+    static CacheItem *itemByEmailAddress(const QString &email);
+    static bool saveContact(const QContact &contact);
+    static void removeContact(const QContact &contact);
 
-    static SeasidePerson *personByPhoneNumber(const QString &msisdn);
-    static SeasidePerson *personByEmailAddress(const QString &email);
-    static bool savePerson(SeasidePerson *person);
-    static void removePerson(SeasidePerson *person);
-
-    static void fetchConstituents(SeasidePerson *person);
-
-    static void fetchMergeCandidates(SeasidePerson *person);
+    static void fetchConstituents(const QContact &contact);
+    static void fetchMergeCandidates(const QContact &contact);
 
     static int importContacts(const QString &path);
     static QString exportContacts();
 
-    static const QVector<ContactIdType> *contacts(SeasideFilteredModel::FilterType filterType);
-    static bool isPopulated(SeasideFilteredModel::FilterType filterType);
+    static const QVector<ContactIdType> *contacts(FilterType filterType);
+    static bool isPopulated(FilterType filterType);
+
+    static QString generateDisplayLabel(const QContact &contact, DisplayLabelOrder order = FirstNameFirst);
+    static QString generateDisplayLabelFromNonNameDetails(const QContact &contact);
 
     bool event(QEvent *event);
 
@@ -136,22 +212,22 @@ public:
 
 protected:
     void timerEvent(QTimerEvent *event);
+    void setSortOrder(DisplayLabelOrder order);
 
 private slots:
     void contactsAvailable();
     void contactIdsAvailable();
     void relationshipsAvailable();
     void requestStateChanged(QContactAbstractRequest::State state);
-#ifdef USING_QTPIM
-    void contactsRemoved(const QList<QContactId> &contactIds);
-#else
-    void contactsRemoved(const QList<QContactLocalId> &contactIds);
-#endif
     void updateContacts();
 #ifdef USING_QTPIM
-    void updateContacts(const QList<QContactId> &contactIds);
+    void contactsAdded(const QList<QContactId> &contactIds);
+    void contactsChanged(const QList<QContactId> &contactIds);
+    void contactsRemoved(const QList<QContactId> &contactIds);
 #else
-    void updateContacts(const QList<QContactLocalId> &contactIds);
+    void contactsAdded(const QList<QContactLocalId> &contactIds);
+    void contactsChanged(const QList<QContactLocalId> &contactIds);
+    void contactsRemoved(const QList<QContactLocalId> &contactIds);
 #endif
     void displayLabelOrderChanged();
 
@@ -161,22 +237,25 @@ private:
 
     static void checkForExpiry();
 
+    void keepPopulated();
+
     void requestUpdate();
     void appendContacts(const QList<QContact> &contacts);
     void fetchContacts();
+    void updateContacts(const QList<QContactId> &contactIds);
 
-    void finalizeUpdate(SeasideFilteredModel::FilterType filter);
-    void removeRange(SeasideFilteredModel::FilterType filter, int index, int count);
+    void finalizeUpdate(FilterType filter);
+    void removeRange(FilterType filter, int index, int count);
     int insertRange(
-            SeasideFilteredModel::FilterType filter,
+            FilterType filter,
             int index,
             int count,
             const QList<ContactIdType> &queryIds,
             int queryIndex);
 
-    void updateContactData(const ContactIdType &contactId, SeasideFilteredModel::FilterType filter);
-    void removeContactData(const ContactIdType &contactId, SeasideFilteredModel::FilterType filter);
-    void makePopulated(SeasideFilteredModel::FilterType filter);
+    void updateContactData(const ContactIdType &contactId, FilterType filter);
+    void removeContactData(const ContactIdType &contactId, FilterType filter);
+    void makePopulated(FilterType filter);
 
     void addToContactNameGroup(const QChar &group, QList<QChar> *modifiedGroups = 0);
     void removeFromContactNameGroup(const QChar &group, QList<QChar> *modifiedGroups = 0);
@@ -184,7 +263,7 @@ private:
 
     QBasicTimer m_expiryTimer;
     QBasicTimer m_fetchTimer;
-    QHash<quint32, SeasideCacheItem> m_people;
+    QHash<quint32, CacheItem> m_people;
     QHash<QString, quint32> m_phoneNumberIds;
     QHash<QString, quint32> m_emailAddressIds;
     QHash<ContactIdType, QContact> m_contactsToSave;
@@ -195,8 +274,8 @@ private:
     QList<QContactId> m_contactsToFetchConstituents;
     QList<QContactId> m_contactsToFetchCandidates;
     QList<SeasideNameGroupChangeListener*> m_nameGroupChangeListeners;
-    QVector<ContactIdType> m_contacts[SeasideFilteredModel::FilterTypesCount];
-    QList<SeasideFilteredModel *> m_models[SeasideFilteredModel::FilterTypesCount];
+    QVector<ContactIdType> m_contacts[FilterTypesCount];
+    QList<ListModel *> m_models[FilterTypesCount];
     QSet<QObject *> m_users;
     QHash<ContactIdType,int> m_expiredContacts;
     QContactManager m_manager;
@@ -218,8 +297,9 @@ private:
     int m_cacheIndex;
     int m_queryIndex;
     int m_appendIndex;
-    SeasideFilteredModel::FilterType m_fetchFilter;
-    SeasideFilteredModel::DisplayLabelOrder m_displayLabelOrder;
+    FilterType m_fetchFilter;
+    DisplayLabelOrder m_displayLabelOrder;
+    bool m_keepPopulated;
     bool m_updatesPending;
     bool m_fetchActive;
     bool m_refreshRequired;
@@ -230,7 +310,7 @@ private:
     QElapsedTimer m_timer;
     QElapsedTimer m_fetchPostponed;
 
-    static SeasideCache *instance;
+    static SeasideCache *instancePtr;
     static QList<QChar> allContactNameGroups;
 };
 

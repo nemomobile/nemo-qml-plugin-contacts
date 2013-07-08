@@ -16,6 +16,7 @@ INSTALLS += target
 INCLUDEPATH += $$SRCDIR
 HEADERS += \
         seasidecache.h \
+        seasidefilteredmodel.h \
         $$SRCDIR/seasidefilteredmodel.h \
         $$SRCDIR/seasideperson.h \
         $$SRCDIR/synchronizelists_p.h
