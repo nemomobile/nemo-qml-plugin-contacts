@@ -67,6 +67,17 @@
 
 USE_VERSIT_NAMESPACE
 
+
+static QString aggregateRelationshipType =
+#ifdef USING_QTPIM
+    QContactRelationship::Aggregates();
+#else
+    QContactRelationship::Aggregates;
+#endif
+
+static const QString syncTargetLocal = QLatin1String("local");
+static const QString syncTargetWasLocal = QLatin1String("was_local");
+
 static QList<QChar> getAllContactNameGroups()
 {
     QList<QChar> groups;
@@ -264,6 +275,10 @@ SeasideCache::SeasideCache()
             this, SLOT(requestStateChanged(QContactAbstractRequest::State)));
     connect(&m_saveRequest, SIGNAL(stateChanged(QContactAbstractRequest::State)),
             this, SLOT(requestStateChanged(QContactAbstractRequest::State)));
+    connect(&m_relationshipSaveRequest, SIGNAL(stateChanged(QContactAbstractRequest::State)),
+            this, SLOT(requestStateChanged(QContactAbstractRequest::State)));
+    connect(&m_relationshipRemoveRequest, SIGNAL(stateChanged(QContactAbstractRequest::State)),
+            this, SLOT(requestStateChanged(QContactAbstractRequest::State)));
 
     m_fetchRequest.setManager(&m_manager);
     m_fetchByIdRequest.setManager(&m_manager);
@@ -271,6 +286,8 @@ SeasideCache::SeasideCache()
     m_relationshipsFetchRequest.setManager(&m_manager);
     m_removeRequest.setManager(&m_manager);
     m_saveRequest.setManager(&m_manager);
+    m_relationshipSaveRequest.setManager(&m_manager);
+    m_relationshipRemoveRequest.setManager(&m_manager);
 
     QContactFetchHint fetchHint;
     fetchHint.setOptimizationHints(QContactFetchHint::NoRelationships
@@ -806,6 +823,20 @@ bool SeasideCache::event(QEvent *event)
 {
     if (event->type() != QEvent::UpdateRequest) {
         return QObject::event(event);
+    } else if (!m_relationshipsToSave.isEmpty() || !m_relationshipsToRemove.isEmpty()) {
+        // this has to be before contact saves are processed so that the disaggregation flow
+        // works properly
+        if (!m_relationshipsToSave.isEmpty()) {
+            m_relationshipSaveRequest.setRelationships(m_relationshipsToSave);
+            m_relationshipSaveRequest.start();
+            m_relationshipsToSave.clear();
+        }
+        if (!m_relationshipsToRemove.isEmpty()) {
+            m_relationshipRemoveRequest.setRelationships(m_relationshipsToRemove);
+            m_relationshipRemoveRequest.start();
+            m_relationshipsToRemove.clear();
+        }
+
     } else if (!m_contactsToRemove.isEmpty()) {
         m_removeRequest.setContactIds(m_contactsToRemove);
         m_removeRequest.start();
@@ -1330,6 +1361,8 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
             if (cacheItem->itemData) {
                 cacheItem->itemData->constituentsFetched(QList<int>());
             }
+
+            updateConstituentAggregations(aggregateId);
         }
     } else if (request == &m_fetchByIdRequest) {
         if (!m_contactsToFetchConstituents.isEmpty()) {
@@ -1350,6 +1383,8 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
             if (cacheItem->itemData) {
                 cacheItem->itemData->constituentsFetched(constituentIds);
             }
+
+            updateConstituentAggregations(aggregateId);
         }
     } else if (request == &m_contactIdRequest) {
         if (!m_contactsToFetchCandidates.isEmpty()) {
@@ -1376,6 +1411,33 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
             if (cacheItem->itemData) {
                 cacheItem->itemData->mergeCandidatesFetched(candidateIds);
             }
+        }
+    } else if (request == &m_relationshipSaveRequest || request == &m_relationshipRemoveRequest) {
+        ContactIdType contactId;
+        QList<ContactIdType> contactIds;
+        QList<QContactRelationship> relationships;
+        relationships = m_relationshipSaveRequest.relationships();
+        for (int i=0; i<relationships.count(); i++) {
+            contactId = SeasideCache::apiId(relationships[i].first());
+            if (!contactIds.contains(contactId))
+                contactIds.append(contactId);
+            contactId = SeasideCache::apiId(relationships[i].second());
+            if (!contactIds.contains(contactId))
+                contactIds.append(contactId);
+        }
+        relationships = m_relationshipRemoveRequest.relationships();
+        for (int i=0; i<relationships.count(); i++) {
+            contactId = SeasideCache::apiId(relationships[i].first());
+            if (!contactIds.contains(contactId))
+                contactIds.append(contactId);
+            contactId = SeasideCache::apiId(relationships[i].second());
+            if (!contactIds.contains(contactId))
+                contactIds.append(contactId);
+        }
+        for (int i=0; i<contactIds.count(); i++) {
+            CacheItem *cacheItem = itemById(contactIds[i]);
+            if (cacheItem && cacheItem->itemData)
+                cacheItem->itemData->aggregationOperationCompleted();
         }
     }
 
@@ -1597,3 +1659,113 @@ void SeasideCache::keepPopulated()
     }
 }
 
+// Aggregates contact2 into contact1. Aggregate relationships will be created between the first
+// contact and the constituents of the second contact.
+void SeasideCache::aggregateContacts(const QContact &contact1, const QContact &contact2)
+{
+    instancePtr->m_contactPairsToLink.append(qMakePair(
+              ContactLinkRequest(apiId(contact1)),
+              ContactLinkRequest(apiId(contact2))));
+    instancePtr->fetchConstituents(contact1);
+    instancePtr->fetchConstituents(contact2);
+}
+
+// Disaggregates contact2 (a non-aggregate constituent) from contact1 (an aggregate).  This removes
+// the existing aggregate relationships between the two contacts.
+void SeasideCache::disaggregateContacts(const QContact &contact1, const QContact &contact2)
+{
+    instancePtr->m_relationshipsToRemove.append(makeRelationship(aggregateRelationshipType, contact1, contact2));
+    instancePtr->m_relationshipsToSave.append(makeRelationship(QLatin1String("IsNot"), contact1, contact2));
+
+    if (contact2.detail<QContactSyncTarget>().syncTarget() == syncTargetWasLocal) {
+        // restore the local sync target that was changed in a previous link creation operation
+        QContact c = contact2;
+        QContactSyncTarget syncTarget = c.detail<QContactSyncTarget>();
+        syncTarget.setSyncTarget(syncTargetLocal);
+        c.saveDetail(&syncTarget);
+        saveContact(c);
+    }
+
+    QCoreApplication::postEvent(instancePtr, new QEvent(QEvent::UpdateRequest));
+}
+
+void SeasideCache::updateConstituentAggregations(const ContactIdType &contactId)
+{
+    typedef QList<QPair<ContactLinkRequest, ContactLinkRequest> >::iterator iterator;
+    for (iterator it = m_contactPairsToLink.begin(); it != m_contactPairsToLink.end(); ) {
+        QPair<ContactLinkRequest, ContactLinkRequest> &pair = *it;
+        if (pair.first.contactId == contactId)
+            pair.first.constituentsFetched = true;
+        if (pair.second.contactId == contactId)
+            pair.second.constituentsFetched = true;
+        if (pair.first.constituentsFetched && pair.second.constituentsFetched) {
+            completeContactAggregation(pair.first.contactId, pair.second.contactId);
+            it = m_contactPairsToLink.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+// Called once constituents have been fetched for both persons.
+void SeasideCache::completeContactAggregation(const ContactIdType &contact1Id, const ContactIdType &contact2Id)
+{
+    CacheItem *cacheItem1 = itemById(contact1Id);
+    CacheItem *cacheItem2 = itemById(contact2Id);
+    if (!cacheItem1 || !cacheItem2 || !cacheItem1->itemData || !cacheItem2->itemData)
+        return;
+
+    // Contact1 needs to be linked to each of person2's constituents. However, a local constituent
+    // cannot be linked to two aggregate contacts. So, if both contacts have local constituents,
+    // change contact2's local constitent's syncTarget to "was_local" and don't aggregate it with
+    // contact1.
+    const QList<int> &constituents1 = cacheItem1->itemData->constituents();
+    const QList<int> &constituents2 = cacheItem2->itemData->constituents();
+    QContact contact2Local;
+    bool bothHaveLocals = false;
+    foreach (int id, constituents1) {
+        QContact c = contactById(apiId(id));
+        if (c.detail<QContactSyncTarget>().syncTarget() == syncTargetLocal) {
+            foreach (int id, constituents2) {
+                QContact c = contactById(apiId(id));
+                if (c.detail<QContactSyncTarget>().syncTarget() == syncTargetLocal) {
+                    contact2Local = c;
+                    bothHaveLocals = true;
+                    break;
+                }
+            }
+            break;
+        }
+    }
+    if (bothHaveLocals) {
+        QContactSyncTarget syncTarget = contact2Local.detail<QContactSyncTarget>();
+        syncTarget.setSyncTarget(syncTargetWasLocal);
+        contact2Local.saveDetail(&syncTarget);
+        saveContact(contact2Local);
+    }
+
+    // For each constituent of contact2, add a relationship between it and contact1, and remove the
+    // relationship between it and contact2.
+    foreach (int id, constituents2) {
+        QContact c = contactById(apiId(id));
+        m_relationshipsToSave.append(makeRelationship(aggregateRelationshipType, contactById(contact1Id), c));
+        m_relationshipsToRemove.append(makeRelationship(aggregateRelationshipType, contactById(contact2Id), c));
+    }
+
+    if (!m_relationshipsToSave.isEmpty() || !m_relationshipsToRemove.isEmpty())
+        requestUpdate();
+}
+
+QContactRelationship SeasideCache::makeRelationship(const QString &type, const QContact &contact1, const QContact &contact2)
+{
+    QContactRelationship relationship;
+    relationship.setRelationshipType(type);
+#ifdef USING_QTPIM
+    relationship.setFirst(contact1);
+    relationship.setSecond(contact2);
+#else
+    relationship.setFirst(contact1.id());
+    relationship.setSecond(contact2.id());
+#endif
+    return relationship;
+}

@@ -39,6 +39,8 @@
 #include <QContactRemoveRequest>
 #include <QContactSaveRequest>
 #include <QContactRelationshipFetchRequest>
+#include <QContactRelationshipSaveRequest>
+#include <QContactRelationshipRemoveRequest>
 #ifdef USING_QTPIM
 #include <QContactIdFilter>
 #include <QContactIdFetchRequest>
@@ -109,6 +111,9 @@ public:
 
         virtual void constituentsFetched(const QList<int> &ids) = 0;
         virtual void mergeCandidatesFetched(const QList<int> &ids) = 0;
+        virtual void aggregationOperationCompleted() = 0;
+
+        virtual QList<int> constituents() const = 0;
     };
 
     struct ModelData
@@ -129,6 +134,15 @@ public:
         ItemData *itemData;
         ModelData *modelData;
         ContactState contactState;
+    };
+
+    struct ContactLinkRequest
+    {
+        ContactLinkRequest(const QContactId &id) : contactId(id), constituentsFetched(false) {}
+        ContactLinkRequest(const ContactLinkRequest &req) : contactId(req.contactId), constituentsFetched(req.constituentsFetched) {}
+
+        SeasideCache::ContactIdType contactId;
+        bool constituentsFetched;
     };
 
     class ListModel : public QAbstractListModel
@@ -190,6 +204,9 @@ public:
     static CacheItem *itemByEmailAddress(const QString &email);
     static bool saveContact(const QContact &contact);
     static void removeContact(const QContact &contact);
+
+    static void aggregateContacts(const QContact &contact1, const QContact &contact2);
+    static void disaggregateContacts(const QContact &contact1, const QContact &contact2);
 
     static void fetchConstituents(const QContact &contact);
     static void fetchMergeCandidates(const QContact &contact);
@@ -261,6 +278,11 @@ private:
     void removeFromContactNameGroup(const QChar &group, QList<QChar> *modifiedGroups = 0);
     void notifyNameGroupsChanged(const QList<QChar> &groups);
 
+    void updateConstituentAggregations(const ContactIdType &contactId);
+    void completeContactAggregation(const ContactIdType &contact1Id, const ContactIdType &contact2Id);
+
+    static QContactRelationship makeRelationship(const QString &type, const QContact &contact1, const QContact &contact2);
+
     QBasicTimer m_expiryTimer;
     QBasicTimer m_fetchTimer;
     QHash<quint32, CacheItem> m_people;
@@ -273,6 +295,9 @@ private:
     QList<ContactIdType> m_changedContacts;
     QList<QContactId> m_contactsToFetchConstituents;
     QList<QContactId> m_contactsToFetchCandidates;
+    QList<QPair<ContactLinkRequest, ContactLinkRequest> > m_contactPairsToLink;
+    QList<QContactRelationship> m_relationshipsToSave;
+    QList<QContactRelationship> m_relationshipsToRemove;
     QList<SeasideNameGroupChangeListener*> m_nameGroupChangeListeners;
     QVector<ContactIdType> m_contacts[FilterTypesCount];
     QList<ListModel *> m_models[FilterTypesCount];
@@ -289,6 +314,8 @@ private:
     QContactRelationshipFetchRequest m_relationshipsFetchRequest;
     QContactRemoveRequest m_removeRequest;
     QContactSaveRequest m_saveRequest;
+    QContactRelationshipSaveRequest m_relationshipSaveRequest;
+    QContactRelationshipRemoveRequest m_relationshipRemoveRequest;
 #ifdef HAS_MLITE
     MGConfItem m_displayLabelOrderConf;
 #endif

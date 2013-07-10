@@ -1040,6 +1040,43 @@ void SeasidePerson::mergeCandidatesFetched(const QList<int> &ids)
     emit mergeCandidatesChanged();
 }
 
+void SeasidePerson::aggregationOperationCompleted()
+{
+    emit aggregationOperationFinished();
+}
+
+void SeasidePerson::aggregateInto(SeasidePerson *person)
+{
+    if (!person)
+        return;
+    // linking must done between two aggregates
+    if (syncTarget() != QLatin1String("aggregate")) {
+        qWarning() << "SeasidePerson::aggregateInto() failed, this person is not an aggregate contact";
+        return;
+    }
+    if (person->syncTarget() != QLatin1String("aggregate")) {
+        qWarning() << "SeasidePerson::aggregateInto() failed, given person is not an aggregate contact";
+        return;
+    }
+    SeasideCache::aggregateContacts(person->contact(), *mContact);
+}
+
+void SeasidePerson::disaggregateFrom(SeasidePerson *person)
+{
+    if (!person)
+        return;
+    // unlinking must be done between an aggregate and a non-aggregate
+    if (person->syncTarget() != QLatin1String("aggregate")) {
+        qWarning() << "SeasidePerson::disaggregateFrom() failed, given person is not an aggregate contact";
+        return;
+    }
+    if (syncTarget() == QLatin1String("aggregate")) {
+        qWarning() << "SeasidePerson::disaggregateFrom() failed, this person is already an aggregate";
+        return;
+    }
+    SeasideCache::disaggregateContacts(person->contact(), *mContact);
+}
+
 SeasidePersonAttached *SeasidePerson::qmlAttachedProperties(QObject *object)
 {
     return new SeasidePersonAttached(object);

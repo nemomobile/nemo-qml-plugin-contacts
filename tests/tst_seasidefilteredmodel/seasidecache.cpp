@@ -417,6 +417,14 @@ void SeasideCache::removeContact(const QContact &)
 {
 }
 
+void SeasideCache::aggregateContacts(const QContact &, const QContact &)
+{
+}
+
+void SeasideCache::disaggregateContacts(const QContact &, const QContact &)
+{
+}
+
 void SeasideCache::fetchConstituents(const QContact &contact)
 {
     if (SeasideCache::CacheItem *item = itemById(contact.id())) {
