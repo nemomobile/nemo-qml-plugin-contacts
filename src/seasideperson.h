@@ -255,7 +255,7 @@ public:
     Q_PROPERTY(QStringList accountIconPaths READ accountIconPaths NOTIFY accountIconPathsChanged)
     QStringList accountIconPaths() const;
 
-    Q_PROPERTY(QString syncTarget READ syncTarget)
+    Q_PROPERTY(QString syncTarget READ syncTarget CONSTANT)
     QString syncTarget() const;
 
     Q_PROPERTY(QList<int> constituents READ constituents NOTIFY constituentsChanged)
