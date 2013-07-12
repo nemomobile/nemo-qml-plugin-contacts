@@ -138,7 +138,7 @@ public:
 
     struct ContactLinkRequest
     {
-        ContactLinkRequest(const QContactId &id) : contactId(id), constituentsFetched(false) {}
+        ContactLinkRequest(const SeasideCache::ContactIdType &id) : contactId(id), constituentsFetched(false) {}
         ContactLinkRequest(const ContactLinkRequest &req) : contactId(req.contactId), constituentsFetched(req.constituentsFetched) {}
 
         SeasideCache::ContactIdType contactId;
@@ -259,7 +259,7 @@ private:
     void requestUpdate();
     void appendContacts(const QList<QContact> &contacts);
     void fetchContacts();
-    void updateContacts(const QList<QContactId> &contactIds);
+    void updateContacts(const QList<ContactIdType> &contactIds);
 
     void finalizeUpdate(FilterType filter);
     void removeRange(FilterType filter, int index, int count);

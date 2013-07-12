@@ -1362,7 +1362,7 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
                 cacheItem->itemData->constituentsFetched(QList<int>());
             }
 
-            updateConstituentAggregations(aggregateId);
+            updateConstituentAggregations(cacheItem->apiId());
         }
     } else if (request == &m_fetchByIdRequest) {
         if (!m_contactsToFetchConstituents.isEmpty()) {
@@ -1384,7 +1384,7 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
                 cacheItem->itemData->constituentsFetched(constituentIds);
             }
 
-            updateConstituentAggregations(aggregateId);
+            updateConstituentAggregations(cacheItem->apiId());
         }
     } else if (request == &m_contactIdRequest) {
         if (!m_contactsToFetchCandidates.isEmpty()) {
@@ -1413,29 +1413,18 @@ void SeasideCache::requestStateChanged(QContactAbstractRequest::State state)
             }
         }
     } else if (request == &m_relationshipSaveRequest || request == &m_relationshipRemoveRequest) {
-        ContactIdType contactId;
-        QList<ContactIdType> contactIds;
-        QList<QContactRelationship> relationships;
-        relationships = m_relationshipSaveRequest.relationships();
-        for (int i=0; i<relationships.count(); i++) {
-            contactId = SeasideCache::apiId(relationships[i].first());
-            if (!contactIds.contains(contactId))
-                contactIds.append(contactId);
-            contactId = SeasideCache::apiId(relationships[i].second());
-            if (!contactIds.contains(contactId))
-                contactIds.append(contactId);
+        QSet<ContactIdType> contactIds;
+        foreach (const QContactRelationship &relationship, m_relationshipSaveRequest.relationships() +
+                                                           m_relationshipRemoveRequest.relationships()) {
+#ifdef USING_QTPIM
+            contactIds.insert(SeasideCache::apiId(relationship.first()));
+#else
+            contactIds.insert(relationship.first().localId());
+#endif
         }
-        relationships = m_relationshipRemoveRequest.relationships();
-        for (int i=0; i<relationships.count(); i++) {
-            contactId = SeasideCache::apiId(relationships[i].first());
-            if (!contactIds.contains(contactId))
-                contactIds.append(contactId);
-            contactId = SeasideCache::apiId(relationships[i].second());
-            if (!contactIds.contains(contactId))
-                contactIds.append(contactId);
-        }
-        for (int i=0; i<contactIds.count(); i++) {
-            CacheItem *cacheItem = itemById(contactIds[i]);
+
+        foreach (const ContactIdType &contactId, contactIds) {
+            CacheItem *cacheItem = itemById(contactId);
             if (cacheItem && cacheItem->itemData)
                 cacheItem->itemData->aggregationOperationCompleted();
         }
