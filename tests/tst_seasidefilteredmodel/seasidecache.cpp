@@ -298,7 +298,7 @@ SeasideCache::CacheItem *SeasideCache::existingItem(const ContactIdType &id)
         return &instancePtr->m_cache[instancePtr->m_cacheIndices[id]];
     }
 #else
-    if (id > 0 && id <= instancePtr->m_cache.count()) {
+    if (id != 0 && id <= instancePtr->m_cache.count()) {
         return &instancePtr->m_cache[id - 1];
     }
 #endif
@@ -312,7 +312,7 @@ SeasideCache::CacheItem *SeasideCache::itemById(const ContactIdType &id)
         return &instancePtr->m_cache[instancePtr->m_cacheIndices[id]];
     }
 #else
-    if (id > 0 && id <= instancePtr->m_cache.count()) {
+    if (id != 0 && id <= instancePtr->m_cache.count()) {
         return &instancePtr->m_cache[id - 1];
     }
 #endif
@@ -427,7 +427,7 @@ void SeasideCache::disaggregateContacts(const QContact &, const QContact &)
 
 void SeasideCache::fetchConstituents(const QContact &contact)
 {
-    if (SeasideCache::CacheItem *item = itemById(contact.id())) {
+    if (SeasideCache::CacheItem *item = itemById(SeasideCache::apiId(contact))) {
         if (item->itemData) {
             item->itemData->constituentsFetched(QList<int>());
         }
@@ -436,7 +436,7 @@ void SeasideCache::fetchConstituents(const QContact &contact)
 
 void SeasideCache::fetchMergeCandidates(const QContact &contact)
 {
-    if (SeasideCache::CacheItem *item = itemById(contact.id())) {
+    if (SeasideCache::CacheItem *item = itemById(SeasideCache::apiId(contact))) {
         if (item->itemData) {
             item->itemData->mergeCandidatesFetched(QList<int>());
         }
