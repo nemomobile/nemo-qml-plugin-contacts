@@ -33,7 +33,6 @@
 
 #include "normalization_p.h"
 #include "synchronizelists_p.h"
-#include "constants_p.h"
 
 #include <QCoreApplication>
 #ifdef USING_QTPIM
@@ -155,20 +154,7 @@ SeasideCache::ContactIdType SeasideCache::apiId(const QContact &contact)
 
 SeasideCache::ContactIdType SeasideCache::apiId(quint32 iid)
 {
-#ifdef USING_QTPIM
-    // Currently only works with qtcontacts-sqlite
-    QContactId contactId;
-    if (iid != 0) {
-        static const QString idStr(QString::fromLatin1("qtcontacts:org.nemomobile.contacts.sqlite::sql-%1"));
-        contactId = QContactId::fromString(idStr.arg(iid));
-        if (contactId.isNull()) {
-            qWarning() << "Unable to formulate valid ID from:" << iid;
-        }
-    }
-    return contactId;
-#else
-    return static_cast<ContactIdType>(iid);
-#endif
+    return QtContactsSqliteExtensions::apiContactId(iid);
 }
 
 bool SeasideCache::validId(const ContactIdType &id)
@@ -187,27 +173,13 @@ quint32 SeasideCache::internalId(const QContact &contact)
 
 quint32 SeasideCache::internalId(const QContactId &id)
 {
-#ifdef USING_QTPIM
-    // We need to be able to represent an ID as a 32-bit int; we could use
-    // hashing, but for now we will just extract the integral part of the ID
-    // string produced by qtcontacts-sqlite
-    if (!id.isNull()) {
-        QStringList components = id.toString().split(QChar::fromLatin1(':'));
-        const QString &idComponent = components.isEmpty() ? QString() : components.last();
-        if (idComponent.startsWith(QString::fromLatin1("sql-"))) {
-            return idComponent.mid(4).toUInt();
-        }
-    }
-    return 0;
-#else
-    return static_cast<quint32>(id.localId());
-#endif
+    return QtContactsSqliteExtensions::internalContactId(id);
 }
 
 #ifndef USING_QTPIM
 quint32 SeasideCache::internalId(QContactLocalId id)
 {
-    return static_cast<quint32>(id);
+    return QtContactsSqliteExtensions::internalContactId(id);
 }
 #endif
 
@@ -1758,3 +1730,6 @@ QContactRelationship SeasideCache::makeRelationship(const QString &type, const Q
 #endif
     return relationship;
 }
+
+// Instantiate the contact ID functions for qtcontacts-sqlite
+#include <qtcontacts-extensions_impl.h>

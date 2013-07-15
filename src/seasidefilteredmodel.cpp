@@ -33,7 +33,8 @@
 #include "seasidecache.h"
 #include "seasideperson.h"
 #include "synchronizelists_p.h"
-#include "constants_p.h"
+
+#include <qtcontacts-extensions.h>
 
 #include <QContactAvatar>
 #include <QContactEmailAddress>
