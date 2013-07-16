@@ -30,9 +30,9 @@
  */
 
 #include "seasidefilteredmodel.h"
-#include "seasidecache.h"
 #include "seasideperson.h"
-#include "synchronizelists_p.h"
+
+#include <synchronizelists.h>
 
 #include <qtcontacts-extensions.h>
 
