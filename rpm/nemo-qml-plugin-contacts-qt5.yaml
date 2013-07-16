@@ -17,6 +17,7 @@ PkgConfigBR:
     - Qt5Contacts
     - Qt5Versit
     - Qt5Test
+    - qtcontacts-sqlite-qt5-extensions
     - contactcache-qt5
 Requires:
     - qtcontacts-sqlite-qt5

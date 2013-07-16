@@ -15,6 +15,7 @@ PkgConfigBR:
     - QtDeclarative
     - QtGui
     - QtContacts
+    - qtcontacts-sqlite-extensions
     - contactcache
 Provides:
     - nemo-qml-plugins-contacts > 0.3.26
