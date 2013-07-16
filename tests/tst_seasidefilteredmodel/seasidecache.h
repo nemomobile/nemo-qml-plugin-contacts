@@ -9,6 +9,8 @@
 #include <QAbstractListModel>
 #include <QVector>
 
+// Provide enough of SeasideCache's interface to support SeasideFilteredModel
+
 USE_CONTACTS_NAMESPACE
 
 class SeasidePerson;
@@ -32,11 +34,17 @@ public:
         LastNameFirst
     };
 
+    enum ContactState {
+        ContactAbsent,
+        ContactRequested,
+        ContactFetched
+    };
+
     struct ItemData
     {
         virtual ~ItemData() {}
 
-        virtual QString getDisplayLabel() const;
+        virtual QString getDisplayLabel() const = 0;
         virtual void displayLabelOrderChanged(DisplayLabelOrder order) = 0;
 
         virtual void updateContact(const QContact &newContact, QContact *oldContact) = 0;
@@ -60,6 +68,7 @@ public:
         QContact contact;
         ItemData *itemData;
         ModelData *modelData;
+        ContactState contactState;
     };
 
     class ListModel : public QAbstractListModel

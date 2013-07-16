@@ -47,7 +47,7 @@
 #include <QContactPresence>
 
 // Seaside
-#include "seasidecache.h"
+#include <seasidecache.h>
 
 USE_CONTACTS_NAMESPACE
 
