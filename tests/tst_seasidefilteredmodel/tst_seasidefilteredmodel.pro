@@ -1,28 +1,13 @@
-include(../../config.pri)
+include(../common.pri)
 
-QT += testlib
-TEMPLATE = app
-CONFIG -= app_bundle
-
-SRCDIR = $$PWD/../../src
-
-equals(QT_MAJOR_VERSION, 4): QT += declarative
-equals(QT_MAJOR_VERSION, 5): QT += qml
-
-equals(QT_MAJOR_VERSION, 4): target.path = /opt/tests/nemo-qml-plugins/contacts
-equals(QT_MAJOR_VERSION, 5): target.path = /opt/tests/nemo-qml-plugins-qt5/contacts
-INSTALLS += target
-
-INCLUDEPATH += $$SRCDIR
 HEADERS += \
         seasidecache.h \
         seasidefilteredmodel.h \
         $$SRCDIR/seasidefilteredmodel.h \
-        $$SRCDIR/seasideperson.h \
-        $$SRCDIR/synchronizelists_p.h
+        $$SRCDIR/seasideperson.h
 
 SOURCES += \
+        seasidecache.cpp \
         tst_seasidefilteredmodel.cpp \
         $$SRCDIR/seasidefilteredmodel.cpp \
-        $$SRCDIR/seasideperson.cpp \
-        seasidecache.cpp
+        $$SRCDIR/seasideperson.cpp

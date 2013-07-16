@@ -53,7 +53,6 @@
 #include <QVersitContactExporter>
 
 #include "seasideperson.h"
-#include "seasidecache.h"
 
 USE_VERSIT_NAMESPACE
 

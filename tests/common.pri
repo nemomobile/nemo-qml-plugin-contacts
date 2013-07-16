@@ -1,16 +1,16 @@
-include(../src/src.pro)
+include(../config.pri)
+include(basename.pri)
 
-SRCDIR = ../../src/
-INCLUDEPATH += $$SRCDIR
-DEPENDPATH = $$INCLUDEPATH
-
-QT += testlib
 TEMPLATE = app
 CONFIG -= app_bundle
 
-CONFIG += mobility
-MOBILITY += contacts versit
+QT += testlib
+equals(QT_MAJOR_VERSION, 4): QT += declarative
+equals(QT_MAJOR_VERSION, 5): QT += qml
 
-equals(QT_MAJOR_VERSION, 4): target.path = /opt/tests/nemo-qml-plugins/contacts
-equals(QT_MAJOR_VERSION, 5): target.path = /opt/tests/nemo-qml-plugins-qt5/contacts
+SRCDIR = $$PWD/../src/
+INCLUDEPATH += $$SRCDIR
+DEPENDPATH = $$INCLUDEPATH
+
+target.path = /opt/tests/$${BASENAME}/contacts
 INSTALLS += target

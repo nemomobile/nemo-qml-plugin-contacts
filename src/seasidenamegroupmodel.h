@@ -32,12 +32,12 @@
 #ifndef SEASIDEPEOPLENAMEGROUPMODEL_H
 #define SEASIDEPEOPLENAMEGROUPMODEL_H
 
+#include <seasidecache.h>
+
 #include <QAbstractListModel>
 #include <QStringList>
 
 #include <QContactId>
-
-#include "seasidecache.h"
 
 USE_CONTACTS_NAMESPACE
 

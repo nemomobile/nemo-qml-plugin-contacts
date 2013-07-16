@@ -32,7 +32,7 @@
 #ifndef SEASIDEFILTEREDMODEL_H
 #define SEASIDEFILTEREDMODEL_H
 
-#include "seasidecache.h"
+#include <seasidecache.h>
 
 #include <QStringList>
 #include <QVector>
