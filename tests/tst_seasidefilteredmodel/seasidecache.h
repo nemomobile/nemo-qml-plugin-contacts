@@ -1,6 +1,8 @@
 #ifndef SEASIDECACHE_H
 #define SEASIDECACHE_H
 
+#include <qtcontacts-extensions.h>
+
 #include <QContact>
 #include <QContactId>
 
@@ -15,11 +17,7 @@ class SeasideCache : public QObject
 {
     Q_OBJECT
 public:
-#ifdef USING_QTPIM
-    typedef QContactId ContactIdType;
-#else
-    typedef QContactLocalId ContactIdType;
-#endif
+    typedef QtContactsSqliteExtensions::ApiContactIdType ContactIdType;
 
     enum FilterType {
         FilterNone,
@@ -94,6 +92,7 @@ public:
 #ifndef USING_QTPIM
     static quint32 internalId(QContactLocalId id);
 #endif
+
     SeasideCache();
     ~SeasideCache();
 

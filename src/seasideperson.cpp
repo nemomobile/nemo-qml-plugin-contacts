@@ -31,6 +31,8 @@
 
 #include <QDebug>
 
+#include <qtcontacts-extensions.h>
+
 #include <QContactAvatar>
 #include <QContactBirthday>
 #include <QContactAnniversary>
@@ -52,7 +54,6 @@
 
 #include "seasideperson.h"
 #include "seasidecache.h"
-#include "constants_p.h"
 
 USE_VERSIT_NAMESPACE
 
