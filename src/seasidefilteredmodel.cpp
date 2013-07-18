@@ -396,28 +396,7 @@ void SeasideFilteredModel::refineIndex()
 
 void SeasideFilteredModel::updateIndex()
 {
-    int f = 0;
-    int r = 0;
-    synchronizeFilteredList(this, m_filteredContactIds, f, *m_referenceContactIds, r);
-
-    if (f < m_filteredContactIds.count())
-        removeRange(f, m_filteredContactIds.count() - f);
-
-    if (r < m_referenceContactIds->count()) {
-        QVector<ContactIdType> insertIds;
-        for (; r < m_referenceContactIds->count(); ++r) {
-            if (filterId(m_referenceContactIds->at(r)))
-                insertIds.append(m_referenceContactIds->at(r));
-        }
-        if (insertIds.count() > 0) {
-            beginInsertRows(
-                    QModelIndex(),
-                    m_filteredContactIds.count(),
-                    m_filteredContactIds.count() + insertIds.count() - 1);
-            m_filteredContactIds += insertIds;
-            endInsertRows();
-        }
-    }
+    synchronizeFilteredList(this, m_filteredContactIds, *m_referenceContactIds);
 }
 
 void SeasideFilteredModel::populateIndex()
