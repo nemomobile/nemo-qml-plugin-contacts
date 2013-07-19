@@ -1002,7 +1002,12 @@ QString SeasidePerson::vCard() const
 
 void SeasidePerson::fetchConstituents()
 {
-    SeasideCache::fetchConstituents(contact());
+    if (SeasideCache::validId(mContact->id())) {
+        SeasideCache::fetchConstituents(contact());
+    } else {
+        // No constituents
+        QMetaObject::invokeMethod(this, "constituentsChanged", Qt::QueuedConnection);
+    }
 }
 
 void SeasidePerson::fetchMergeCandidates()
