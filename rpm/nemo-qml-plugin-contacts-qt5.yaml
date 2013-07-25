@@ -1,0 +1,46 @@
+Name: nemo-qml-plugin-contacts-qt5
+Summary: Nemo QML contacts plugin
+Group: System/Libraries
+Description: "%{summary}."
+Version: 0.0.0
+Release: 1
+Sources:
+    - "%{name}-%{version}.tar.bz2"
+License: BSD
+URL: https://github.com/nemomobile/nemo-qml-plugin-contacts
+Configure: none
+Builder: qmake5
+PkgConfigBR:
+    - Qt5Core
+    - Qt5Qml
+    - Qt5Gui
+    - Qt5Contacts
+    - Qt5Versit
+    - Qt5Test
+    - qtcontacts-sqlite-qt5-extensions
+    - contactcache-qt5 >= 0.0.1
+Requires:
+    - qtcontacts-sqlite-qt5
+Files:
+    - "%{_libdir}/qt5/qml/org/nemomobile/contacts/libnemocontacts.so"
+    - "%{_libdir}/qt5/qml/org/nemomobile/contacts/qmldir"
+SubPackages:
+    - Name: tools
+      Summary: Development tools for qmlcontacts
+      Description: "%{summary}."
+      Group: Applications/System
+      License: BSD
+      AutoDepend: false
+      Files:
+          - "%{_bindir}/vcardconverter"
+      Provides:
+          - qmlcontacts-tools > 0.4.9
+      Obsoletes:
+          - qmlcontacts-tools <= 0.4.9
+
+    - Name: tests
+      Summary: QML contacts plugin tests
+      Group: System/Libraries
+      Description: "%{summary}."
+      Files:
+          - "/opt/tests/nemo-qml-plugins-qt5/contacts/*"
