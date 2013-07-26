@@ -64,6 +64,8 @@ private slots:
     void filterId();
     void searchByFirstNameCharacter();
     void lookupById();
+    void requiredProperty();
+    void mixedFilters();
 
 private:
     QVariant idAt(int index) const { return QVariant::fromValue<ContactIdType>(cache.idAt(index)); }
@@ -692,6 +694,147 @@ void tst_SeasideFilteredModel::lookupById()
     // Verify that invalid values yield nothing
     QCOMPARE(model.personById(0), static_cast<SeasidePerson *>(0));
     QCOMPARE(model.personById(666), static_cast<SeasidePerson *>(0));
+}
+
+void tst_SeasideFilteredModel::requiredProperty()
+{
+    SeasideFilteredModel model;
+    QSignalSpy propertySpy(&model, SIGNAL(requiredPropertyChanged()));
+    QSignalSpy insertedSpy(&model, SIGNAL(rowsInserted(QModelIndex,int,int)));
+    QSignalSpy removedSpy(&model, SIGNAL(rowsRemoved(QModelIndex,int,int)));
+
+    QCOMPARE(model.filterType(), SeasideFilteredModel::FilterAll);
+    QCOMPARE(model.requiredProperty(), SeasideFilteredModel::NoPropertyRequired);
+    QCOMPARE(model.rowCount(), 7);
+
+    // 0 3 4 6
+    model.setRequiredProperty(SeasideFilteredModel::PhoneNumberRequired);
+    QCOMPARE(model.requiredProperty(), SeasideFilteredModel::PhoneNumberRequired);
+    QCOMPARE(propertySpy.count(), 1);
+    QCOMPARE(model.rowCount(), 4);
+    QCOMPARE(insertedSpy.count(), 0);
+    QCOMPARE(removedSpy.count(), 2);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 1);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 2);
+    QCOMPARE(removedSpy.at(1).at(1).value<int>(), 3);
+    QCOMPARE(removedSpy.at(1).at(2).value<int>(), 3);
+
+    propertySpy.clear();
+    removedSpy.clear();
+
+    // 0 1 2 3 4 5
+    model.setRequiredProperty(SeasideFilteredModel::EmailAddressRequired);
+    QCOMPARE(model.requiredProperty(), SeasideFilteredModel::EmailAddressRequired);
+    QCOMPARE(propertySpy.count(), 1);
+    QCOMPARE(model.rowCount(), 6);
+    QCOMPARE(insertedSpy.count(), 2);
+    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 1);
+    QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 2);
+    QCOMPARE(insertedSpy.at(1).at(1).value<int>(), 5);
+    QCOMPARE(insertedSpy.at(1).at(2).value<int>(), 5);
+    QCOMPARE(removedSpy.count(), 1);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 5);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 5);
+
+    propertySpy.clear();
+    insertedSpy.clear();
+    removedSpy.clear();
+
+    // No IM accounts in this data
+    model.setRequiredProperty(SeasideFilteredModel::AccountUriRequired);
+    QCOMPARE(model.requiredProperty(), SeasideFilteredModel::AccountUriRequired);
+    QCOMPARE(propertySpy.count(), 1);
+    QCOMPARE(model.rowCount(), 0);
+    QCOMPARE(insertedSpy.count(), 0);
+    QCOMPARE(removedSpy.count(), 1);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 5);
+
+    propertySpy.clear();
+    removedSpy.clear();
+
+    model.setRequiredProperty(SeasideFilteredModel::NoPropertyRequired);
+    QCOMPARE(model.requiredProperty(), SeasideFilteredModel::NoPropertyRequired);
+    QCOMPARE(propertySpy.count(), 1);
+    QCOMPARE(model.rowCount(), 7);
+    QCOMPARE(insertedSpy.count(), 1);
+    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 6);
+    QCOMPARE(removedSpy.count(), 0);
+}
+
+void tst_SeasideFilteredModel::mixedFilters()
+{
+    SeasideFilteredModel model;
+    QSignalSpy insertedSpy(&model, SIGNAL(rowsInserted(QModelIndex,int,int)));
+    QSignalSpy removedSpy(&model, SIGNAL(rowsRemoved(QModelIndex,int,int)));
+
+    QCOMPARE(model.filterType(), SeasideFilteredModel::FilterAll);
+    QCOMPARE(model.rowCount(), 7);
+
+    // 0 3 4 6
+    model.setRequiredProperty(SeasideFilteredModel::PhoneNumberRequired);
+    QCOMPARE(model.rowCount(), 4);
+    QCOMPARE(insertedSpy.count(), 0);
+    QCOMPARE(removedSpy.count(), 2);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 1);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 2);
+    QCOMPARE(removedSpy.at(1).at(1).value<int>(), 3);
+    QCOMPARE(removedSpy.at(1).at(2).value<int>(), 3);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::LastNameRole).toString(), QString::fromLatin1("Aaronson"));
+    QCOMPARE(model.index(QModelIndex(), 1, 0).data(SeasideFilteredModel::LastNameRole).toString(), QString::fromLatin1("Johns"));
+    QCOMPARE(model.index(QModelIndex(), 2, 0).data(SeasideFilteredModel::LastNameRole).toString(), QString::fromLatin1("Aaronson"));
+    QCOMPARE(model.index(QModelIndex(), 3, 0).data(SeasideFilteredModel::LastNameRole).toString(), QString::fromLatin1("Burchell"));
+
+    removedSpy.clear();
+
+    // 0 4
+    model.setFilterPattern("Aaron");
+    QCOMPARE(model.rowCount(), 2);
+    QCOMPARE(insertedSpy.count(), 0);
+    QCOMPARE(removedSpy.count(), 2);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 1);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 1);
+    QCOMPARE(removedSpy.at(1).at(1).value<int>(), 2);
+    QCOMPARE(removedSpy.at(1).at(1).value<int>(), 2);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::LastNameRole).toString(), QString::fromLatin1("Aaronson"));
+    QCOMPARE(model.index(QModelIndex(), 1, 0).data(SeasideFilteredModel::LastNameRole).toString(), QString::fromLatin1("Aaronson"));
+
+    removedSpy.clear();
+
+    // None
+    model.setRequiredProperty(SeasideFilteredModel::AccountUriRequired);
+    QCOMPARE(model.rowCount(), 0);
+    QCOMPARE(insertedSpy.count(), 0);
+    QCOMPARE(removedSpy.count(), 1);
+    QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 1);
+
+    removedSpy.clear();
+
+    // 0 1 2 4
+    model.setRequiredProperty(SeasideFilteredModel::NoPropertyRequired);
+    QCOMPARE(model.rowCount(), 4);
+    QCOMPARE(insertedSpy.count(), 1);
+    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 0);
+    QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 3);
+    QCOMPARE(removedSpy.count(), 0);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::LastNameRole).toString(), QString::fromLatin1("Aaronson"));
+    QCOMPARE(model.index(QModelIndex(), 1, 0).data(SeasideFilteredModel::LastNameRole).toString(), QString::fromLatin1("Arthur"));
+    QCOMPARE(model.index(QModelIndex(), 2, 0).data(SeasideFilteredModel::LastNameRole).toString(), QString::fromLatin1("Johns"));
+    QCOMPARE(model.index(QModelIndex(), 3, 0).data(SeasideFilteredModel::LastNameRole).toString(), QString::fromLatin1("Aaronson"));
+
+    insertedSpy.clear();
+
+    // 0 1 2 3 4 5 6
+    model.setFilterPattern(QString());
+    QCOMPARE(model.rowCount(), 7);
+    QCOMPARE(insertedSpy.count(), 2);
+    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 3);
+    QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 3);
+    QCOMPARE(insertedSpy.at(1).at(1).value<int>(), 5);
+    QCOMPARE(insertedSpy.at(1).at(2).value<int>(), 6);
+    QCOMPARE(removedSpy.count(), 0);
 }
 
 #include "tst_seasidefilteredmodel.moc"
