@@ -34,6 +34,7 @@
 #include <QContactName>
 #include <QContactAvatar>
 #include <QContactEmailAddress>
+#include <QContactPhoneNumber>
 
 #include <QtDebug>
 
@@ -44,18 +45,19 @@ struct Contact
     const bool isFavorite;
     const bool isOnline;
     const char *email;
+    const char *phoneNumber;
     const char *avatar;
 };
 
 static const Contact contactsData[] =
 {
-/*1*/   { "Aaron",  "Aaronson", false, false, "aaronaa@example.com", 0 },
-/*2*/   { "Aaron",  "Arthur",   false, true,  "aaronar@example.com", 0 },
-/*3*/   { "Aaron",  "Johns",    true,  false, "johns@example.com", 0 },
-/*4*/   { "Arthur", "Johns",    false, true,  "arthur1.johnz@example.org", 0 },
-/*5*/   { "Jason",  "Aaronson", false, false, "jay@examplez.org", 0 },
-/*6*/   { "Joe",    "Johns",    true,  true,  "jj@examplez.org", "file:///cache/joe.jpg" },
-/*7*/   { "Robin",  "Burchell", true,  false, 0, 0 }
+/*1*/   { "Aaron",  "Aaronson", false, false, "aaronaa@example.com",       "1234567", 0 },
+/*2*/   { "Aaron",  "Arthur",   false, true,  "aaronar@example.com",       0,         0 },
+/*3*/   { "Aaron",  "Johns",    true,  false, "johns@example.com",         0,         0 },
+/*4*/   { "Arthur", "Johns",    false, true,  "arthur1.johnz@example.org", "2345678", 0 },
+/*5*/   { "Jason",  "Aaronson", false, false, "jay@examplez.org",          "3456789", 0 },
+/*6*/   { "Joe",    "Johns",    true,  true,  "jj@examplez.org",           0,         "file:///cache/joe.jpg" },
+/*7*/   { "Robin",  "Burchell", true,  false, 0,                           "9876543", 0 }
 };
 
 static QList<QChar> getAllContactNameGroups()
@@ -199,6 +201,12 @@ void SeasideCache::reset()
             QContactEmailAddress email;
             email.setEmailAddress(QLatin1String(contactsData[i].email));
             contact.saveDetail(&email);
+        }
+
+        if (contactsData[i].phoneNumber) {
+            QContactPhoneNumber phoneNumber;
+            phoneNumber.setNumber(QLatin1String(contactsData[i].phoneNumber));
+            contact.saveDetail(&phoneNumber);
         }
 
 #ifdef USING_QTPIM

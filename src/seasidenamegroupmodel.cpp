@@ -30,10 +30,16 @@
  */
 
 #include "seasidenamegroupmodel.h"
+
+#include <QContactOnlineAccount>
+#include <QContactPhoneNumber>
+#include <QContactEmailAddress>
+
 #include <QDebug>
 
 SeasideNameGroupModel::SeasideNameGroupModel(QObject *parent)
     : QAbstractListModel(parent)
+    , m_requiredProperty(NoPropertyRequired)
 {
     SeasideCache::registerNameGroupChangeListener(this);
 
@@ -42,19 +48,47 @@ SeasideNameGroupModel::SeasideNameGroupModel(QObject *parent)
 #endif
 
     QList<QChar> allGroups = SeasideCache::allNameGroups();
-    QHash<QChar, int> existingGroups = SeasideCache::nameGroupCounts();
+    QHash<QChar, QSet<quint32> > existingGroups = SeasideCache::nameGroupMembers();
     if (!existingGroups.isEmpty()) {
         for (int i=0; i<allGroups.count(); i++)
-            m_groups << SeasideNameGroup(allGroups[i], existingGroups.value(allGroups[i], 0));
+            m_groups << SeasideNameGroup(allGroups[i], existingGroups.value(allGroups[i]));
     } else {
         for (int i=0; i<allGroups.count(); i++)
-            m_groups << SeasideNameGroup(allGroups[i], 0);
+            m_groups << SeasideNameGroup(allGroups[i]);
     }
 }
 
 SeasideNameGroupModel::~SeasideNameGroupModel()
 {
     SeasideCache::unregisterNameGroupChangeListener(this);
+}
+
+SeasideNameGroupModel::RequiredPropertyType SeasideNameGroupModel::requiredProperty() const
+{
+    return m_requiredProperty;
+}
+
+void SeasideNameGroupModel::setRequiredProperty(RequiredPropertyType property)
+{
+    if (m_requiredProperty != property) {
+        m_requiredProperty = property;
+
+        // Update counts
+        QList<SeasideNameGroup>::iterator it = m_groups.begin(), end = m_groups.end();
+        for ( ; it != end; ++it) {
+            SeasideNameGroup &existing(*it);
+
+            int newCount = countFilteredContacts(existing.contactIds);
+            if (existing.count != newCount) {
+                existing.count = newCount;
+
+                const QModelIndex updateIndex(createIndex(it - m_groups.begin(), 0));
+                emit dataChanged(updateIndex, updateIndex);
+            }
+        }
+
+        emit requiredPropertyChanged();
+    }
 }
 
 QHash<int, QByteArray> SeasideNameGroupModel::roleNames() const
@@ -81,7 +115,7 @@ QVariant SeasideNameGroupModel::data(const QModelIndex &index, int role) const
     return QVariant();
 }
 
-void SeasideNameGroupModel::nameGroupsUpdated(const QHash<QChar, int> &groups)
+void SeasideNameGroupModel::nameGroupsUpdated(const QHash<QChar, QSet<quint32> > &groups)
 {
     if (groups.isEmpty())
         return;
@@ -91,18 +125,27 @@ void SeasideNameGroupModel::nameGroupsUpdated(const QHash<QChar, int> &groups)
         QList<QChar> allGroups = SeasideCache::allNameGroups();
         beginInsertRows(QModelIndex(), 0, allGroups.count() - 1);
         for (int i=0; i<allGroups.count(); i++)
-            m_groups << SeasideNameGroup(allGroups[i], 0);
+            m_groups << SeasideNameGroup(allGroups[i]);
     }
 
-    for (QHash<QChar,int>::const_iterator it = groups.begin(); it != groups.end(); ++it) {
-        int index = m_groups.indexOf(SeasideNameGroup(it.key()));
-        if (index < 0) {
-            qWarning() << "SeasideNameGroupModel: no match for group" << it.key();
-            continue;
+    QHash<QChar, QSet<quint32> >::const_iterator it = groups.constBegin(), end = groups.constEnd();
+    for ( ; it != end; ++it) {
+        QList<SeasideNameGroup>::iterator existingIt = m_groups.begin(), existingEnd = m_groups.end();
+        for ( ; existingIt != existingEnd; ++existingIt) {
+            SeasideNameGroup &existing(*existingIt);
+            if (existing.name == it.key()) {
+                existing.contactIds = it.value();
+                existing.count = countFilteredContacts(it.value());
+                if (!wasEmpty) {
+                    const QModelIndex updateIndex(createIndex(existingIt - m_groups.begin(), 0));
+                    emit dataChanged(updateIndex, updateIndex);
+                }
+                break;
+            }
         }
-        m_groups[index].count = it.value();
-        if (!wasEmpty)
-            emit dataChanged(createIndex(index, 0), createIndex(index, 0));
+        if (existingIt == existingEnd) {
+            qWarning() << "SeasideNameGroupModel: no match for group" << it.key();
+        }
     }
 
     if (wasEmpty) {
@@ -110,3 +153,27 @@ void SeasideNameGroupModel::nameGroupsUpdated(const QHash<QChar, int> &groups)
         emit countChanged();
     }
 }
+
+int SeasideNameGroupModel::countFilteredContacts(const QSet<quint32> &contactIds) const
+{
+    if (m_requiredProperty != NoPropertyRequired) {
+        int count = 0;
+
+        // Check if these contacts are included by the current filter
+        foreach (quint32 iid, contactIds) {
+            SeasideCache::CacheItem *item = SeasideCache::existingItem(iid);
+            Q_ASSERT(item);
+
+            if ((m_requiredProperty == AccountUriRequired && !item->contact.detail<QContactOnlineAccount>().isEmpty()) ||
+                (m_requiredProperty == PhoneNumberRequired && !item->contact.detail<QContactPhoneNumber>().isEmpty()) ||
+                (m_requiredProperty == EmailAddressRequired && !item->contact.detail<QContactEmailAddress>().isEmpty())) {
+                ++count;
+            }
+        }
+
+        return count;
+    }
+
+    return contactIds.count();
+}
+

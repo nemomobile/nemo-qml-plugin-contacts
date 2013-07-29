@@ -50,9 +50,10 @@ class SeasideFilteredModel : public SeasideCache::ListModel
     Q_PROPERTY(FilterType filterType READ filterType WRITE setFilterType NOTIFY filterTypeChanged)
     Q_PROPERTY(DisplayLabelOrder displayLabelOrder READ displayLabelOrder WRITE setDisplayLabelOrder NOTIFY displayLabelOrderChanged)
     Q_PROPERTY(QString filterPattern READ filterPattern WRITE setFilterPattern NOTIFY filterPatternChanged)
+    Q_PROPERTY(RequiredPropertyType requiredProperty READ requiredProperty WRITE setRequiredProperty NOTIFY requiredPropertyChanged)
     Q_PROPERTY(bool searchByFirstNameCharacter READ searchByFirstNameCharacter WRITE setSearchByFirstNameCharacter NOTIFY searchByFirstNameCharacterChanged)
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
-    Q_ENUMS(FilterType DisplayLabelOrder)
+    Q_ENUMS(FilterType RequiredPropertyType DisplayLabelOrder)
 public:
     enum FilterType {
         FilterNone = SeasideCache::FilterNone,
@@ -60,6 +61,13 @@ public:
         FilterFavorites = SeasideCache::FilterFavorites,
         FilterOnline = SeasideCache::FilterOnline,
         FilterTypesCount = SeasideCache::FilterTypesCount
+    };
+
+    enum RequiredPropertyType {
+        NoPropertyRequired = 0,
+        AccountUriRequired,
+        PhoneNumberRequired,
+        EmailAddressRequired
     };
 
     enum DisplayLabelOrder {
@@ -87,6 +95,9 @@ public:
 
     QString filterPattern() const;
     void setFilterPattern(const QString &pattern);
+
+    RequiredPropertyType requiredProperty() const;
+    void setRequiredProperty(RequiredPropertyType type);
 
     bool searchByFirstNameCharacter() const;
     void setSearchByFirstNameCharacter(bool searchByFirstNameCharacter);
@@ -143,6 +154,7 @@ signals:
     void populatedChanged();
     void filterTypeChanged();
     void filterPatternChanged();
+    void requiredPropertyChanged();
     void searchByFirstNameCharacterChanged();
     void displayLabelOrderChanged();
     void countChanged();
@@ -152,6 +164,9 @@ private:
     void refineIndex();
     void updateIndex();
     void updateContactData(const ContactIdType &contactId, FilterType filter);
+
+    bool isFiltered() const;
+    void updateFilters(const QString &pattern, RequiredPropertyType property);
 
     SeasidePerson *personFromItem(SeasideCache::CacheItem *item) const;
 
@@ -163,6 +178,7 @@ private:
     int m_filterIndex;
     int m_referenceIndex;
     FilterType m_filterType;
+    RequiredPropertyType m_requiredProperty;
     bool m_searchByFirstNameCharacter;
 };
 

@@ -102,6 +102,7 @@ SeasideFilteredModel::SeasideFilteredModel(QObject *parent)
     , m_filterIndex(0)
     , m_referenceIndex(0)
     , m_filterType(FilterAll)
+    , m_requiredProperty(NoPropertyRequired)
     , m_searchByFirstNameCharacter(false)
 {
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
@@ -157,9 +158,10 @@ void SeasideFilteredModel::setFilterType(FilterType type)
         const bool wasPopulated = SeasideCache::isPopulated(static_cast<SeasideCache::FilterType>(m_filterType));
 
         // FilterNone == FilterAll when there is a filter pattern.
+        const bool filtered = isFiltered();
         const bool equivalentFilter = (type == FilterAll || type == FilterNone) &&
                                       (m_filterType == FilterAll || m_filterType == FilterNone) &&
-                                      !m_filterPattern.isEmpty();
+                                      filtered;
 
         m_filterType = type;
 
@@ -167,18 +169,19 @@ void SeasideFilteredModel::setFilterType(FilterType type)
             m_referenceIndex = 0;
             m_filterIndex = 0;
 
-            SeasideCache::registerModel(this, m_filterType != FilterNone || m_filterPattern.isEmpty()
+            SeasideCache::registerModel(this, m_filterType != FilterNone || !filtered
                     ? static_cast<SeasideCache::FilterType>(m_filterType)
                     : SeasideCache::FilterAll);
 
-            if (m_filterPattern.isEmpty())
+            if (!filtered) {
                 m_filteredContactIds = *m_referenceContactIds;
+            }
 
             m_referenceContactIds = SeasideCache::contacts(static_cast<SeasideCache::FilterType>(m_filterType));
 
             updateIndex();
 
-            if (m_filterPattern.isEmpty()) {
+            if (!filtered) {
                 m_contactIds = m_referenceContactIds;
                 m_filteredContactIds.clear();
             }
@@ -198,60 +201,17 @@ QString SeasideFilteredModel::filterPattern() const
 
 void SeasideFilteredModel::setFilterPattern(const QString &pattern)
 {
-    if (m_filterPattern != pattern) {
-        const bool wasEmpty = m_filterPattern.isEmpty();
-        const bool subFilter = !wasEmpty && pattern.startsWith(m_filterPattern, Qt::CaseInsensitive);
-        const int prevCount = rowCount();
+    updateFilters(pattern, m_requiredProperty);
+}
 
-        m_filterPattern = pattern;
-        m_filterParts = splitWords(m_filterPattern);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-        // Qt5 does not recognize '#' as a word
-        if (m_filterParts.isEmpty() && !pattern.isEmpty()) {
-            m_filterParts.append(pattern);
-        }
-#endif
-        m_referenceIndex = 0;
-        m_filterIndex = 0;
+SeasideFilteredModel::RequiredPropertyType SeasideFilteredModel::requiredProperty() const
+{
+    return m_requiredProperty;
+}
 
-        if (wasEmpty && m_filterType == FilterNone) {
-            SeasideCache::registerModel(this, SeasideCache::FilterAll);
-            m_referenceContactIds = SeasideCache::contacts(SeasideCache::FilterAll);
-
-            populateIndex();
-        } else if (wasEmpty) {
-            m_filteredContactIds = *m_referenceContactIds;
-            m_contactIds = &m_filteredContactIds;
-
-            refineIndex();
-        } else if (subFilter) {
-            refineIndex();
-        } else if (m_filterPattern.isEmpty() && m_filterType == FilterNone) {
-            SeasideCache::registerModel(this, SeasideCache::FilterNone);
-            const bool hadMatches = m_contactIds->count() > 0;
-            if (hadMatches) {
-                beginRemoveRows(QModelIndex(), 0, m_contactIds->count() - 1);
-            }
-
-            m_referenceContactIds = SeasideCache::contacts(SeasideCache::FilterNone);
-            m_contactIds = m_referenceContactIds;
-            m_filteredContactIds.clear();
-
-            if (hadMatches) {
-                endRemoveRows();
-            }
-        } else {
-            updateIndex();
-
-            if (m_filterPattern.isEmpty()) {
-                m_contactIds = m_referenceContactIds;
-                m_filteredContactIds.clear();
-            }
-        }
-        if (rowCount() != prevCount)
-            emit countChanged();
-        emit filterPatternChanged();
-    }
+void SeasideFilteredModel::setRequiredProperty(RequiredPropertyType type)
+{
+    updateFilters(m_filterPattern, type);
 }
 
 bool SeasideFilteredModel::searchByFirstNameCharacter() const
@@ -276,12 +236,20 @@ void insert(QSet<T> &set, const QList<T> &list)
 
 bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
 {
-    if (m_filterParts.isEmpty())
+    if (m_filterParts.isEmpty() && m_requiredProperty == NoPropertyRequired)
         return true;
 
     SeasideCache::CacheItem *item = SeasideCache::existingItem(contactId);
     if (!item)
         return false;
+
+    if (m_requiredProperty != NoPropertyRequired) {
+        if ((m_requiredProperty == AccountUriRequired && item->contact.detail<QContactOnlineAccount>().isEmpty()) ||
+            (m_requiredProperty == PhoneNumberRequired && item->contact.detail<QContactPhoneNumber>().isEmpty()) ||
+            (m_requiredProperty == EmailAddressRequired && item->contact.detail<QContactEmailAddress>().isEmpty())) {
+            return false;
+        }
+    }
 
     if (m_searchByFirstNameCharacter && !m_filterPattern.isEmpty())
         return m_filterPattern[0].toUpper() == SeasideCache::nameGroupForCacheItem(item);
@@ -537,7 +505,7 @@ QVariant SeasideFilteredModel::data(const QModelIndex &index, int role) const
 
 void SeasideFilteredModel::sourceAboutToRemoveItems(int begin, int end)
 {
-    if (m_filterPattern.isEmpty()) {
+    if (!isFiltered()) {
         beginRemoveRows(QModelIndex(), begin, end);
     } else {
         // The items inserted/removed notifications arrive sequentially, so if begin is at or
@@ -578,7 +546,7 @@ void SeasideFilteredModel::sourceAboutToRemoveItems(int begin, int end)
 
 void SeasideFilteredModel::sourceItemsRemoved()
 {
-    if (m_filterPattern.isEmpty()) {
+    if (!isFiltered()) {
         endRemoveRows();
         emit countChanged();
     }
@@ -586,13 +554,14 @@ void SeasideFilteredModel::sourceItemsRemoved()
 
 void SeasideFilteredModel::sourceAboutToInsertItems(int begin, int end)
 {
-    if (m_filterPattern.isEmpty())
+    if (!isFiltered()) {
         beginInsertRows(QModelIndex(), begin, end);
+    }
 }
 
 void SeasideFilteredModel::sourceItemsInserted(int begin, int end)
 {
-    if (m_filterPattern.isEmpty()) {
+    if (!isFiltered()) {
         endInsertRows();
         emit countChanged();
     } else {
@@ -630,7 +599,7 @@ void SeasideFilteredModel::sourceItemsInserted(int begin, int end)
 
 void SeasideFilteredModel::sourceDataChanged(int begin, int end)
 {
-    if (m_filterPattern.isEmpty()) {
+    if (!isFiltered()) {
         emit dataChanged(createIndex(begin, 0), createIndex(end, 0));
     } else {
         // the items inserted/removed notifications arrive sequentially.  All bets are off
@@ -703,5 +672,90 @@ SeasidePerson *SeasideFilteredModel::personFromItem(SeasideCache::CacheItem *ite
     }
 
     return static_cast<SeasidePerson *>(item->itemData);
+}
+
+bool SeasideFilteredModel::isFiltered() const
+{
+    return !m_filterPattern.isEmpty() || (m_requiredProperty != NoPropertyRequired);
+}
+
+void SeasideFilteredModel::updateFilters(const QString &pattern, RequiredPropertyType property)
+{
+    if ((pattern == m_filterPattern) && (property == m_requiredProperty))
+        return;
+
+    const bool filtered = isFiltered();
+    const bool removeFilter = pattern.isEmpty() && property == NoPropertyRequired;
+    const bool refinement = (pattern == m_filterPattern || pattern.startsWith(m_filterPattern, Qt::CaseInsensitive)) &&
+                            (property == m_requiredProperty || m_requiredProperty == NoPropertyRequired);
+
+    const int prevCount = rowCount();
+
+    bool changedPattern(false);
+    bool changedProperty(false);
+
+    if (m_filterPattern != pattern) {
+        m_filterPattern = pattern;
+        m_filterParts = splitWords(m_filterPattern);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+        // Qt5 does not recognize '#' as a word
+        if (m_filterParts.isEmpty() && !pattern.isEmpty()) {
+            m_filterParts.append(pattern);
+        }
+#endif
+        changedPattern = true;
+    }
+    if (m_requiredProperty != property) {
+        m_requiredProperty = property;
+        changedProperty = true;
+    }
+
+    m_referenceIndex = 0;
+    m_filterIndex = 0;
+
+    if (!filtered && m_filterType == FilterNone) {
+        SeasideCache::registerModel(this, SeasideCache::FilterAll);
+        m_referenceContactIds = SeasideCache::contacts(SeasideCache::FilterAll);
+
+        populateIndex();
+    } else if (!filtered) {
+        m_filteredContactIds = *m_referenceContactIds;
+        m_contactIds = &m_filteredContactIds;
+
+        refineIndex();
+    } else if (refinement) {
+        refineIndex();
+    } else if (removeFilter && m_filterType == FilterNone) {
+        SeasideCache::registerModel(this, SeasideCache::FilterNone);
+        const bool hadMatches = m_contactIds->count() > 0;
+        if (hadMatches) {
+            beginRemoveRows(QModelIndex(), 0, m_contactIds->count() - 1);
+        }
+
+        m_referenceContactIds = SeasideCache::contacts(SeasideCache::FilterNone);
+        m_contactIds = m_referenceContactIds;
+        m_filteredContactIds.clear();
+
+        if (hadMatches) {
+            endRemoveRows();
+        }
+    } else {
+        updateIndex();
+
+        if (removeFilter) {
+            m_contactIds = m_referenceContactIds;
+            m_filteredContactIds.clear();
+        }
+    }
+
+    if (rowCount() != prevCount) {
+        emit countChanged();
+    }
+    if (changedPattern) {
+        emit filterPatternChanged();
+    }
+    if (changedProperty) {
+        emit requiredPropertyChanged();
+    }
 }
 
