@@ -33,6 +33,7 @@
 #define SEASIDEPEOPLENAMEGROUPMODEL_H
 
 #include <seasidecache.h>
+#include <seasidefilteredmodel.h>
 
 #include <QAbstractListModel>
 #include <QStringList>
@@ -45,31 +46,50 @@ class SeasideNameGroup
 {
 public:
     SeasideNameGroup() : count(0) {}
-    SeasideNameGroup(const QChar &n, int c = 0) : name(n), count(c) {}
+    SeasideNameGroup(const QChar &n, const QSet<quint32> &ids = QSet<quint32>(), int c = -1)
+        : name(n), count(c), contactIds(ids)
+    {
+        if (count == -1) {
+            count = contactIds.count();
+        }
+    }
 
     inline bool operator==(const SeasideNameGroup &other) { return other.name == name; }
 
     QChar name;
     int count;
+    QSet<quint32> contactIds;
 };
 
 class SeasideNameGroupModel : public QAbstractListModel, public SeasideNameGroupChangeListener
 {
     Q_OBJECT
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
+    Q_PROPERTY(RequiredPropertyType requiredProperty READ requiredProperty WRITE setRequiredProperty NOTIFY requiredPropertyChanged)
+    Q_ENUMS(RequiredPropertyType)
 public:
     enum Role {
         NameRole = Qt::UserRole,
         EntryCount
     };
 
+    enum RequiredPropertyType {
+        NoPropertyRequired = SeasideFilteredModel::NoPropertyRequired,
+        AccountUriRequired = SeasideFilteredModel::AccountUriRequired,
+        PhoneNumberRequired = SeasideFilteredModel::PhoneNumberRequired,
+        EmailAddressRequired = SeasideFilteredModel::EmailAddressRequired
+    };
+
     SeasideNameGroupModel(QObject *parent = 0);
     ~SeasideNameGroupModel();
+
+    RequiredPropertyType requiredProperty() const;
+    void setRequiredProperty(RequiredPropertyType type);
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role) const;
 
-    void nameGroupsUpdated(const QHash<QChar, int> &groups);
+    void nameGroupsUpdated(const QHash<QChar, QSet<quint32> > &groups);
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     virtual
@@ -78,9 +98,13 @@ public:
 
 signals:
     void countChanged();
+    void requiredPropertyChanged();
 
 private:
+    int countFilteredContacts(const QSet<quint32> &contactIds) const;
+
     QList<SeasideNameGroup> m_groups;
+    RequiredPropertyType m_requiredProperty;
 };
 
 #endif
