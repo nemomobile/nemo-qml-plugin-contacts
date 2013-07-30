@@ -68,6 +68,7 @@ public:
         QContact contact;
         ItemData *itemData;
         ModelData *modelData;
+        quint64 statusFlags;
         ContactState contactState;
     };
 
