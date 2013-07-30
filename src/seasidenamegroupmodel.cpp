@@ -31,6 +31,8 @@
 
 #include "seasidenamegroupmodel.h"
 
+#include <QContactStatusFlags>
+
 #include <QContactOnlineAccount>
 #include <QContactPhoneNumber>
 #include <QContactEmailAddress>
@@ -164,9 +166,9 @@ int SeasideNameGroupModel::countFilteredContacts(const QSet<quint32> &contactIds
             SeasideCache::CacheItem *item = SeasideCache::existingItem(iid);
             Q_ASSERT(item);
 
-            if ((m_requiredProperty == AccountUriRequired && !item->contact.detail<QContactOnlineAccount>().isEmpty()) ||
-                (m_requiredProperty == PhoneNumberRequired && !item->contact.detail<QContactPhoneNumber>().isEmpty()) ||
-                (m_requiredProperty == EmailAddressRequired && !item->contact.detail<QContactEmailAddress>().isEmpty())) {
+            if ((m_requiredProperty == AccountUriRequired && (item->statusFlags & QContactStatusFlags::HasOnlineAccount)) ||
+                (m_requiredProperty == PhoneNumberRequired && (item->statusFlags & QContactStatusFlags::HasPhoneNumber)) ||
+                (m_requiredProperty == EmailAddressRequired && (item->statusFlags & QContactStatusFlags::HasEmailAddress))) {
                 ++count;
             }
         }
