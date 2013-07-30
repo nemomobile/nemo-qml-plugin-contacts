@@ -35,6 +35,7 @@
 #include <synchronizelists.h>
 
 #include <qtcontacts-extensions.h>
+#include <QContactStatusFlags>
 
 #include <QContactAvatar>
 #include <QContactEmailAddress>
@@ -244,9 +245,9 @@ bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
         return false;
 
     if (m_requiredProperty != NoPropertyRequired) {
-        if ((m_requiredProperty == AccountUriRequired && item->contact.detail<QContactOnlineAccount>().isEmpty()) ||
-            (m_requiredProperty == PhoneNumberRequired && item->contact.detail<QContactPhoneNumber>().isEmpty()) ||
-            (m_requiredProperty == EmailAddressRequired && item->contact.detail<QContactEmailAddress>().isEmpty())) {
+        if ((m_requiredProperty == AccountUriRequired && ((item->statusFlags & QContactStatusFlags::HasOnlineAccount) == 0)) ||
+            (m_requiredProperty == PhoneNumberRequired && ((item->statusFlags & QContactStatusFlags::HasPhoneNumber) == 0)) ||
+            (m_requiredProperty == EmailAddressRequired && ((item->statusFlags & QContactStatusFlags::HasEmailAddress) == 0))) {
             return false;
         }
     }
