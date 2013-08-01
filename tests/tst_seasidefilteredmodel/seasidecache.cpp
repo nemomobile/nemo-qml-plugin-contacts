@@ -440,6 +440,12 @@ SeasideCache::DisplayLabelOrder SeasideCache::displayLabelOrder()
     return FirstNameFirst;
 }
 
+SeasideCache::DisplayLabelOrder SeasideCache::setDisplayLabelOrder(DisplayLabelOrder order)
+{
+    
+}
+
+
 void SeasideCache::populate(FilterType filterType)
 {
     m_populated[filterType] = true;

@@ -141,9 +141,18 @@ SeasideFilteredModel::DisplayLabelOrder SeasideFilteredModel::displayLabelOrder(
     return static_cast<SeasideFilteredModel::DisplayLabelOrder>(order);
 }
 
-void SeasideFilteredModel::setDisplayLabelOrder(DisplayLabelOrder)
+void SeasideFilteredModel::setDisplayLabelOrder(bool bFirstNameFirst)
 {
     // For compatibility only.
+    m_searchByFirstNameCharacter = bFirstNameFirst;
+    if (bFirstNameFirst == true) 
+    {
+    	SeasideCache::setDisplayLabelOrder(SeasideCache::FirstNameFirst);
+    }
+    else
+    {
+      SeasideCache::setDisplayLabelOrder(SeasideCache::LastNameFirst);
+    }
 }
 
 SeasideFilteredModel::FilterType SeasideFilteredModel::filterType() const

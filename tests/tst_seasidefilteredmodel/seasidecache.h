@@ -112,6 +112,7 @@ public:
     static void unregisterUser(QObject *user);
 
     static DisplayLabelOrder displayLabelOrder();
+    static DisplayLabelOrder setDisplayLabelOrder(DisplayLabelOrder order);
 
     static int contactId(const QContact &contact);
 

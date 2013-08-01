@@ -91,8 +91,8 @@ public:
     bool searchByFirstNameCharacter() const;
     void setSearchByFirstNameCharacter(bool searchByFirstNameCharacter);
 
-    DisplayLabelOrder displayLabelOrder() const;
-    void setDisplayLabelOrder(DisplayLabelOrder order);
+    Q_INVOKABLE DisplayLabelOrder displayLabelOrder() const;
+    Q_INVOKABLE void setDisplayLabelOrder(bool bFirstNameFirst);
 
     Q_INVOKABLE QVariantMap get(int row) const;
 

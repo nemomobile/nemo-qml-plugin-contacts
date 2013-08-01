@@ -294,7 +294,7 @@ public:
 
     static QString generateDisplayLabel(
                 const QContact &mContact,
-                SeasideCache::DisplayLabelOrder order = SeasideCache::FirstNameFirst);
+                SeasideCache::DisplayLabelOrder order);
     static QString generateDisplayLabelFromNonNameDetails(const QContact &mContact);
 
     static SeasidePersonAttached *qmlAttachedProperties(QObject *object);
@@ -335,7 +335,7 @@ signals:
     void aggregationOperationFinished();
 
 public slots:
-    void recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order = SeasideCache::FirstNameFirst) const;
+    void recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order) const;
 
 private:
     QContact *mContact;
