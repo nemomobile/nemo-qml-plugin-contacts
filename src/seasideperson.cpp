@@ -71,7 +71,7 @@ SeasidePerson *SeasidePersonAttached::selfPerson() const
 {
     SeasideCache::CacheItem *item = SeasideCache::itemById(SeasideCache::selfContactId());
     if (!item->itemData) {
-        item->itemData = new SeasidePerson(&item->contact, (item->contactState == SeasideCache::ContactFetched), SeasideCache::instance());
+        item->itemData = new SeasidePerson(&item->contact, (item->contactState == SeasideCache::ContactComplete), SeasideCache::instance());
     }
 
     return static_cast<SeasidePerson *>(item->itemData);
@@ -278,18 +278,30 @@ void SeasidePerson::setFavorite(bool favorite)
 
 QUrl SeasidePerson::avatarPath() const
 {
-    QContactAvatar avatarDetail = mContact->detail<QContactAvatar>();
-    QUrl avatarUrl = avatarDetail.imageUrl();
-    if (avatarUrl.isEmpty())
-        return QUrl("image://theme/icon-m-telephony-contact-avatar");
-    return avatarUrl;
+    QUrl url = avatarUrl();
+    if (!url.isEmpty())
+        return url;
+
+    return QUrl("image://theme/icon-m-telephony-contact-avatar");
 }
 
 void SeasidePerson::setAvatarPath(QUrl avatarPath)
 {
+    setAvatarUrl(avatarPath);
+}
+
+QUrl SeasidePerson::avatarUrl() const
+{
     QContactAvatar avatarDetail = mContact->detail<QContactAvatar>();
-    avatarDetail.setImageUrl(QUrl(avatarPath));
+    return avatarDetail.imageUrl();
+}
+
+void SeasidePerson::setAvatarUrl(QUrl avatarUrl)
+{
+    QContactAvatar avatarDetail = mContact->detail<QContactAvatar>();
+    avatarDetail.setImageUrl(avatarUrl);
     mContact->saveDetail(&avatarDetail);
+    emit avatarUrlChanged();
     emit avatarPathChanged();
 }
 
@@ -896,6 +908,11 @@ void SeasidePerson::setContact(const QContact &contact)
     QContact oldContact = *mContact;
     *mContact = contact;
 
+    updateContactDetails(oldContact);
+}
+
+void SeasidePerson::updateContactDetails(const QContact &oldContact)
+{
     if (oldContact.id() != mContact->id())
         emit contactChanged();
 
@@ -923,8 +940,10 @@ void SeasidePerson::setContact(const QContact &contact)
     QContactAvatar oldAvatar = oldContact.detail<QContactAvatar>();
     QContactAvatar newAvatar = mContact->detail<QContactAvatar>();
 
-    if (oldAvatar.imageUrl() != newAvatar.imageUrl())
+    if (oldAvatar.imageUrl() != newAvatar.imageUrl()) {
+        emit avatarUrlChanged();
         emit avatarPathChanged();
+    }
 
     QContactGlobalPresence oldPresence = oldContact.detail<QContactGlobalPresence>();
     QContactGlobalPresence newPresence = mContact->detail<QContactGlobalPresence>();
@@ -981,6 +1000,13 @@ void SeasidePerson::setContact(const QContact &contact)
     recalculateDisplayLabel();
 }
 
+void SeasidePerson::ensureComplete()
+{
+    if (SeasideCache::CacheItem *item = SeasideCache::itemById(mContact->id())) {
+        SeasideCache::ensureCompletion(item);
+    }
+}
+
 QString SeasidePerson::vCard() const
 {
     QVersitContactExporter exporter;
@@ -1015,12 +1041,59 @@ void SeasidePerson::fetchMergeCandidates()
     SeasideCache::fetchMergeCandidates(contact());
 }
 
-void SeasidePerson::updateContact(const QContact &newContact, QContact *oldContact)
+void SeasidePerson::resolvePhoneNumber(const QString &number, bool requireComplete)
+{
+    if (SeasideCache::CacheItem *item = SeasideCache::resolvePhoneNumber(this, number, requireComplete)) {
+        // TODO: should this be invoked async?
+        addressResolved(item);
+    }
+}
+
+void SeasidePerson::resolveEmailAddress(const QString &address, bool requireComplete)
+{
+    if (SeasideCache::CacheItem *item = SeasideCache::resolveEmailAddress(this, address, requireComplete)) {
+        addressResolved(item);
+    }
+}
+
+void SeasidePerson::resolveOnlineAccount(const QString &localUid, const QString &remoteUid, bool requireComplete)
+{
+    if (SeasideCache::CacheItem *item = SeasideCache::resolveOnlineAccount(this, localUid, remoteUid, requireComplete)) {
+        addressResolved(item);
+    }
+}
+
+void SeasidePerson::updateContact(const QContact &newContact, QContact *oldContact, SeasideCache::ContactState state)
 {
     Q_ASSERT(oldContact == mContact);
 
     setContact(newContact);
-    setComplete(true);
+    setComplete(state == SeasideCache::ContactComplete);
+}
+
+void SeasidePerson::addressResolved(SeasideCache::CacheItem *item)
+{
+    if (item) {
+        if (&item->contact != mContact) {
+            QContact *oldContact = mContact;
+
+            // Attach to the contact in the cache item
+            mContact = &item->contact;
+            updateContactDetails(*oldContact);
+
+            // Release our previous contact info
+            delete oldContact;
+
+            // TODO: at this point, we are attached to the contact in the cache, but the cache
+            // doesn't know about this Person instance, so it won't update us when the
+            // contact changes.  We could use a list of attached Person objects in the
+            // model to fix this...
+        }
+
+        setComplete(item->contactState == SeasideCache::ContactComplete);
+    }
+
+    emit addressResolved();
 }
 
 QString SeasidePerson::getDisplayLabel() const

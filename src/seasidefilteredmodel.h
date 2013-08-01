@@ -78,8 +78,15 @@ public:
     enum PeopleRoles {
         FirstNameRole = Qt::UserRole,
         LastNameRole,
+        FavoriteRole,
         AvatarRole,
+        AvatarUrlRole,
         SectionBucketRole,
+        GlobalPresenceStateRole,
+        ContactIdRole,
+        PhoneNumbersRole,
+        EmailAddressesRole,
+        AccountUrisRole,
         PersonRole
     };
 
@@ -106,12 +113,14 @@ public:
     void setDisplayLabelOrder(DisplayLabelOrder order);
 
     Q_INVOKABLE QVariantMap get(int row) const;
+    Q_INVOKABLE QVariant get(int row, int role) const;
 
     Q_INVOKABLE bool savePerson(SeasidePerson *person);
     Q_INVOKABLE SeasidePerson *personByRow(int row) const;
     Q_INVOKABLE SeasidePerson *personById(int id) const;
-    Q_INVOKABLE SeasidePerson *personByPhoneNumber(const QString &msisdn) const;
-    Q_INVOKABLE SeasidePerson *personByEmailAddress(const QString &email) const;
+    Q_INVOKABLE SeasidePerson *personByPhoneNumber(const QString &number, bool requireComplete = true) const;
+    Q_INVOKABLE SeasidePerson *personByEmailAddress(const QString &email, bool requireComplete = true) const;
+    Q_INVOKABLE SeasidePerson *personByOnlineAccount(const QString &localUid, const QString &remoteUid, bool requireComplete = true) const;
     Q_INVOKABLE SeasidePerson *selfPerson() const;
     Q_INVOKABLE void removePerson(SeasidePerson *person);
 
@@ -121,6 +130,7 @@ public:
     QModelIndex index(const QModelIndex &parent, int row, int column) const;
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role) const;
+    QVariant data(SeasideCache::CacheItem *item, int role) const;
 
     // Backward-compatibilty:
     Q_INVOKABLE void setFilter(FilterType type) { setFilterType(type); }
@@ -164,6 +174,7 @@ private:
     void refineIndex();
     void updateIndex();
     void updateContactData(const ContactIdType &contactId, FilterType filter);
+    void updateRegistration();
 
     bool isFiltered() const;
     void updateFilters(const QString &pattern, RequiredPropertyType property);
@@ -178,6 +189,8 @@ private:
     int m_filterIndex;
     int m_referenceIndex;
     FilterType m_filterType;
+    FilterType m_effectiveFilterType;
+    SeasideCache::FetchDataType m_fetchType;
     RequiredPropertyType m_requiredProperty;
     bool m_searchByFirstNameCharacter;
 };
