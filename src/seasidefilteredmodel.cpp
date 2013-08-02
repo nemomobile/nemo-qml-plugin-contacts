@@ -450,7 +450,13 @@ QVariantMap SeasideFilteredModel::get(int row) const
 
 bool SeasideFilteredModel::savePerson(SeasidePerson *person)
 {
-    return SeasideCache::saveContact(person->contact());
+    if (SeasideCache::saveContact(person->contact()))
+    {
+         setDisplayLabelOrder(m_searchByFirstNameCharacter);    	
+         return true;	
+    }
+    
+    return false;
 }
 
 SeasidePerson *SeasideFilteredModel::personByRow(int row) const
