@@ -71,7 +71,7 @@ signals:
     void selfPersonChanged();
 };
 
-class SeasidePerson : public QObject, public SeasideCache::ItemData
+class SeasidePerson : public QObject, public SeasideCache::ItemData, public SeasideCache::ResolveListener
 {
     Q_OBJECT
     Q_ENUMS(DetailType)
@@ -188,6 +188,10 @@ public:
     QUrl avatarPath() const;
     void setAvatarPath(QUrl avatarPath);
 
+    Q_PROPERTY(QUrl avatarUrl READ avatarUrl WRITE setAvatarUrl NOTIFY avatarUrlChanged)
+    QUrl avatarUrl() const;
+    void setAvatarUrl(QUrl avatarUrl);
+
     Q_PROPERTY(QStringList phoneNumbers READ phoneNumbers WRITE setPhoneNumbers NOTIFY phoneNumbersChanged)
     QStringList phoneNumbers() const;
     void setPhoneNumbers(const QStringList &phoneNumbers);
@@ -272,6 +276,8 @@ public:
     QContact contact() const;
     void setContact(const QContact &contact);
 
+    Q_INVOKABLE void ensureComplete();
+
     Q_INVOKABLE QVariant contactData() const { return QVariant::fromValue(contact()); }
     Q_INVOKABLE void setContactData(const QVariant &data) { setContact(data.value<QContact>()); }
 
@@ -283,10 +289,16 @@ public:
     Q_INVOKABLE void fetchConstituents();
     Q_INVOKABLE void fetchMergeCandidates();
 
+    Q_INVOKABLE void resolvePhoneNumber(const QString &number, bool requireComplete = true);
+    Q_INVOKABLE void resolveEmailAddress(const QString &address, bool requireComplete = true);
+    Q_INVOKABLE void resolveOnlineAccount(const QString &localUid, const QString &remoteUid, bool requireComplete = true);
+
     QString getDisplayLabel() const;
     void displayLabelOrderChanged(SeasideCache::DisplayLabelOrder order);
 
-    void updateContact(const QContact &newContact, QContact *oldContact);
+    void updateContact(const QContact &newContact, QContact *oldContact, SeasideCache::ContactState state);
+
+    void addressResolved(SeasideCache::CacheItem *item);
 
     void constituentsFetched(const QList<int> &ids);
     void mergeCandidatesFetched(const QList<int> &ids);
@@ -312,6 +324,7 @@ signals:
     void titleChanged();
     void favoriteChanged();
     void avatarPathChanged();
+    void avatarUrlChanged();
     void phoneNumbersChanged();
     void phoneNumberTypesChanged();
     void emailAddressesChanged();
@@ -333,11 +346,14 @@ signals:
     void constituentsChanged();
     void mergeCandidatesChanged();
     void aggregationOperationFinished();
+    void addressResolved();
 
 public slots:
     void recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order = SeasideCache::FirstNameFirst) const;
 
 private:
+    void updateContactDetails(const QContact &oldContact);
+
     QContact *mContact;
     mutable QString mDisplayLabel;
     QList<int> mConstituents;

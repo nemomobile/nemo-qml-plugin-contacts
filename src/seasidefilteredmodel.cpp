@@ -39,6 +39,7 @@
 
 #include <QContactAvatar>
 #include <QContactEmailAddress>
+#include <QContactFavorite>
 #include <QContactName>
 #include <QContactNickname>
 #include <QContactOnlineAccount>
@@ -50,12 +51,30 @@
 
 #include <QtDebug>
 
+namespace {
+
+const QByteArray displayRole("display");
+const QByteArray firstNameRole("firstName");
+const QByteArray lastNameRole("lastName");
+const QByteArray sectionBucketRole("sectionBucket");
+const QByteArray favoriteRole("favorite");
+const QByteArray avatarRole("avatar");
+const QByteArray avatarUrlRole("avatarUrl");
+const QByteArray globalPresenceStateRole("globalPresenceState");
+const QByteArray contactIdRole("contactId");
+const QByteArray phoneNumbersRole("phoneNumbers");
+const QByteArray emailAddressesRole("emailAddresses");
+const QByteArray accountUrisRole("accountUris");
+const QByteArray personRole("person");
+
+}
+
 struct FilterData : public SeasideCache::ModelData
 {
     // Store additional filter keys with the cache item
     QStringList filterKey;
 
-    void contactChanged(const QContact &) { filterKey.clear(); }
+    void contactChanged(const QContact &, SeasideCache::ContactState) { filterKey.clear(); }
 };
 
 // We could squeeze a little more performance out of QVector by inserting all the items in a
@@ -103,6 +122,8 @@ SeasideFilteredModel::SeasideFilteredModel(QObject *parent)
     , m_filterIndex(0)
     , m_referenceIndex(0)
     , m_filterType(FilterAll)
+    , m_effectiveFilterType(FilterAll)
+    , m_fetchType(SeasideCache::FetchNone)
     , m_requiredProperty(NoPropertyRequired)
     , m_searchByFirstNameCharacter(false)
 {
@@ -110,7 +131,8 @@ SeasideFilteredModel::SeasideFilteredModel(QObject *parent)
     setRoleNames(roleNames());
 #endif
 
-    SeasideCache::registerModel(this, SeasideCache::FilterAll);
+    updateRegistration();
+
     m_referenceContactIds = SeasideCache::contacts(SeasideCache::FilterAll);
     m_contactIds = m_referenceContactIds;
 }
@@ -123,12 +145,19 @@ SeasideFilteredModel::~SeasideFilteredModel()
 QHash<int, QByteArray> SeasideFilteredModel::roleNames() const
 {
     QHash<int, QByteArray> roles;
-    roles.insert(Qt::DisplayRole, "display");
-    roles.insert(FirstNameRole, "firstName");
-    roles.insert(LastNameRole, "lastName");
-    roles.insert(SectionBucketRole, "sectionBucket");
-    roles.insert(PersonRole, "person");
-    roles.insert(AvatarRole, "avatar");
+    roles.insert(Qt::DisplayRole, displayRole);
+    roles.insert(FirstNameRole, firstNameRole);
+    roles.insert(LastNameRole, lastNameRole);
+    roles.insert(SectionBucketRole, sectionBucketRole);
+    roles.insert(FavoriteRole, favoriteRole);
+    roles.insert(AvatarRole, avatarRole);
+    roles.insert(AvatarUrlRole, avatarUrlRole);
+    roles.insert(GlobalPresenceStateRole, globalPresenceStateRole);
+    roles.insert(ContactIdRole, contactIdRole);
+    roles.insert(PhoneNumbersRole, phoneNumbersRole);
+    roles.insert(EmailAddressesRole, emailAddressesRole);
+    roles.insert(AccountUrisRole, accountUrisRole);
+    roles.insert(PersonRole, personRole);
     return roles;
 }
 
@@ -170,9 +199,8 @@ void SeasideFilteredModel::setFilterType(FilterType type)
             m_referenceIndex = 0;
             m_filterIndex = 0;
 
-            SeasideCache::registerModel(this, m_filterType != FilterNone || !filtered
-                    ? static_cast<SeasideCache::FilterType>(m_filterType)
-                    : SeasideCache::FilterAll);
+            m_effectiveFilterType = (m_filterType != FilterNone || !filtered) ? m_filterType : FilterAll;
+            updateRegistration();
 
             if (!filtered) {
                 m_filteredContactIds = *m_referenceContactIds;
@@ -389,23 +417,33 @@ void SeasideFilteredModel::populateIndex()
 
 QVariantMap SeasideFilteredModel::get(int row) const
 {
-    // needed for SectionScroller.
     SeasideCache::CacheItem *cacheItem = SeasideCache::existingItem(m_contactIds->at(row));
-    QString sectionBucket;
-    if (cacheItem && cacheItem->itemData) {
-        sectionBucket = static_cast<SeasidePerson *>(cacheItem->itemData)->sectionBucket();
-    } else if (cacheItem) {
-#ifdef USING_QTPIM
-        QString displayLabel = cacheItem->contact.detail<QContactName>().value<QString>(QContactName__FieldCustomLabel);
-#else
-        QString displayLabel = cacheItem->contact.detail<QContactName>().customLabel();
-#endif
-        if (!displayLabel.isEmpty())
-            sectionBucket = displayLabel.at(0).toUpper();
-    }
+    if (!cacheItem)
+        return QVariantMap();
+
     QVariantMap m;
-    m[QLatin1String("sectionBucket")] = sectionBucket;
+    m.insert(displayRole, data(cacheItem, Qt::DisplayRole));
+    m.insert(firstNameRole, data(cacheItem, FirstNameRole));
+    m.insert(lastNameRole, data(cacheItem, LastNameRole));
+    m.insert(sectionBucketRole, data(cacheItem, SectionBucketRole));
+    m.insert(favoriteRole, data(cacheItem, FavoriteRole));
+    m.insert(avatarRole, data(cacheItem, AvatarRole));
+    m.insert(avatarUrlRole, data(cacheItem, AvatarUrlRole));
+    m.insert(globalPresenceStateRole, data(cacheItem, GlobalPresenceStateRole));
+    m.insert(contactIdRole, data(cacheItem, ContactIdRole));
+    m.insert(phoneNumbersRole, data(cacheItem, PhoneNumbersRole));
+    m.insert(emailAddressesRole, data(cacheItem, EmailAddressesRole));
+    m.insert(accountUrisRole, data(cacheItem, AccountUrisRole));
     return m;
+}
+
+QVariant SeasideFilteredModel::get(int row, int role) const
+{
+    SeasideCache::CacheItem *cacheItem = SeasideCache::existingItem(m_contactIds->at(row));
+    if (!cacheItem)
+        return QVariant();
+
+    return data(cacheItem, role);
 }
 
 bool SeasideFilteredModel::savePerson(SeasidePerson *person)
@@ -423,14 +461,19 @@ SeasidePerson *SeasideFilteredModel::personById(int id) const
     return personFromItem(SeasideCache::itemById(id));
 }
 
-SeasidePerson *SeasideFilteredModel::personByPhoneNumber(const QString &msisdn) const
+SeasidePerson *SeasideFilteredModel::personByPhoneNumber(const QString &number, bool requireComplete) const
 {
-    return personFromItem(SeasideCache::itemByPhoneNumber(msisdn));
+    return personFromItem(SeasideCache::itemByPhoneNumber(number, requireComplete));
 }
 
-SeasidePerson *SeasideFilteredModel::personByEmailAddress(const QString &email) const
+SeasidePerson *SeasideFilteredModel::personByEmailAddress(const QString &email, bool requireComplete) const
 {
-    return personFromItem(SeasideCache::itemByEmailAddress(email));
+    return personFromItem(SeasideCache::itemByEmailAddress(email, requireComplete));
+}
+
+SeasidePerson *SeasideFilteredModel::personByOnlineAccount(const QString &localUid, const QString &remoteUid, bool requireComplete) const
+{
+    return personFromItem(SeasideCache::itemByOnlineAccount(localUid, remoteUid, requireComplete));
 }
 
 SeasidePerson *SeasideFilteredModel::selfPerson() const
@@ -466,42 +509,77 @@ QVariant SeasideFilteredModel::data(const QModelIndex &index, int role) const
     if (!cacheItem)
         return QVariant();
 
-    // Avoid creating a Person instance for as long as possible.
-    if (role == FirstNameRole || role == LastNameRole) {
-        QContactName name = cacheItem->contact.detail<QContactName>();
+    return data(cacheItem, role);
+}
 
+QVariant SeasideFilteredModel::data(SeasideCache::CacheItem *cacheItem, int role) const
+{
+    const QContact &contact = cacheItem->contact;
+
+    if (role == ContactIdRole) {
+        return cacheItem->iid;
+    } else if (role == FirstNameRole || role == LastNameRole) {
+        QContactName name = contact.detail<QContactName>();
         return role == FirstNameRole
                 ? name.firstName()
                 : name.lastName();
-    } else if (role == AvatarRole) {
-        QUrl avatarUrl = cacheItem->contact.detail<QContactAvatar>().imageUrl();
-        return avatarUrl.isEmpty()
-                ? QUrl(QLatin1String("image://theme/icon-m-telephony-contact-avatar"))
-                : avatarUrl;
-    } else if (role != PersonRole && !cacheItem->itemData) {  // Display or Section Bucket.
+    } else if (role == FavoriteRole) {
+        return contact.detail<QContactFavorite>().isFavorite();
+    } else if (role == AvatarRole || role == AvatarUrlRole) {
+        QUrl avatarUrl = contact.detail<QContactAvatar>().imageUrl();
+        if (role == AvatarUrlRole || !avatarUrl.isEmpty()) {
+            return avatarUrl;
+        }
+        // Return the default avatar path for when no avatar URL is available
+        return QUrl(QLatin1String("image://theme/icon-m-telephony-contact-avatar"));
+    } else if (role == GlobalPresenceStateRole) {
+        QContactGlobalPresence presence = contact.detail<QContactGlobalPresence>();
+        return presence.isEmpty()
+                ? QContactPresence::PresenceUnknown
+                : presence.presenceState();
+    } else if (role == PhoneNumbersRole || role == EmailAddressesRole || role == AccountUrisRole) {
+        QStringList rv;
+        if (role == PhoneNumbersRole) {
+            foreach (const QContactPhoneNumber &number, contact.details<QContactPhoneNumber>()) {
+                rv.append(number.number());
+            }
+        } else if (role == EmailAddressesRole) {
+            foreach (const QContactEmailAddress &address, contact.details<QContactEmailAddress>()) {
+                rv.append(address.emailAddress());
+            }
+        } else {
+            foreach (const QContactOnlineAccount &account, contact.details<QContactOnlineAccount>()) {
+                rv.append(account.accountUri());
+            }
+        }
+        return rv;
+    } else if (role == Qt::DisplayRole || role == SectionBucketRole) {
+        if (SeasidePerson *person = static_cast<SeasidePerson *>(cacheItem->itemData)) {
+            // If we have a person instance, prefer to use that
+            return role == Qt::DisplayRole ? person->displayLabel() : person->sectionBucket();
+        }
+
 #ifdef USING_QTPIM
-        QString displayLabel = cacheItem->contact.detail<QContactName>().value<QString>(QContactName__FieldCustomLabel);
+        QString displayLabel = contact.detail<QContactName>().value<QString>(QContactName__FieldCustomLabel);
 #else
-        QString displayLabel = cacheItem->contact.detail<QContactName>().customLabel();
+        QString displayLabel = contact.detail<QContactName>().customLabel();
 #endif
+        if (displayLabel.isEmpty()) {
+            displayLabel = contact.detail<QContactDisplayLabel>().label();
+        }
 
         return role == Qt::DisplayRole || displayLabel.isEmpty()
                 ? displayLabel
                 : displayLabel.at(0).toUpper();
+    } else if (role == PersonRole) {
+        // Avoid creating a Person instance for as long as possible.
+        SeasideCache::ensureCompletion(cacheItem);
+        return QVariant::fromValue(personFromItem(cacheItem));
+    } else {
+        qWarning() << "Invalid role requested:" << role;
     }
 
-    SeasidePerson *person = personFromItem(cacheItem);
-
-    switch (role) {
-    case Qt::DisplayRole:
-        return person->displayLabel();
-    case PersonRole:
-        return QVariant::fromValue(person);
-    case SectionBucketRole:
-        return person->sectionBucket();
-    default:
-        return QVariant();
-    }
+    return QVariant();
 }
 
 void SeasideFilteredModel::sourceAboutToRemoveItems(int begin, int end)
@@ -669,7 +747,7 @@ SeasidePerson *SeasideFilteredModel::personFromItem(SeasideCache::CacheItem *ite
         return 0;
 
     if (!item->itemData) {
-        item->itemData = new SeasidePerson(&item->contact, (item->contactState == SeasideCache::ContactFetched), SeasideCache::instance());
+        item->itemData = new SeasidePerson(&item->contact, (item->contactState == SeasideCache::ContactComplete), SeasideCache::instance());
     }
 
     return static_cast<SeasidePerson *>(item->itemData);
@@ -709,15 +787,28 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, RequiredPropert
     if (m_requiredProperty != property) {
         m_requiredProperty = property;
         changedProperty = true;
+
+        // Update our registration to include the data type we need
+        if (m_requiredProperty == AccountUriRequired) {
+            m_fetchType = SeasideCache::FetchAccountUri;
+        } else if (m_requiredProperty == PhoneNumberRequired) {
+            m_fetchType = SeasideCache::FetchPhoneNumber;
+        } else if (m_requiredProperty == EmailAddressRequired) {
+            m_fetchType = SeasideCache::FetchEmailAddress;
+        } else {
+            m_fetchType = SeasideCache::FetchNone;
+        }
+        updateRegistration();
     }
 
     m_referenceIndex = 0;
     m_filterIndex = 0;
 
     if (!filtered && m_filterType == FilterNone) {
-        SeasideCache::registerModel(this, SeasideCache::FilterAll);
-        m_referenceContactIds = SeasideCache::contacts(SeasideCache::FilterAll);
+        m_effectiveFilterType = FilterAll;
+        updateRegistration();
 
+        m_referenceContactIds = SeasideCache::contacts(SeasideCache::FilterAll);
         populateIndex();
     } else if (!filtered) {
         m_filteredContactIds = *m_referenceContactIds;
@@ -727,7 +818,9 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, RequiredPropert
     } else if (refinement) {
         refineIndex();
     } else if (removeFilter && m_filterType == FilterNone) {
-        SeasideCache::registerModel(this, SeasideCache::FilterNone);
+        m_effectiveFilterType = FilterNone;
+        updateRegistration();
+
         const bool hadMatches = m_contactIds->count() > 0;
         if (hadMatches) {
             beginRemoveRows(QModelIndex(), 0, m_contactIds->count() - 1);
@@ -758,5 +851,10 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, RequiredPropert
     if (changedProperty) {
         emit requiredPropertyChanged();
     }
+}
+
+void SeasideFilteredModel::updateRegistration()
+{
+    SeasideCache::registerModel(this, static_cast<SeasideCache::FilterType>(m_effectiveFilterType), m_fetchType);
 }
 
