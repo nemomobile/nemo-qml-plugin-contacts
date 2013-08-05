@@ -31,6 +31,8 @@
 
 #include "seasidecache.h"
 
+#include <qcontactstatusflags_impl.h>
+
 #include <QContactName>
 #include <QContactAvatar>
 #include <QContactEmailAddress>
@@ -197,17 +199,23 @@ void SeasideCache::reset()
             contact.saveDetail(&avatar);
         }
 
+        QContactStatusFlags statusFlags;
+
         if (contactsData[i].email) {
             QContactEmailAddress email;
             email.setEmailAddress(QLatin1String(contactsData[i].email));
             contact.saveDetail(&email);
+            statusFlags.setFlag(QContactStatusFlags::HasEmailAddress, true);
         }
 
         if (contactsData[i].phoneNumber) {
             QContactPhoneNumber phoneNumber;
             phoneNumber.setNumber(QLatin1String(contactsData[i].phoneNumber));
             contact.saveDetail(&phoneNumber);
+            statusFlags.setFlag(QContactStatusFlags::HasPhoneNumber, true);
         }
+
+        contact.saveDetail(&statusFlags);
 
 #ifdef USING_QTPIM
         m_cacheIndices.insert(apiId(contact), m_cache.count());
@@ -244,7 +252,7 @@ SeasideCache::~SeasideCache()
     instancePtr = 0;
 }
 
-void SeasideCache::registerModel(ListModel *model, FilterType type)
+void SeasideCache::registerModel(ListModel *model, FilterType type, FetchDataType)
 {
     for (int i = 0; i < FilterTypesCount; ++i)
         instancePtr->m_models[i] = 0;
@@ -285,7 +293,7 @@ SeasideCache::CacheItem *SeasideCache::existingItem(const ContactIdType &id)
     return 0;
 }
 
-SeasideCache::CacheItem *SeasideCache::itemById(const ContactIdType &id)
+SeasideCache::CacheItem *SeasideCache::itemById(const ContactIdType &id, bool)
 {
 #ifdef USING_QTPIM
     if (instancePtr->m_cacheIndices.contains(id)) {
@@ -300,7 +308,7 @@ SeasideCache::CacheItem *SeasideCache::itemById(const ContactIdType &id)
 }
 
 #ifdef USING_QTPIM
-SeasideCache::CacheItem *SeasideCache::itemById(int id)
+SeasideCache::CacheItem *SeasideCache::itemById(int id, bool)
 {
     if (id == 0)
         return 0;
@@ -373,12 +381,37 @@ QList<QChar> SeasideCache::allNameGroups()
     return QList<QChar>();
 }
 
-SeasideCache::CacheItem *SeasideCache::itemByPhoneNumber(const QString &)
+void SeasideCache::ensureCompletion(CacheItem *)
+{
+}
+
+SeasideCache::CacheItem *SeasideCache::itemByPhoneNumber(const QString &, bool)
 {
     return 0;
 }
 
-SeasideCache::CacheItem *SeasideCache::itemByEmailAddress(const QString &)
+SeasideCache::CacheItem *SeasideCache::itemByEmailAddress(const QString &, bool)
+{
+    return 0;
+}
+
+SeasideCache::CacheItem *SeasideCache::itemByOnlineAccount(const QString &, const QString &, bool)
+{
+    return 0;
+}
+
+SeasideCache::CacheItem *SeasideCache::resolvePhoneNumber(ResolveListener *, const QString &, bool)
+{
+    // TODO: implement and test these functions
+    return 0;
+}
+
+SeasideCache::CacheItem *SeasideCache::resolveEmailAddress(ResolveListener *, const QString &, bool)
+{
+    return 0;
+}
+
+SeasideCache::CacheItem *SeasideCache::resolveOnlineAccount(ResolveListener *, const QString &, const QString &, bool)
 {
     return 0;
 }
@@ -509,7 +542,7 @@ void SeasideCache::setFirstName(FilterType filterType, int index, const QString 
     cacheItem.contact.saveDetail(&name);
 
     if (cacheItem.modelData) {
-        cacheItem.modelData->contactChanged(cacheItem.contact);
+        cacheItem.modelData->contactChanged(cacheItem.contact, ContactComplete);
     }
 
     if (m_models[filterType])

@@ -2,6 +2,7 @@
 #define SEASIDECACHE_H
 
 #include <qtcontacts-extensions.h>
+#include <QContactStatusFlags>
 
 #include <QContact>
 #include <QContactId>
@@ -29,6 +30,13 @@ public:
         FilterTypesCount
     };
 
+    enum FetchDataType {
+        FetchNone = 0,
+        FetchAccountUri = (1 << 0),
+        FetchPhoneNumber = (1 << 1),
+        FetchEmailAddress = (1 << 2)
+    };
+
     enum DisplayLabelOrder {
         FirstNameFirst,
         LastNameFirst
@@ -36,8 +44,9 @@ public:
 
     enum ContactState {
         ContactAbsent,
+        ContactPartial,
         ContactRequested,
-        ContactFetched
+        ContactComplete
     };
 
     struct ItemData
@@ -47,7 +56,7 @@ public:
         virtual QString getDisplayLabel() const = 0;
         virtual void displayLabelOrderChanged(DisplayLabelOrder order) = 0;
 
-        virtual void updateContact(const QContact &newContact, QContact *oldContact) = 0;
+        virtual void updateContact(const QContact &newContact, QContact *oldContact, ContactState state) = 0;
 
         virtual void constituentsFetched(const QList<int> &ids) = 0;
         virtual void mergeCandidatesFetched(const QList<int> &ids) = 0;
@@ -57,17 +66,20 @@ public:
     {
         virtual ~ModelData() {}
 
-        virtual void contactChanged(const QContact &) = 0;
+        virtual void contactChanged(const QContact &, ContactState) = 0;
     };
 
     struct CacheItem
     {
-        CacheItem() : itemData(0), modelData(0) {}
-        CacheItem(const QContact &contact) : contact(contact), itemData(0), modelData(0) {}
+        CacheItem() : itemData(0), modelData(0), iid(0), statusFlags(0), contactState(ContactAbsent) {}
+        CacheItem(const QContact &contact)
+            : contact(contact), itemData(0), modelData(0), iid(internalId(contact)),
+              statusFlags(contact.detail<QContactStatusFlags>().flagsValue()), contactState(ContactComplete) {}
 
         QContact contact;
         ItemData *itemData;
         ModelData *modelData;
+        quint32 iid;
         quint64 statusFlags;
         ContactState contactState;
     };
@@ -90,6 +102,13 @@ public:
         virtual void updateDisplayLabelOrder() = 0;
     };
 
+    struct ResolveListener
+    {
+        virtual ~ResolveListener() {}
+
+        virtual void addressResolved(CacheItem *item) = 0;
+    };
+
     static SeasideCache *instance();
 
     static ContactIdType apiId(const QContact &contact);
@@ -106,7 +125,7 @@ public:
     SeasideCache();
     ~SeasideCache();
 
-    static void registerModel(ListModel *model, FilterType type);
+    static void registerModel(ListModel *model, FilterType type, FetchDataType extraData = FetchNone);
     static void unregisterModel(ListModel *model);
 
     static void registerUser(QObject *user);
@@ -117,17 +136,25 @@ public:
     static int contactId(const QContact &contact);
 
     static CacheItem *existingItem(const ContactIdType &id);
-    static CacheItem *itemById(const ContactIdType &id);
+    static CacheItem *itemById(const ContactIdType &id, bool requireComplete = true);
 #ifdef USING_QTPIM
-    static CacheItem *itemById(int id);
+    static CacheItem *itemById(int id, bool requireComplete = true);
 #endif
     static ContactIdType selfContactId();
     static QContact contactById(const ContactIdType &id);
     static QChar nameGroupForCacheItem(CacheItem *cacheItem);
     static QList<QChar> allNameGroups();
 
-    static CacheItem *itemByPhoneNumber(const QString &msisdn);
-    static CacheItem *itemByEmailAddress(const QString &email);
+    static void ensureCompletion(CacheItem *cacheItem);
+
+    static CacheItem *itemByPhoneNumber(const QString &number, bool requireComplete = true);
+    static CacheItem *itemByEmailAddress(const QString &email, bool requireComplete = true);
+    static CacheItem *itemByOnlineAccount(const QString &localUid, const QString &remoteUid, bool requireComplete = true);
+
+    static CacheItem *resolvePhoneNumber(ResolveListener *listener, const QString &msisdn, bool requireComplete = true);
+    static CacheItem *resolveEmailAddress(ResolveListener *listener, const QString &email, bool requireComplete = true);
+    static CacheItem *resolveOnlineAccount(ResolveListener *listener, const QString &localUid, const QString &remoteUid, bool requireComplete = true);
+
     static bool saveContact(const QContact &contact);
     static void removeContact(const QContact &contact);
 
