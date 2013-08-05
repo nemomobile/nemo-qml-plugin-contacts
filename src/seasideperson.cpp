@@ -1002,7 +1002,7 @@ void SeasidePerson::updateContactDetails(const QContact &oldContact)
 
 void SeasidePerson::ensureComplete()
 {
-    if (SeasideCache::CacheItem *item = SeasideCache::itemById(mContact->id())) {
+    if (SeasideCache::CacheItem *item = SeasideCache::itemById(SeasideCache::apiId(*mContact))) {
         SeasideCache::ensureCompletion(item);
     }
 }
@@ -1028,7 +1028,7 @@ QString SeasidePerson::vCard() const
 
 void SeasidePerson::fetchConstituents()
 {
-    if (SeasideCache::validId(mContact->id())) {
+    if (SeasideCache::validId(SeasideCache::apiId(*mContact))) {
         SeasideCache::fetchConstituents(contact());
     } else {
         // No constituents
@@ -1065,6 +1065,7 @@ void SeasidePerson::resolveOnlineAccount(const QString &localUid, const QString 
 
 void SeasidePerson::updateContact(const QContact &newContact, QContact *oldContact, SeasideCache::ContactState state)
 {
+    Q_UNUSED(oldContact)
     Q_ASSERT(oldContact == mContact);
 
     setContact(newContact);
