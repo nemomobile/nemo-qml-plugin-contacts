@@ -103,6 +103,8 @@ SeasidePerson::SeasidePerson(QContact *contact, bool complete, QObject *parent)
 
 SeasidePerson::~SeasidePerson()
 {
+    SeasideCache::unregisterResolveListener(this);
+
     emit contactRemoved();
 
     if (mDeleteContact)
@@ -1045,21 +1047,21 @@ void SeasidePerson::resolvePhoneNumber(const QString &number, bool requireComple
 {
     if (SeasideCache::CacheItem *item = SeasideCache::resolvePhoneNumber(this, number, requireComplete)) {
         // TODO: should this be invoked async?
-        addressResolved(item);
+        addressResolved(QString(), number, item);
     }
 }
 
 void SeasidePerson::resolveEmailAddress(const QString &address, bool requireComplete)
 {
     if (SeasideCache::CacheItem *item = SeasideCache::resolveEmailAddress(this, address, requireComplete)) {
-        addressResolved(item);
+        addressResolved(address, QString(), item);
     }
 }
 
 void SeasidePerson::resolveOnlineAccount(const QString &localUid, const QString &remoteUid, bool requireComplete)
 {
     if (SeasideCache::CacheItem *item = SeasideCache::resolveOnlineAccount(this, localUid, remoteUid, requireComplete)) {
-        addressResolved(item);
+        addressResolved(localUid, remoteUid, item);
     }
 }
 
@@ -1072,7 +1074,7 @@ void SeasidePerson::updateContact(const QContact &newContact, QContact *oldConta
     setComplete(state == SeasideCache::ContactComplete);
 }
 
-void SeasidePerson::addressResolved(SeasideCache::CacheItem *item)
+void SeasidePerson::addressResolved(const QString &, const QString &, SeasideCache::CacheItem *item)
 {
     if (item) {
         if (&item->contact != mContact) {

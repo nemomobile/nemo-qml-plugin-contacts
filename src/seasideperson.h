@@ -298,7 +298,7 @@ public:
 
     void updateContact(const QContact &newContact, QContact *oldContact, SeasideCache::ContactState state);
 
-    void addressResolved(SeasideCache::CacheItem *item);
+    void addressResolved(const QString &first, const QString &second, SeasideCache::CacheItem *item);
 
     void constituentsFetched(const QList<int> &ids);
     void mergeCandidatesFetched(const QList<int> &ids);

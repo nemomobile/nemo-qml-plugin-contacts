@@ -273,6 +273,18 @@ void SeasideCache::unregisterUser(QObject *)
 {
 }
 
+void SeasideCache::registerChangeListener(ChangeListener *)
+{
+}
+
+void SeasideCache::unregisterChangeListener(ChangeListener *)
+{
+}
+
+void SeasideCache::unregisterResolveListener(ResolveListener *)
+{
+}
+
 int SeasideCache::contactId(const QContact &contact)
 {
     quint32 internal = internalId(contact);

@@ -106,7 +106,15 @@ public:
     {
         virtual ~ResolveListener() {}
 
-        virtual void addressResolved(CacheItem *item) = 0;
+        virtual void addressResolved(const QString &, const QString &, CacheItem *item) = 0;
+    };
+
+    struct ChangeListener
+    {
+        virtual ~ChangeListener() {}
+
+        virtual void itemUpdated(CacheItem *item) = 0;
+        virtual void itemAboutToBeRemoved(CacheItem *item) = 0;
     };
 
     static SeasideCache *instance();
@@ -130,6 +138,11 @@ public:
 
     static void registerUser(QObject *user);
     static void unregisterUser(QObject *user);
+
+    static void registerChangeListener(ChangeListener *listener);
+    static void unregisterChangeListener(ChangeListener *listener);
+
+    static void unregisterResolveListener(ResolveListener *listener);
 
     static DisplayLabelOrder displayLabelOrder();
 
