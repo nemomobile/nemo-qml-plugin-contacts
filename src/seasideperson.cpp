@@ -581,6 +581,45 @@ void SeasidePerson::setAddresses(const QStringList &addresses)
     emit addressesChanged();
 }
 
+QStringList SeasidePerson::addressesTypeList() const
+{
+	 QStringList rv;
+    const QList<QContactAddress> &addresses = mContact->details<QContactAddress>();
+
+    foreach(const QContactAddress &address, addresses) {
+        if (address.contexts().contains(QContactDetail::ContextHome)) {
+            rv.push_back("Home");
+        } else if (address.contexts().contains(QContactDetail::ContextWork)) {
+            rv.push_back("Work");
+        } else if (address.contexts().contains(QContactDetail::ContextOther)) {
+            rv.push_back("Other");
+        } else {
+            qWarning() << "Warning: Could not get address type '" << address.contexts() << "'";
+        }
+    }
+	
+	 return rv;
+}
+void SeasidePerson::setAddressesTypeList(const QStringList &addressesTypes)
+{
+	 for (int i=0;i<addressesTypes.size();i++)
+	 {
+	     const QString &addressType = addressesTypes.at(i);
+	     if (addressType == "Work")
+	     {
+	         setAddressType(i, SeasidePerson::AddressWorkType);	
+	     }
+	     else if (addressType == "Home")
+	     {
+	         setAddressType(i, SeasidePerson::AddressHomeType);	
+	     }
+	     else if (addressType == "Other")
+	     {
+	         setAddressType(i, SeasidePerson::AddressOtherType);	
+	     }
+	 }
+}
+
 QList<int> SeasidePerson::addressTypes() const
 {
     const QList<QContactAddress> &addresses = mContact->details<QContactAddress>();

@@ -208,6 +208,10 @@ public:
     QStringList addresses() const;
     void setAddresses(const QStringList &addresses);
 
+    Q_PROPERTY(QStringList addressesTypeList READ addressesTypeList WRITE setAddressesTypeList NOTIFY addressesTypeListChanged)
+    Q_INVOKABLE QStringList addressesTypeList() const;
+    Q_INVOKABLE void setAddressesTypeList(const QStringList &addressesTypes);
+
     Q_PROPERTY(QList<int> addressTypes READ addressTypes NOTIFY addressTypesChanged)
     QList<int> addressTypes() const;
     Q_INVOKABLE void setAddressType(int which, DetailType type);
@@ -316,6 +320,7 @@ signals:
     void phoneNumberTypesChanged();
     void emailAddressesChanged();
     void emailAddressTypesChanged();
+    void addressesTypeListChanged();
     void addressesChanged();
     void addressTypesChanged();
     void websitesChanged();
