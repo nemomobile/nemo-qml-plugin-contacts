@@ -1086,6 +1086,7 @@ void SeasidePerson::addressResolved(const QString &, const QString &, SeasideCac
 
             // Release our previous contact info
             delete oldContact;
+            mDeleteContact = false;
 
             // TODO: at this point, we are attached to the contact in the cache, but the cache
             // doesn't know about this Person instance, so it won't update us when the
