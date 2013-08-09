@@ -62,26 +62,34 @@ public:
         virtual void mergeCandidatesFetched(const QList<int> &ids) = 0;
     };
 
-    struct ModelData
+    struct CacheItem;
+    struct ItemListener
     {
-        virtual ~ModelData() {}
+        virtual ~ItemListener() {}
 
-        virtual void contactChanged(const QContact &, ContactState) = 0;
+        virtual void itemUpdated(CacheItem *) {};
+        virtual void itemAboutToBeRemoved(CacheItem *) {};
+
+        ItemListener *next;
     };
 
     struct CacheItem
     {
-        CacheItem() : itemData(0), modelData(0), iid(0), statusFlags(0), contactState(ContactAbsent) {}
+        CacheItem() : itemData(0), iid(0), statusFlags(0), contactState(ContactAbsent), listeners(0) {}
         CacheItem(const QContact &contact)
-            : contact(contact), itemData(0), modelData(0), iid(internalId(contact)),
-              statusFlags(contact.detail<QContactStatusFlags>().flagsValue()), contactState(ContactComplete) {}
+            : contact(contact), itemData(0), iid(internalId(contact)),
+              statusFlags(contact.detail<QContactStatusFlags>().flagsValue()), contactState(ContactComplete), listeners(0) {}
+
+        ItemListener *listener(void *) { return 0; }
+
+        ItemListener *appendListener(ItemListener *listener, void *) { listeners = listener; listener->next = 0; return listener; }
 
         QContact contact;
         ItemData *itemData;
-        ModelData *modelData;
         quint32 iid;
         quint64 statusFlags;
         ContactState contactState;
+        ItemListener *listeners;
     };
 
     class ListModel : public QAbstractListModel

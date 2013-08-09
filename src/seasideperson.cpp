@@ -218,7 +218,6 @@ QString SeasidePerson::sectionBucket() const
     // just the first - also, we should use QLocale (or ICU) to uppercase, not
     // QString, as QString uses C locale.
     return displayLabel().at(0).toUpper();
-
 }
 
 QString SeasidePerson::companyName() const
@@ -1088,16 +1087,40 @@ void SeasidePerson::addressResolved(const QString &, const QString &, SeasideCac
             delete oldContact;
             mDeleteContact = false;
 
-            // TODO: at this point, we are attached to the contact in the cache, but the cache
-            // doesn't know about this Person instance, so it won't update us when the
-            // contact changes.  We could use a list of attached Person objects in the
-            // model to fix this...
+            // We need to be informed of any changes to this contact in the cache
+            item->appendListener(this, this);
         }
 
         setComplete(item->contactState == SeasideCache::ContactComplete);
     }
 
     emit addressResolved();
+}
+
+void SeasidePerson::itemUpdated(SeasideCache::CacheItem *)
+{
+}
+
+void SeasidePerson::itemAboutToBeRemoved(SeasideCache::CacheItem *item)
+{
+    if (&item->contact == mContact) {
+        // Our contact is being destroyed - copy the address details to an internal contact
+        mContact = new QContact;
+        mDeleteContact = true;
+
+        foreach (QContactPhoneNumber number, item->contact.details<QContactPhoneNumber>()) {
+            mContact->saveDetail(&number);
+        }
+        foreach (QContactEmailAddress address, item->contact.details<QContactEmailAddress>()) {
+            mContact->saveDetail(&address);
+        }
+        foreach (QContactOnlineAccount account, item->contact.details<QContactOnlineAccount>()) {
+            mContact->saveDetail(&account);
+        }
+
+        recalculateDisplayLabel();
+        updateContactDetails(item->contact);
+    }
 }
 
 QString SeasidePerson::getDisplayLabel() const

@@ -71,7 +71,11 @@ signals:
     void selfPersonChanged();
 };
 
-class SeasidePerson : public QObject, public SeasideCache::ItemData, public SeasideCache::ResolveListener
+class SeasidePerson
+    : public QObject,
+      public SeasideCache::ItemData,
+      public SeasideCache::ResolveListener,
+      public SeasideCache::ItemListener
 {
     Q_OBJECT
     Q_ENUMS(DetailType)
@@ -299,6 +303,9 @@ public:
     void updateContact(const QContact &newContact, QContact *oldContact, SeasideCache::ContactState state);
 
     void addressResolved(const QString &first, const QString &second, SeasideCache::CacheItem *item);
+
+    void itemUpdated(SeasideCache::CacheItem *item);
+    void itemAboutToBeRemoved(SeasideCache::CacheItem *item);
 
     void constituentsFetched(const QList<int> &ids);
     void mergeCandidatesFetched(const QList<int> &ids);

@@ -553,8 +553,10 @@ void SeasideCache::setFirstName(FilterType filterType, int index, const QString 
 #endif
     cacheItem.contact.saveDetail(&name);
 
-    if (cacheItem.modelData) {
-        cacheItem.modelData->contactChanged(cacheItem.contact, ContactComplete);
+    ItemListener *listener(cacheItem.listeners);
+    while (listener) {
+        listener->itemUpdated(&cacheItem);
+        listener = listener->next;
     }
 
     if (m_models[filterType])

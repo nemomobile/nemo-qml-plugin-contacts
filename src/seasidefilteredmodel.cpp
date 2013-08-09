@@ -69,12 +69,13 @@ const QByteArray personRole("person");
 
 }
 
-struct FilterData : public SeasideCache::ModelData
+struct FilterData : public SeasideCache::ItemListener
 {
     // Store additional filter keys with the cache item
     QStringList filterKey;
 
-    void contactChanged(const QContact &, SeasideCache::ContactState) { filterKey.clear(); }
+    void itemUpdated(SeasideCache::CacheItem *) { filterKey.clear(); }
+    void itemAboutToBeRemoved(SeasideCache::CacheItem *) { delete this; }
 };
 
 // We could squeeze a little more performance out of QVector by inserting all the items in a
@@ -283,14 +284,17 @@ bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
     if (m_searchByFirstNameCharacter && !m_filterPattern.isEmpty())
         return m_filterPattern[0].toUpper() == SeasideCache::nameGroupForCacheItem(item);
 
+    void *key = const_cast<void *>(static_cast<const void *>(this));
+    SeasideCache::ItemListener *listener = item->listener(key);
+    if (!listener) {
+        listener = item->appendListener(new FilterData, key);
+    }
+    FilterData *filterData = static_cast<FilterData *>(listener);
+
     // split the display label and filter into words.
     //
     // TODO: i18n will require different splitting for thai and possibly
     // other locales, see MBreakIterator
-    if (!item->modelData) {
-        item->modelData = new FilterData;
-    }
-    FilterData *filterData = static_cast<FilterData *>(item->modelData);
     if (filterData->filterKey.isEmpty()) {
         QSet<QString> matchTokens;
 
