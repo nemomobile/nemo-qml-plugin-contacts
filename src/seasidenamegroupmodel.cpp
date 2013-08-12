@@ -84,7 +84,8 @@ void SeasideNameGroupModel::setRequiredProperty(RequiredPropertyType property)
             if (existing.count != newCount) {
                 existing.count = newCount;
 
-                const QModelIndex updateIndex(createIndex(it - m_groups.begin(), 0));
+                const int row = it - m_groups.begin();
+                const QModelIndex updateIndex(createIndex(row, 1)); // entryCount column
                 emit dataChanged(updateIndex, updateIndex);
             }
         }
@@ -137,10 +138,14 @@ void SeasideNameGroupModel::nameGroupsUpdated(const QHash<QChar, QSet<quint32> >
             SeasideNameGroup &existing(*existingIt);
             if (existing.name == it.key()) {
                 existing.contactIds = it.value();
-                existing.count = countFilteredContacts(it.value());
-                if (!wasEmpty) {
-                    const QModelIndex updateIndex(createIndex(existingIt - m_groups.begin(), 0));
-                    emit dataChanged(updateIndex, updateIndex);
+                const int count = countFilteredContacts(existing.contactIds);
+                if (existing.count != count) {
+                    existing.count = count;
+                    if (!wasEmpty) {
+                        const int row = existingIt - m_groups.begin();
+                        const QModelIndex updateIndex(createIndex(row, 1)); // entryCount column
+                        emit dataChanged(updateIndex, updateIndex);
+                    }
                 }
                 break;
             }
