@@ -81,7 +81,8 @@ SeasidePerson::SeasidePerson(QObject *parent)
     : QObject(parent)
     , mContact(new QContact)
     , mComplete(true)
-    , mDeleteContact(true)
+    , mAttachState(Unattached)
+    , mItem(0)
 {
 }
 
@@ -89,7 +90,8 @@ SeasidePerson::SeasidePerson(const QContact &contact, QObject *parent)
     : QObject(parent)
     , mContact(new QContact(contact))
     , mComplete(true)
-    , mDeleteContact(true)
+    , mAttachState(Unattached)
+    , mItem(0)
 {
 }
 
@@ -97,7 +99,8 @@ SeasidePerson::SeasidePerson(QContact *contact, bool complete, QObject *parent)
     : QObject(parent)
     , mContact(contact)
     , mComplete(complete)
-    , mDeleteContact(false)
+    , mAttachState(Attached)
+    , mItem(0)
 {
 }
 
@@ -107,8 +110,11 @@ SeasidePerson::~SeasidePerson()
 
     emit contactRemoved();
 
-    if (mDeleteContact)
+    if (mAttachState == Unattached) {
         delete mContact;
+    } else if (mAttachState == Listening) {
+        mItem->removeListener(this);
+    }
 }
 
 // QT5: this needs to change type
@@ -1085,10 +1091,11 @@ void SeasidePerson::addressResolved(const QString &, const QString &, SeasideCac
 
             // Release our previous contact info
             delete oldContact;
-            mDeleteContact = false;
 
             // We need to be informed of any changes to this contact in the cache
             item->appendListener(this, this);
+            mItem = item;
+            mAttachState = Listening;
         }
 
         setComplete(item->contactState == SeasideCache::ContactComplete);
@@ -1106,7 +1113,12 @@ void SeasidePerson::itemAboutToBeRemoved(SeasideCache::CacheItem *item)
     if (&item->contact == mContact) {
         // Our contact is being destroyed - copy the address details to an internal contact
         mContact = new QContact;
-        mDeleteContact = true;
+        if (mAttachState == Listening) {
+            Q_ASSERT(mItem == item);
+            mItem->removeListener(this);
+            mItem = 0;
+        }
+        mAttachState = Unattached;
 
         foreach (QContactPhoneNumber number, item->contact.details<QContactPhoneNumber>()) {
             mContact->saveDetail(&number);
