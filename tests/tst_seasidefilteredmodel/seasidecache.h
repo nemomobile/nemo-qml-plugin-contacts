@@ -83,6 +83,7 @@ public:
         ItemListener *listener(void *) { return 0; }
 
         ItemListener *appendListener(ItemListener *listener, void *) { listeners = listener; listener->next = 0; return listener; }
+        bool removeListener(ItemListener *) { listeners = 0; return true; }
 
         QContact contact;
         ItemData *itemData;

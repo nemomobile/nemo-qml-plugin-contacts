@@ -361,12 +361,19 @@ public slots:
 private:
     void updateContactDetails(const QContact &oldContact);
 
+    enum AttachState {
+        Unattached = 0,
+        Attached,
+        Listening
+    };
+
     QContact *mContact;
     mutable QString mDisplayLabel;
     QList<int> mConstituents;
     QList<int> mCandidates;
     bool mComplete;
-    bool mDeleteContact;
+    AttachState mAttachState;
+    SeasideCache::CacheItem *mItem;
 
     friend class SeasideCache;
     friend class tst_SeasidePerson;
