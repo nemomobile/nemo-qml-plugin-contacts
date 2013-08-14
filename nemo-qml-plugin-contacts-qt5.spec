@@ -14,7 +14,7 @@ Release:    1
 Group:      System/Libraries
 License:    BSD
 URL:        https://github.com/nemomobile/nemo-qml-plugin-contacts
-Source0:    %{name}-%{version}.tar.bz2
+Source0:    %{name}-%{version}.tar.gz
 Source100:  nemo-qml-plugin-contacts-qt5.yaml
 Requires:   qtcontacts-sqlite-qt5
 BuildRequires:  pkgconfig(Qt5Core)
@@ -88,6 +88,6 @@ rm -rf %{buildroot}
 
 %files tests
 %defattr(-,root,root,-)
-/opt/tests/nemo-qml-plugins-qt5/contacts/*
+# /opt/tests/nemo-qml-plugins-qt5/contacts/*
 # >> files tests
 # << files tests
