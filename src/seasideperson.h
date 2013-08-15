@@ -282,8 +282,8 @@ public:
 
     Q_INVOKABLE void ensureComplete();
 
-    Q_INVOKABLE QVariant contactData() const { return QVariant::fromValue(contact()); }
-    Q_INVOKABLE void setContactData(const QVariant &data) { setContact(data.value<QContact>()); }
+    Q_INVOKABLE QVariant contactData() const;
+    Q_INVOKABLE void setContactData(const QVariant &data);
 
     Q_INVOKABLE QString vCard() const;
 
