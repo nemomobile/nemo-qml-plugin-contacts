@@ -221,6 +221,9 @@ void SeasideCache::reset()
         m_cacheIndices.insert(apiId(contact), m_cache.count());
 #endif
         m_cache.append(CacheItem(contact));
+
+        CacheItem &cacheItem(m_cache.last());
+        cacheItem.nameGroup = determineNameGroup(&cacheItem);
     }
 
     insert(FilterAll, 0, getContactsForFilterType(FilterAll));
@@ -517,8 +520,10 @@ void SeasideCache::insert(FilterType filterType, int index, const QVector<Contac
     for (int i = 0; i < ids.count(); ++i)
         m_contacts[filterType].insert(index + i, ids.at(i));
 
-    if (m_models[filterType])
+    if (m_models[filterType]) {
         m_models[filterType]->sourceItemsInserted(index, index + ids.count() - 1);
+        m_models[filterType]->sourceItemsChanged();
+    }
 }
 
 void SeasideCache::remove(FilterType filterType, int index, int count)
@@ -528,8 +533,10 @@ void SeasideCache::remove(FilterType filterType, int index, int count)
 
     m_contacts[filterType].remove(index, count);
 
-    if (m_models[filterType])
+    if (m_models[filterType]) {
         m_models[filterType]->sourceItemsRemoved();
+        m_models[filterType]->sourceItemsChanged();
+    }
 }
 
 int SeasideCache::importContacts(const QString &)
@@ -560,6 +567,7 @@ void SeasideCache::setFirstName(FilterType filterType, int index, const QString 
     name.setCustomLabel(fullName);
 #endif
     cacheItem.contact.saveDetail(&name);
+    cacheItem.nameGroup = determineNameGroup(&cacheItem);
 
     ItemListener *listener(cacheItem.listeners);
     while (listener) {
