@@ -297,7 +297,6 @@ public:
     Q_INVOKABLE void resolveEmailAddress(const QString &address, bool requireComplete = true);
     Q_INVOKABLE void resolveOnlineAccount(const QString &localUid, const QString &remoteUid, bool requireComplete = true);
 
-    QString getDisplayLabel() const;
     void displayLabelOrderChanged(SeasideCache::DisplayLabelOrder order);
 
     void updateContact(const QContact &newContact, QContact *oldContact, SeasideCache::ContactState state);

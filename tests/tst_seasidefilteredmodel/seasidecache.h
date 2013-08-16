@@ -53,7 +53,6 @@ public:
     {
         virtual ~ItemData() {}
 
-        virtual QString getDisplayLabel() const = 0;
         virtual void displayLabelOrderChanged(DisplayLabelOrder order) = 0;
 
         virtual void updateContact(const QContact &newContact, QContact *oldContact, ContactState state) = 0;
@@ -92,6 +91,7 @@ public:
         ContactState contactState;
         ItemListener *listeners;
         QChar nameGroup;
+        QString displayLabel;
     };
 
     class ListModel : public QAbstractListModel

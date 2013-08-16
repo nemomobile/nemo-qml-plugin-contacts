@@ -184,13 +184,6 @@ void SeasideCache::reset()
         QContactName name;
         name.setFirstName(QLatin1String(contactsData[i].firstName));
         name.setLastName(QLatin1String(contactsData[i].lastName));
-
-        QString fullName = name.firstName() + QChar::fromLatin1(' ') + name.lastName();
-#ifdef USING_QTPIM
-        name.setValue(QContactName__FieldCustomLabel, fullName);
-#else
-        name.setCustomLabel(fullName);
-#endif
         contact.saveDetail(&name);
 
         if (contactsData[i].avatar) {
@@ -222,8 +215,11 @@ void SeasideCache::reset()
 #endif
         m_cache.append(CacheItem(contact));
 
-        CacheItem &cacheItem(m_cache.last());
+        QString fullName = name.firstName() + QChar::fromLatin1(' ') + name.lastName();
+
+        CacheItem &cacheItem = m_cache.last();
         cacheItem.nameGroup = determineNameGroup(&cacheItem);
+        cacheItem.displayLabel = fullName;
     }
 
     insert(FilterAll, 0, getContactsForFilterType(FilterAll));
@@ -377,12 +373,8 @@ QChar SeasideCache::determineNameGroup(const CacheItem *cacheItem)
         group = first[0].toUpper();
     } else if (!last.isEmpty()) {
         group = last[0].toUpper();
-    } else {
-        QString displayLabel = (cacheItem->itemData)
-                ? cacheItem->itemData->getDisplayLabel()
-                : generateDisplayLabel(cacheItem->contact);
-        if (!displayLabel.isEmpty())
-            group = displayLabel[0].toUpper();
+    } else if (!cacheItem->displayLabel.isEmpty()) {
+        group = cacheItem->displayLabel[0].toUpper();
     }
 
     // XXX temporary workaround for non-latin names: use non-name details to try to find a
@@ -559,15 +551,11 @@ void SeasideCache::setFirstName(FilterType filterType, int index, const QString 
 
     QContactName name = cacheItem.contact.detail<QContactName>();
     name.setFirstName(firstName);
+    cacheItem.contact.saveDetail(&name);
 
     QString fullName = name.firstName() + QChar::fromLatin1(' ') + name.lastName();
-#ifdef USING_QTPIM
-    name.setValue(QContactName__FieldCustomLabel, fullName);
-#else
-    name.setCustomLabel(fullName);
-#endif
-    cacheItem.contact.saveDetail(&name);
     cacheItem.nameGroup = determineNameGroup(&cacheItem);
+    cacheItem.displayLabel = fullName;
 
     ItemListener *listener(cacheItem.listeners);
     while (listener) {

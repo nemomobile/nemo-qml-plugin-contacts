@@ -1156,11 +1156,6 @@ void SeasidePerson::itemAboutToBeRemoved(SeasideCache::CacheItem *item)
     }
 }
 
-QString SeasidePerson::getDisplayLabel() const
-{
-    return displayLabel();
-}
-
 void SeasidePerson::displayLabelOrderChanged(SeasideCache::DisplayLabelOrder order)
 {
     recalculateDisplayLabel(order);

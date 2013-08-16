@@ -53,7 +53,7 @@
 
 namespace {
 
-const QByteArray displayRole("display");
+const QByteArray displayLabelRole("displayLabel");
 const QByteArray firstNameRole("firstName");
 const QByteArray lastNameRole("lastName");
 const QByteArray sectionBucketRole("sectionBucket");
@@ -146,7 +146,7 @@ SeasideFilteredModel::~SeasideFilteredModel()
 QHash<int, QByteArray> SeasideFilteredModel::roleNames() const
 {
     QHash<int, QByteArray> roles;
-    roles.insert(Qt::DisplayRole, displayRole);
+    roles.insert(Qt::DisplayRole, displayLabelRole);
     roles.insert(FirstNameRole, firstNameRole);
     roles.insert(LastNameRole, lastNameRole);
     roles.insert(SectionBucketRole, sectionBucketRole);
@@ -426,7 +426,7 @@ QVariantMap SeasideFilteredModel::get(int row) const
         return QVariantMap();
 
     QVariantMap m;
-    m.insert(displayRole, data(cacheItem, Qt::DisplayRole));
+    m.insert(displayLabelRole, data(cacheItem, Qt::DisplayRole));
     m.insert(firstNameRole, data(cacheItem, FirstNameRole));
     m.insert(lastNameRole, data(cacheItem, LastNameRole));
     m.insert(sectionBucketRole, data(cacheItem, SectionBucketRole));
@@ -563,18 +563,10 @@ QVariant SeasideFilteredModel::data(SeasideCache::CacheItem *cacheItem, int role
             return role == Qt::DisplayRole ? person->displayLabel() : person->sectionBucket();
         }
 
-#ifdef USING_QTPIM
-        QString displayLabel = contact.detail<QContactName>().value<QString>(QContactName__FieldCustomLabel);
-#else
-        QString displayLabel = contact.detail<QContactName>().customLabel();
-#endif
-        if (displayLabel.isEmpty()) {
-            displayLabel = contact.detail<QContactDisplayLabel>().label();
+        if (role == Qt::DisplayRole) {
+            return cacheItem->displayLabel;
         }
-
-        return role == Qt::DisplayRole || displayLabel.isEmpty()
-                ? displayLabel
-                : displayLabel.at(0).toUpper();
+        return cacheItem->displayLabel.isEmpty() ? QChar() : cacheItem->displayLabel.at(0).toUpper();
     } else if (role == PersonRole) {
         // Avoid creating a Person instance for as long as possible.
         SeasideCache::ensureCompletion(cacheItem);
@@ -610,6 +602,9 @@ void SeasideFilteredModel::sourceAboutToInsertItems(int begin, int end)
 
 void SeasideFilteredModel::sourceItemsInserted(int begin, int end)
 {
+    Q_UNUSED(begin)
+    Q_UNUSED(end)
+
     if (!isFiltered()) {
         endInsertRows();
         emit countChanged();
