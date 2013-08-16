@@ -65,15 +65,15 @@ SeasideNameGroupModel::~SeasideNameGroupModel()
     SeasideCache::unregisterNameGroupChangeListener(this);
 }
 
-SeasideNameGroupModel::RequiredPropertyType SeasideNameGroupModel::requiredProperty() const
+int SeasideNameGroupModel::requiredProperty() const
 {
     return m_requiredProperty;
 }
 
-void SeasideNameGroupModel::setRequiredProperty(RequiredPropertyType property)
+void SeasideNameGroupModel::setRequiredProperty(int properties)
 {
-    if (m_requiredProperty != property) {
-        m_requiredProperty = property;
+    if (m_requiredProperty != properties) {
+        m_requiredProperty = properties;
 
         // Update counts
         QList<SeasideNameGroup>::iterator it = m_groups.begin(), end = m_groups.end();
@@ -171,11 +171,11 @@ int SeasideNameGroupModel::countFilteredContacts(const QSet<quint32> &contactIds
             SeasideCache::CacheItem *item = SeasideCache::existingItem(iid);
             Q_ASSERT(item);
 
-            if ((m_requiredProperty == AccountUriRequired && (item->statusFlags & QContactStatusFlags::HasOnlineAccount)) ||
-                (m_requiredProperty == PhoneNumberRequired && (item->statusFlags & QContactStatusFlags::HasPhoneNumber)) ||
-                (m_requiredProperty == EmailAddressRequired && (item->statusFlags & QContactStatusFlags::HasEmailAddress))) {
+            bool haveMatch = (m_requiredProperty & AccountUriRequired) && (item->statusFlags & QContactStatusFlags::HasOnlineAccount);
+            haveMatch |= (m_requiredProperty & PhoneNumberRequired) && (item->statusFlags & QContactStatusFlags::HasPhoneNumber);
+            haveMatch |= (m_requiredProperty & EmailAddressRequired) && (item->statusFlags & QContactStatusFlags::HasEmailAddress);
+            if (haveMatch)
                 ++count;
-            }
         }
 
         return count;
