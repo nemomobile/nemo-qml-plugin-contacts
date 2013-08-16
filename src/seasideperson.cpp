@@ -1014,6 +1014,27 @@ void SeasidePerson::ensureComplete()
     }
 }
 
+QVariant SeasidePerson::contactData() const
+{
+    return QVariant::fromValue(contact());
+}
+
+void SeasidePerson::setContactData(const QVariant &data)
+{
+    if (mAttachState == Unattached) {
+        delete mContact;
+    } else if (mAttachState == Listening) {
+        mItem->removeListener(this);
+        mItem = 0;
+    }
+
+    mContact = new QContact(data.value<QContact>());
+    mAttachState = Unattached;
+
+    // We don't know if this contact is complete or not - assume it isn't if it has an ID
+    mComplete = (id() == 0);
+}
+
 QString SeasidePerson::vCard() const
 {
     QVersitContactExporter exporter;
