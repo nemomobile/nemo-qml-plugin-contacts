@@ -377,7 +377,7 @@ QChar SeasideCache::determineNameGroup(const CacheItem *cacheItem)
     } else {
         QString displayLabel = (cacheItem->itemData)
                 ? cacheItem->itemData->getDisplayLabel()
-                : generateDisplayLabel(cacheItem->contact);
+                : generateDisplayLabel(cacheItem->contact, FirstNameFirst);
         if (!displayLabel.isEmpty())
             group = displayLabel[0].toUpper();
     }
@@ -489,6 +489,11 @@ bool SeasideCache::isPopulated(FilterType filterType)
 QString SeasideCache::generateDisplayLabel(const QContact &, DisplayLabelOrder)
 {
     return QString();
+}
+
+void SeasideCache::setDisplayLabelOrder(DisplayLabelOrder order)
+{
+	
 }
 
 QString SeasideCache::generateDisplayLabelFromNonNameDetails(const QContact &)
