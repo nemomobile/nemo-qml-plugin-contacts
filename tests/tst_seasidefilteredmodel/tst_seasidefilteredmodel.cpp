@@ -651,23 +651,12 @@ void tst_SeasideFilteredModel::searchByFirstNameCharacter()
     QCOMPARE(model.rowCount(), 4);
 
     SeasideCache::CacheItem *cacheItem = SeasideCache::existingItem(cache.idAt(0));
-#ifdef USING_QTPIM
-    QContactDisplayLabel displayLabel = cacheItem->contact.detail<QContactDisplayLabel>();
-    displayLabel.setLabel("");
-    cacheItem->contact.saveDetail(&displayLabel);
-#endif
-    QContactName origName = cacheItem->contact.detail<QContactName>();
-    QContactName name = origName;
-    name.setFirstName("123");
-    name.setLastName("");
-#ifndef USING_QTPIM
-    name.setCustomLabel("");
-#endif
-    cacheItem->contact.saveDetail(&name);
+    QString origName = cacheItem->contact.detail<QContactName>().firstName();
+    cache.setFirstName(SeasideCache::FilterAll, 0, "123");
     model.setFilterPattern("#");    // non-letters
     QCOMPARE(model.rowCount(), 1);
 
-    cacheItem->contact.saveDetail(&origName);
+    cache.setFirstName(SeasideCache::FilterAll, 0, origName);
     model.setFilterPattern("");
     QCOMPARE(model.rowCount(), 7);
     model.setFilterPattern("#");
