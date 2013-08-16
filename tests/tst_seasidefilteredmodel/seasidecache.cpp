@@ -346,7 +346,15 @@ QContact SeasideCache::contactById(const ContactIdType &id)
 #endif
 }
 
-QChar SeasideCache::nameGroupForCacheItem(CacheItem *cacheItem)
+QChar SeasideCache::nameGroup(const CacheItem *cacheItem)
+{
+    if (!cacheItem)
+        return QChar();
+
+    return cacheItem->nameGroup;
+}
+
+QChar SeasideCache::determineNameGroup(const CacheItem *cacheItem)
 {
     if (!cacheItem)
         return QChar();
