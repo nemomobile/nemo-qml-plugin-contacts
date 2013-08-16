@@ -704,12 +704,12 @@ void tst_SeasideFilteredModel::requiredProperty()
     QSignalSpy removedSpy(&model, SIGNAL(rowsRemoved(QModelIndex,int,int)));
 
     QCOMPARE(model.filterType(), SeasideFilteredModel::FilterAll);
-    QCOMPARE(model.requiredProperty(), SeasideFilteredModel::NoPropertyRequired);
+    QCOMPARE(model.requiredProperty(), int(SeasideFilteredModel::NoPropertyRequired));
     QCOMPARE(model.rowCount(), 7);
 
     // 0 3 4 6
     model.setRequiredProperty(SeasideFilteredModel::PhoneNumberRequired);
-    QCOMPARE(model.requiredProperty(), SeasideFilteredModel::PhoneNumberRequired);
+    QCOMPARE(model.requiredProperty(), int(SeasideFilteredModel::PhoneNumberRequired));
     QCOMPARE(propertySpy.count(), 1);
     QCOMPARE(model.rowCount(), 4);
     QCOMPARE(insertedSpy.count(), 0);
@@ -724,7 +724,7 @@ void tst_SeasideFilteredModel::requiredProperty()
 
     // 0 1 2 3 4 5
     model.setRequiredProperty(SeasideFilteredModel::EmailAddressRequired);
-    QCOMPARE(model.requiredProperty(), SeasideFilteredModel::EmailAddressRequired);
+    QCOMPARE(model.requiredProperty(), int(SeasideFilteredModel::EmailAddressRequired));
     QCOMPARE(propertySpy.count(), 1);
     QCOMPARE(model.rowCount(), 6);
     QCOMPARE(insertedSpy.count(), 2);
@@ -740,21 +740,35 @@ void tst_SeasideFilteredModel::requiredProperty()
     insertedSpy.clear();
     removedSpy.clear();
 
+    // 0 1 2 3 4 5 6
+    model.setRequiredProperty(SeasideFilteredModel::EmailAddressRequired | SeasideFilteredModel::PhoneNumberRequired);
+    QCOMPARE(model.requiredProperty(), SeasideFilteredModel::EmailAddressRequired  | SeasideFilteredModel::PhoneNumberRequired);
+    QCOMPARE(propertySpy.count(), 1);
+    QCOMPARE(model.rowCount(), 7);
+    QCOMPARE(insertedSpy.count(), 1);
+    QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 6);
+    QCOMPARE(insertedSpy.at(0).at(2).value<int>(), 6);
+    QCOMPARE(removedSpy.count(), 0);
+
+    propertySpy.clear();
+    insertedSpy.clear();
+    removedSpy.clear();
+
     // No IM accounts in this data
     model.setRequiredProperty(SeasideFilteredModel::AccountUriRequired);
-    QCOMPARE(model.requiredProperty(), SeasideFilteredModel::AccountUriRequired);
+    QCOMPARE(model.requiredProperty(), int(SeasideFilteredModel::AccountUriRequired));
     QCOMPARE(propertySpy.count(), 1);
     QCOMPARE(model.rowCount(), 0);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
     QCOMPARE(removedSpy.at(0).at(1).value<int>(), 0);
-    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 5);
+    QCOMPARE(removedSpy.at(0).at(2).value<int>(), 6);
 
     propertySpy.clear();
     removedSpy.clear();
 
     model.setRequiredProperty(SeasideFilteredModel::NoPropertyRequired);
-    QCOMPARE(model.requiredProperty(), SeasideFilteredModel::NoPropertyRequired);
+    QCOMPARE(model.requiredProperty(), int(SeasideFilteredModel::NoPropertyRequired));
     QCOMPARE(propertySpy.count(), 1);
     QCOMPARE(model.rowCount(), 7);
     QCOMPARE(insertedSpy.count(), 1);
