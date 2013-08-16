@@ -65,7 +65,7 @@ class SeasideNameGroupModel : public QAbstractListModel, public SeasideNameGroup
 {
     Q_OBJECT
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
-    Q_PROPERTY(RequiredPropertyType requiredProperty READ requiredProperty WRITE setRequiredProperty NOTIFY requiredPropertyChanged)
+    Q_PROPERTY(int requiredProperty READ requiredProperty WRITE setRequiredProperty NOTIFY requiredPropertyChanged)
     Q_ENUMS(RequiredPropertyType)
 public:
     enum Role {
@@ -83,8 +83,8 @@ public:
     SeasideNameGroupModel(QObject *parent = 0);
     ~SeasideNameGroupModel();
 
-    RequiredPropertyType requiredProperty() const;
-    void setRequiredProperty(RequiredPropertyType type);
+    int requiredProperty() const;
+    void setRequiredProperty(int type);
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role) const;
@@ -104,7 +104,7 @@ private:
     int countFilteredContacts(const QSet<quint32> &contactIds) const;
 
     QList<SeasideNameGroup> m_groups;
-    RequiredPropertyType m_requiredProperty;
+    int m_requiredProperty;
 };
 
 #endif

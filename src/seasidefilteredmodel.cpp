@@ -124,7 +124,7 @@ SeasideFilteredModel::SeasideFilteredModel(QObject *parent)
     , m_referenceIndex(0)
     , m_filterType(FilterAll)
     , m_effectiveFilterType(FilterAll)
-    , m_fetchType(SeasideCache::FetchNone)
+    , m_fetchTypes(SeasideCache::FetchNone)
     , m_requiredProperty(NoPropertyRequired)
     , m_searchByFirstNameCharacter(false)
 {
@@ -234,12 +234,12 @@ void SeasideFilteredModel::setFilterPattern(const QString &pattern)
     updateFilters(pattern, m_requiredProperty);
 }
 
-SeasideFilteredModel::RequiredPropertyType SeasideFilteredModel::requiredProperty() const
+int SeasideFilteredModel::requiredProperty() const
 {
     return m_requiredProperty;
 }
 
-void SeasideFilteredModel::setRequiredProperty(RequiredPropertyType type)
+void SeasideFilteredModel::setRequiredProperty(int type)
 {
     updateFilters(m_filterPattern, type);
 }
@@ -274,11 +274,11 @@ bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
         return false;
 
     if (m_requiredProperty != NoPropertyRequired) {
-        if ((m_requiredProperty == AccountUriRequired && ((item->statusFlags & QContactStatusFlags::HasOnlineAccount) == 0)) ||
-            (m_requiredProperty == PhoneNumberRequired && ((item->statusFlags & QContactStatusFlags::HasPhoneNumber) == 0)) ||
-            (m_requiredProperty == EmailAddressRequired && ((item->statusFlags & QContactStatusFlags::HasEmailAddress) == 0))) {
+        bool haveMatch = (m_requiredProperty & AccountUriRequired) && (item->statusFlags & QContactStatusFlags::HasOnlineAccount);
+        haveMatch |= (m_requiredProperty & PhoneNumberRequired) && (item->statusFlags & QContactStatusFlags::HasPhoneNumber);
+        haveMatch |= (m_requiredProperty & EmailAddressRequired) && (item->statusFlags & QContactStatusFlags::HasEmailAddress);
+        if (!haveMatch)
             return false;
-        }
     }
 
     if (m_searchByFirstNameCharacter && !m_filterPattern.isEmpty())
@@ -762,7 +762,7 @@ bool SeasideFilteredModel::isFiltered() const
     return !m_filterPattern.isEmpty() || (m_requiredProperty != NoPropertyRequired);
 }
 
-void SeasideFilteredModel::updateFilters(const QString &pattern, RequiredPropertyType property)
+void SeasideFilteredModel::updateFilters(const QString &pattern, int property)
 {
     if ((pattern == m_filterPattern) && (property == m_requiredProperty))
         return;
@@ -793,15 +793,8 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, RequiredPropert
         changedProperty = true;
 
         // Update our registration to include the data type we need
-        if (m_requiredProperty == AccountUriRequired) {
-            m_fetchType = SeasideCache::FetchAccountUri;
-        } else if (m_requiredProperty == PhoneNumberRequired) {
-            m_fetchType = SeasideCache::FetchPhoneNumber;
-        } else if (m_requiredProperty == EmailAddressRequired) {
-            m_fetchType = SeasideCache::FetchEmailAddress;
-        } else {
-            m_fetchType = SeasideCache::FetchNone;
-        }
+        m_fetchTypes = static_cast<SeasideCache::FetchDataType>(m_requiredProperty);
+
         updateRegistration();
     }
 
@@ -859,6 +852,6 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, RequiredPropert
 
 void SeasideFilteredModel::updateRegistration()
 {
-    SeasideCache::registerModel(this, static_cast<SeasideCache::FilterType>(m_effectiveFilterType), m_fetchType);
+    SeasideCache::registerModel(this, static_cast<SeasideCache::FilterType>(m_effectiveFilterType), m_fetchTypes);
 }
 
