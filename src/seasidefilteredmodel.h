@@ -158,6 +158,8 @@ public:
 
     void sourceDataChanged(int begin, int end);
 
+    void sourceItemsChanged();
+
     void makePopulated();
     void updateDisplayLabelOrder();
 
