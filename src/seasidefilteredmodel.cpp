@@ -282,7 +282,7 @@ bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
     }
 
     if (m_searchByFirstNameCharacter && !m_filterPattern.isEmpty())
-        return m_filterPattern[0].toUpper() == SeasideCache::nameGroupForCacheItem(item);
+        return m_filterPattern[0].toUpper() == SeasideCache::nameGroup(item);
 
     void *key = const_cast<void *>(static_cast<const void *>(this));
     SeasideCache::ItemListener *listener = item->listener(key);
@@ -590,40 +590,6 @@ void SeasideFilteredModel::sourceAboutToRemoveItems(int begin, int end)
 {
     if (!isFiltered()) {
         beginRemoveRows(QModelIndex(), begin, end);
-    } else {
-        // The items inserted/removed notifications arrive sequentially, so if begin is at or
-        // after the index where the last search finished it's possible to continue from there.
-        if (begin < m_referenceIndex) {
-            m_referenceIndex = 0;
-            m_filterIndex = 0;
-        }
-        // Find the position of filtered items in the reference list, and remove any that are
-        // between begin and end.
-        int &r = m_referenceIndex;
-        int &f = m_filterIndex;
-        for (; f < m_filteredContactIds.count(); ++f) {
-            r = m_referenceContactIds->indexOf(m_filteredContactIds.at(f), r);
-            if (r > end) {
-                // The filtered contacts are all after the end, we're done.
-                break;
-            } else if (r >= begin) {
-                // The filtered contacts intersect the removed items, scan ahead and find the
-                // total number that intersect.
-                int count = 0;
-                while (r <= end) {
-                    ++count;
-                    if (f + count >= m_filteredContactIds.count())
-                        break;
-                    r = m_referenceContactIds->indexOf(m_filteredContactIds.at(f + count), r);
-                }
-
-                beginRemoveRows(QModelIndex(), f, f + count - 1);
-                m_filteredContactIds.remove(f, count);
-                endRemoveRows();
-                emit countChanged();
-                break;
-            }
-        }
     }
 }
 
@@ -647,36 +613,6 @@ void SeasideFilteredModel::sourceItemsInserted(int begin, int end)
     if (!isFiltered()) {
         endInsertRows();
         emit countChanged();
-    } else {
-        // Check if any of the inserted items match the filter.
-        QVector<ContactIdType> insertIds;
-        for (int r = begin; r <= end; ++r) {
-            if (filterId(m_referenceContactIds->at(r)))
-                insertIds.append(m_referenceContactIds->at(r));
-        }
-        if (!insertIds.isEmpty()) {
-            if (begin < m_referenceIndex) {
-                m_referenceIndex = 0;
-                m_filterIndex = 0;
-            }
-
-            // Find the position to insert at in the filtered list.
-            int r = m_referenceIndex;
-            int f = m_filterIndex;
-            for (; f < m_filteredContactIds.count(); ++f) {
-                r = m_referenceContactIds->indexOf(m_filteredContactIds.at(f), r);
-                if (r > begin)
-                    break;
-            }
-
-            m_referenceIndex = end + 1;
-            m_filterIndex = f + insertIds.count();
-
-            beginInsertRows(QModelIndex(), f, f + insertIds.count() - 1);
-            insert(&m_filteredContactIds, f, insertIds);
-            endInsertRows();
-            emit countChanged();
-        }
     }
 }
 
@@ -718,6 +654,19 @@ void SeasideFilteredModel::sourceDataChanged(int begin, int end)
                 const QModelIndex index = createIndex(f, 0);
                 emit dataChanged(index, index);
             }
+        }
+    }
+}
+
+void SeasideFilteredModel::sourceItemsChanged()
+{
+    if (isFiltered()) {
+        const int prevCount = rowCount();
+
+        updateIndex();
+
+        if (rowCount() != prevCount) {
+            emit countChanged();
         }
     }
 }

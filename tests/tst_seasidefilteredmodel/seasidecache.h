@@ -91,6 +91,7 @@ public:
         quint64 statusFlags;
         ContactState contactState;
         ItemListener *listeners;
+        QChar nameGroup;
     };
 
     class ListModel : public QAbstractListModel
@@ -106,6 +107,8 @@ public:
         virtual void sourceItemsInserted(int begin, int end) = 0;
 
         virtual void sourceDataChanged(int begin, int end) = 0;
+
+        virtual void sourceItemsChanged() = 0;
 
         virtual void makePopulated() = 0;
         virtual void updateDisplayLabelOrder() = 0;
@@ -164,7 +167,8 @@ public:
 #endif
     static ContactIdType selfContactId();
     static QContact contactById(const ContactIdType &id);
-    static QChar nameGroupForCacheItem(CacheItem *cacheItem);
+    static QChar nameGroup(const CacheItem *cacheItem);
+    static QChar determineNameGroup(const CacheItem *cacheItem);
     static QList<QChar> allNameGroups();
 
     static void ensureCompletion(CacheItem *cacheItem);
