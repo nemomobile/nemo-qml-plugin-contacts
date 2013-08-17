@@ -61,6 +61,8 @@ public:
         FilterAll = SeasideCache::FilterAll,
         FilterFavorites = SeasideCache::FilterFavorites,
         FilterOnline = SeasideCache::FilterOnline,
+        FilterEmail = SeasideCache::FilterEmail,
+        FilterPhoneNumber = SeasideCache::FilterPhoneNumber,         
         FilterTypesCount = SeasideCache::FilterTypesCount
     };
 
@@ -98,8 +100,8 @@ public:
 
     bool isPopulated() const;
 
-    FilterType filterType() const;
-    void setFilterType(FilterType type);
+    Q_INVOKABLE FilterType filterType() const;
+    Q_INVOKABLE void setFilterType(FilterType type);
 
     QString filterPattern() const;
     void setFilterPattern(const QString &pattern);

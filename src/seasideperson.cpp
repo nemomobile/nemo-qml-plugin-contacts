@@ -621,6 +621,14 @@ QList<int> SeasidePerson::addressTypes() const
     return types;
 }
 
+void SeasidePerson::setAddressTypes(QList<int> types)
+{
+    for (int i=0;i<types.size();i++)
+    {
+        setAddressType(i, (SeasidePerson::DetailType)types.at(i));
+    }	
+}
+
 void SeasidePerson::setAddressType(int which, SeasidePerson::DetailType type)
 {
     const QList<QContactAddress> &addresses = mContact->details<QContactAddress>();

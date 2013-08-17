@@ -216,8 +216,9 @@ public:
     QStringList addresses() const;
     void setAddresses(const QStringList &addresses);
 
-    Q_PROPERTY(QList<int> addressTypes READ addressTypes NOTIFY addressTypesChanged)
+    Q_PROPERTY(QList<int> addressTypes READ addressTypes WRITE setAddressTypes NOTIFY addressTypesChanged)
     QList<int> addressTypes() const;
+    Q_INVOKABLE void setAddressTypes(QList<int> types);
     Q_INVOKABLE void setAddressType(int which, DetailType type);
 
     Q_PROPERTY(QStringList websites READ websites WRITE setWebsites NOTIFY websitesChanged)
