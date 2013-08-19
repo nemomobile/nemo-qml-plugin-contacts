@@ -172,6 +172,7 @@ public:
     static QList<QChar> allNameGroups();
 
     static void ensureCompletion(CacheItem *cacheItem);
+    static void refreshContact(CacheItem *cacheItem);
 
     static CacheItem *itemByPhoneNumber(const QString &number, bool requireComplete = true);
     static CacheItem *itemByEmailAddress(const QString &email, bool requireComplete = true);

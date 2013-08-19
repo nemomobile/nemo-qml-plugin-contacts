@@ -285,6 +285,8 @@ public:
     Q_INVOKABLE QVariant contactData() const;
     Q_INVOKABLE void setContactData(const QVariant &data);
 
+    Q_INVOKABLE void resetContactData();
+
     Q_INVOKABLE QString vCard() const;
 
     Q_INVOKABLE void aggregateInto(SeasidePerson *person);

@@ -400,6 +400,10 @@ void SeasideCache::ensureCompletion(CacheItem *)
 {
 }
 
+void SeasideCache::refreshContact(CacheItem *)
+{
+}
+
 SeasideCache::CacheItem *SeasideCache::itemByPhoneNumber(const QString &, bool)
 {
     return 0;
