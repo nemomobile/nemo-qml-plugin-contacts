@@ -285,6 +285,8 @@ public:
     Q_INVOKABLE QVariant contactData() const;
     Q_INVOKABLE void setContactData(const QVariant &data);
 
+    Q_INVOKABLE void resetContactData();
+
     Q_INVOKABLE QString vCard() const;
 
     Q_INVOKABLE void aggregateInto(SeasidePerson *person);
@@ -297,7 +299,6 @@ public:
     Q_INVOKABLE void resolveEmailAddress(const QString &address, bool requireComplete = true);
     Q_INVOKABLE void resolveOnlineAccount(const QString &localUid, const QString &remoteUid, bool requireComplete = true);
 
-    QString getDisplayLabel() const;
     void displayLabelOrderChanged(SeasideCache::DisplayLabelOrder order);
 
     void updateContact(const QContact &newContact, QContact *oldContact, SeasideCache::ContactState state);

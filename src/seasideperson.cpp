@@ -1021,6 +1021,12 @@ QVariant SeasidePerson::contactData() const
 
 void SeasidePerson::setContactData(const QVariant &data)
 {
+    if (mAttachState == Attached) {
+        // Just update the existing contact's data
+        setContact(data.value<QContact>());
+        return;
+    }
+
     if (mAttachState == Unattached) {
         delete mContact;
     } else if (mAttachState == Listening) {
@@ -1033,6 +1039,14 @@ void SeasidePerson::setContactData(const QVariant &data)
 
     // We don't know if this contact is complete or not - assume it isn't if it has an ID
     mComplete = (id() == 0);
+}
+
+void SeasidePerson::resetContactData()
+{
+    if (SeasideCache::CacheItem *item = SeasideCache::itemById(SeasideCache::apiId(*mContact))) {
+        // Fetch details for this contact again
+        SeasideCache::refreshContact(item);
+    }
 }
 
 QString SeasidePerson::vCard() const
@@ -1154,11 +1168,6 @@ void SeasidePerson::itemAboutToBeRemoved(SeasideCache::CacheItem *item)
         recalculateDisplayLabel();
         updateContactDetails(item->contact);
     }
-}
-
-QString SeasidePerson::getDisplayLabel() const
-{
-    return displayLabel();
 }
 
 void SeasidePerson::displayLabelOrderChanged(SeasideCache::DisplayLabelOrder order)
