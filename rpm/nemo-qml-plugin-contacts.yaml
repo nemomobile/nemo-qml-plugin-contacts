@@ -1,0 +1,42 @@
+Name: nemo-qml-plugin-contacts
+Summary: Nemo QML contacts plugin
+Group: System/Libraries
+Description: "%{summary}."
+Version: 0.0.0
+Release: 1
+Sources:
+    - "%{name}-%{version}.tar.bz2"
+License: BSD
+URL: https://github.com/nemomobile/nemo-qml-plugin-contacts
+Configure: none
+Builder: qmake
+PkgConfigBR:
+    - QtCore >= 4.7.0
+    - QtDeclarative
+    - QtGui
+    - QtContacts
+    - qtcontacts-sqlite-extensions >= 0.1.1
+    - contactcache >= 0.0.13
+Provides:
+    - nemo-qml-plugins-contacts > 0.3.26
+Obsoletes:
+    - nemo-qml-plugins-contacts <= 0.3.26
+Files:
+    - "%{_libdir}/qt4/imports/org/nemomobile/contacts/libnemocontacts.so"
+    - "%{_libdir}/qt4/imports/org/nemomobile/contacts/qmldir"
+SubPackages:
+    - Name: tools
+      Summary: Development tools for qmlcontacts
+      Description: "%{summary}."
+      Group: Applications/System
+      License: BSD
+      AutoDepend: false
+      Files:
+          - "%{_bindir}/vcardconverter"
+
+    - Name: tests
+      Summary: QML contacts plugin tests
+      Group: System/Libraries
+      Description: "%{summary}."
+      Files:
+          - "/opt/tests/nemo-qml-plugins/contacts/*"
