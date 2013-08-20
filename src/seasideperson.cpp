@@ -148,7 +148,7 @@ void SeasidePerson::setFirstName(const QString &name)
     nameDetail.setFirstName(name);
     mContact->saveDetail(&nameDetail);
     emit firstNameChanged();
-    recalculateDisplayLabel();
+    recalculateDisplayLabel(SeasideCache::displayLabelOrder());
 }
 
 QString SeasidePerson::lastName() const
@@ -163,7 +163,7 @@ void SeasidePerson::setLastName(const QString &name)
     nameDetail.setLastName(name);
     mContact->saveDetail(&nameDetail);
     emit lastNameChanged();
-    recalculateDisplayLabel();
+    recalculateDisplayLabel(SeasideCache::displayLabelOrder());
 }
 
 QString SeasidePerson::middleName() const
@@ -178,7 +178,7 @@ void SeasidePerson::setMiddleName(const QString &name)
     nameDetail.setMiddleName(name);
     mContact->saveDetail(&nameDetail);
     emit middleNameChanged();
-    recalculateDisplayLabel();
+    recalculateDisplayLabel(SeasideCache::displayLabelOrder());
 }
 
 // small helper to avoid inconvenience
@@ -208,7 +208,7 @@ void SeasidePerson::recalculateDisplayLabel(SeasideCache::DisplayLabelOrder orde
 QString SeasidePerson::displayLabel() const
 {
     if (mDisplayLabel.isEmpty()) {
-        recalculateDisplayLabel();
+        recalculateDisplayLabel(SeasideCache::displayLabelOrder());
     }
 
     return mDisplayLabel;
@@ -252,7 +252,7 @@ void SeasidePerson::setNickname(const QString &name)
     nameDetail.setNickname(name);
     mContact->saveDetail(&nameDetail);
     emit nicknameChanged();
-    recalculateDisplayLabel();
+    recalculateDisplayLabel(SeasideCache::displayLabelOrder());
 }
 
 QString SeasidePerson::title() const
@@ -619,6 +619,14 @@ QList<int> SeasidePerson::addressTypes() const
     }
 
     return types;
+}
+
+void SeasidePerson::setAddressTypes(QList<int> types)
+{
+    for (int i=0;i<types.size();i++)
+    {
+        setAddressType(i, (SeasidePerson::DetailType)types.at(i));
+    }	
 }
 
 void SeasidePerson::setAddressType(int which, SeasidePerson::DetailType type)
@@ -1004,7 +1012,7 @@ void SeasidePerson::updateContactDetails(const QContact &oldContact)
     emit accountProvidersChanged();
     emit accountIconPathsChanged();
 
-    recalculateDisplayLabel();
+    recalculateDisplayLabel(SeasideCache::displayLabelOrder());
 }
 
 void SeasidePerson::ensureComplete()
@@ -1165,7 +1173,7 @@ void SeasidePerson::itemAboutToBeRemoved(SeasideCache::CacheItem *item)
             mContact->saveDetail(&account);
         }
 
-        recalculateDisplayLabel();
+        recalculateDisplayLabel(SeasideCache::displayLabelOrder());
         updateContactDetails(item->contact);
     }
 }
