@@ -61,6 +61,8 @@ public:
         FilterAll = SeasideCache::FilterAll,
         FilterFavorites = SeasideCache::FilterFavorites,
         FilterOnline = SeasideCache::FilterOnline,
+        FilterEmail = SeasideCache::FilterEmail,
+        FilterPhoneNumber = SeasideCache::FilterPhoneNumber,         
         FilterTypesCount = SeasideCache::FilterTypesCount
     };
 
@@ -99,8 +101,8 @@ public:
 
     bool isPopulated() const;
 
-    FilterType filterType() const;
-    void setFilterType(FilterType type);
+    Q_INVOKABLE FilterType filterType() const;
+    Q_INVOKABLE void setFilterType(FilterType type);
 
     QString filterPattern() const;
     void setFilterPattern(const QString &pattern);
@@ -111,8 +113,8 @@ public:
     bool searchByFirstNameCharacter() const;
     void setSearchByFirstNameCharacter(bool searchByFirstNameCharacter);
 
-    DisplayLabelOrder displayLabelOrder() const;
-    void setDisplayLabelOrder(DisplayLabelOrder order);
+    Q_INVOKABLE DisplayLabelOrder displayLabelOrder() const;
+    Q_INVOKABLE void setDisplayLabelOrder(DisplayLabelOrder order);
 
     Q_INVOKABLE QVariantMap get(int row) const;
     Q_INVOKABLE QVariant get(int row, int role) const;

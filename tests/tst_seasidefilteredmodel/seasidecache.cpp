@@ -490,6 +490,11 @@ QString SeasideCache::generateDisplayLabel(const QContact &, DisplayLabelOrder)
     return QString();
 }
 
+void SeasideCache::setDisplayLabelOrder(DisplayLabelOrder order)
+{
+	
+}
+
 QString SeasideCache::generateDisplayLabelFromNonNameDetails(const QContact &)
 {
     return QString();

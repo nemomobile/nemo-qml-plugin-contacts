@@ -216,8 +216,9 @@ public:
     QStringList addresses() const;
     void setAddresses(const QStringList &addresses);
 
-    Q_PROPERTY(QList<int> addressTypes READ addressTypes NOTIFY addressTypesChanged)
+    Q_PROPERTY(QList<int> addressTypes READ addressTypes WRITE setAddressTypes NOTIFY addressTypesChanged)
     QList<int> addressTypes() const;
+    Q_INVOKABLE void setAddressTypes(QList<int> types);
     Q_INVOKABLE void setAddressType(int which, DetailType type);
 
     Q_PROPERTY(QStringList websites READ websites WRITE setWebsites NOTIFY websitesChanged)
@@ -314,7 +315,7 @@ public:
 
     static QString generateDisplayLabel(
                 const QContact &mContact,
-                SeasideCache::DisplayLabelOrder order = SeasideCache::FirstNameFirst);
+                SeasideCache::DisplayLabelOrder order);
     static QString generateDisplayLabelFromNonNameDetails(const QContact &mContact);
 
     static SeasidePersonAttached *qmlAttachedProperties(QObject *object);
@@ -357,7 +358,7 @@ signals:
     void addressResolved();
 
 public slots:
-    void recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order = SeasideCache::FirstNameFirst) const;
+    void recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order) const;
 
 private:
     void updateContactDetails(const QContact &oldContact);

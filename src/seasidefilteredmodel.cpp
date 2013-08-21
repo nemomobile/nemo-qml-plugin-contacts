@@ -175,9 +175,19 @@ SeasideFilteredModel::DisplayLabelOrder SeasideFilteredModel::displayLabelOrder(
     return static_cast<SeasideFilteredModel::DisplayLabelOrder>(order);
 }
 
-void SeasideFilteredModel::setDisplayLabelOrder(DisplayLabelOrder)
+void SeasideFilteredModel::setDisplayLabelOrder(DisplayLabelOrder order)
 {
-    // For compatibility only.
+    // For compatibility only.    
+    if (order == SeasideCache::FirstNameFirst) 
+    {
+        m_searchByFirstNameCharacter = true;
+        SeasideCache::setDisplayLabelOrder(SeasideCache::FirstNameFirst);
+    }
+    else
+    {
+        m_searchByFirstNameCharacter = false;
+        SeasideCache::setDisplayLabelOrder(SeasideCache::LastNameFirst);
+    }
 }
 
 SeasideFilteredModel::FilterType SeasideFilteredModel::filterType() const
