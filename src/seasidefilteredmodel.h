@@ -88,6 +88,7 @@ public:
         PhoneNumbersRole,
         EmailAddressesRole,
         AccountUrisRole,
+        AccountPathsRole,
         PersonRole
     };
 
