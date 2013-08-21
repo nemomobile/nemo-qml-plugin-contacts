@@ -65,6 +65,7 @@ const QByteArray contactIdRole("contactId");
 const QByteArray phoneNumbersRole("phoneNumbers");
 const QByteArray emailAddressesRole("emailAddresses");
 const QByteArray accountUrisRole("accountUris");
+const QByteArray accountPathsRole("accountPaths");
 const QByteArray personRole("person");
 
 }
@@ -158,6 +159,7 @@ QHash<int, QByteArray> SeasideFilteredModel::roleNames() const
     roles.insert(PhoneNumbersRole, phoneNumbersRole);
     roles.insert(EmailAddressesRole, emailAddressesRole);
     roles.insert(AccountUrisRole, accountUrisRole);
+    roles.insert(AccountPathsRole, accountPathsRole);
     roles.insert(PersonRole, personRole);
     return roles;
 }
@@ -438,6 +440,7 @@ QVariantMap SeasideFilteredModel::get(int row) const
     m.insert(phoneNumbersRole, data(cacheItem, PhoneNumbersRole));
     m.insert(emailAddressesRole, data(cacheItem, EmailAddressesRole));
     m.insert(accountUrisRole, data(cacheItem, AccountUrisRole));
+    m.insert(accountPathsRole, data(cacheItem, AccountPathsRole));
     return m;
 }
 
@@ -541,7 +544,7 @@ QVariant SeasideFilteredModel::data(SeasideCache::CacheItem *cacheItem, int role
         return presence.isEmpty()
                 ? QContactPresence::PresenceUnknown
                 : presence.presenceState();
-    } else if (role == PhoneNumbersRole || role == EmailAddressesRole || role == AccountUrisRole) {
+    } else if (role == PhoneNumbersRole || role == EmailAddressesRole || role == AccountUrisRole || role == AccountPathsRole) {
         QStringList rv;
         if (role == PhoneNumbersRole) {
             foreach (const QContactPhoneNumber &number, contact.details<QContactPhoneNumber>()) {
@@ -550,6 +553,10 @@ QVariant SeasideFilteredModel::data(SeasideCache::CacheItem *cacheItem, int role
         } else if (role == EmailAddressesRole) {
             foreach (const QContactEmailAddress &address, contact.details<QContactEmailAddress>()) {
                 rv.append(address.emailAddress());
+            }
+        } else if (role == AccountPathsRole){
+            foreach (const QContactOnlineAccount &account, contact.details<QContactOnlineAccount>()) {
+                rv.append(account.value<QString>(QContactOnlineAccount__FieldAccountPath));
             }
         } else {
             foreach (const QContactOnlineAccount &account, contact.details<QContactOnlineAccount>()) {
