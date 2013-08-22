@@ -216,14 +216,16 @@ QString SeasidePerson::displayLabel() const
 
 QString SeasidePerson::sectionBucket() const
 {
-    if (displayLabel().isEmpty())
-        return QString();
+    if (id() != 0) {
+        SeasideCache::CacheItem *cacheItem = SeasideCache::existingItem(mContact->id());
+        return SeasideCache::nameGroup(cacheItem);
+    }
 
-    // TODO: won't be at all correct for localisation
-    // for some locales (asian in particular), we may need multiple bytes - not
-    // just the first - also, we should use QLocale (or ICU) to uppercase, not
-    // QString, as QString uses C locale.
-    return displayLabel().at(0).toUpper();
+    if (!displayLabel().isEmpty()) {
+        return displayLabel().at(0).toUpper();
+    }
+
+    return QString();
 }
 
 QString SeasidePerson::companyName() const
