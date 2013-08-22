@@ -569,11 +569,7 @@ QVariant SeasideFilteredModel::data(SeasideCache::CacheItem *cacheItem, int role
             // If we have a person instance, prefer to use that
             return role == Qt::DisplayRole ? person->displayLabel() : person->sectionBucket();
         }
-
-        if (role == Qt::DisplayRole) {
-            return cacheItem->displayLabel;
-        }
-        return cacheItem->displayLabel.isEmpty() ? QChar() : cacheItem->displayLabel.at(0).toUpper();
+        return role == Qt::DisplayRole ? cacheItem->displayLabel : cacheItem->nameGroup;
     } else if (role == PersonRole) {
         // Avoid creating a Person instance for as long as possible.
         SeasideCache::ensureCompletion(cacheItem);
