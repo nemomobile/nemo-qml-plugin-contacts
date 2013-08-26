@@ -415,25 +415,20 @@ QList<int> SeasidePerson::phoneNumberTypes() const
     QList<int> types;
     types.reserve((numbers.length()));
 
-    foreach(const QContactPhoneNumber &number, numbers) {
-        if (number.contexts().contains(QContactDetail::ContextHome)
-            && number.subTypes().contains(QContactPhoneNumber::SubTypeLandline)) {
-            types.push_back(SeasidePerson::PhoneHomeType);
-        } else if (number.contexts().contains(QContactDetail::ContextWork)
-            && number.subTypes().contains(QContactPhoneNumber::SubTypeLandline)) {
-            types.push_back(SeasidePerson::PhoneWorkType);
-        } else if (number.contexts().contains(QContactDetail::ContextHome)
-            && number.subTypes().contains(QContactPhoneNumber::SubTypeMobile)) {
-            types.push_back(SeasidePerson::PhoneMobileType);
-        } else if (number.contexts().contains(QContactDetail::ContextHome)
-            && number.subTypes().contains(QContactPhoneNumber::SubTypeFax)) {
-            types.push_back(SeasidePerson::PhoneFaxType);
-        } else if (number.contexts().contains(QContactDetail::ContextHome)
-            && number.subTypes().contains(QContactPhoneNumber::SubTypePager)) {
-            types.push_back(SeasidePerson::PhonePagerType);
-        } else {
-            qWarning() << "Warning: Could not get phone type for '" << number.contexts() << "'";
+    foreach (const QContactPhoneNumber &number, numbers) {
+        int type = SeasidePerson::PhoneHomeType;
+
+        if (number.subTypes().contains(QContactPhoneNumber::SubTypeMobile)) {
+            type = SeasidePerson::PhoneMobileType;
+        } else if (number.subTypes().contains(QContactPhoneNumber::SubTypeFax)) {
+            type = SeasidePerson::PhoneFaxType;
+        } else if (number.subTypes().contains(QContactPhoneNumber::SubTypePager)) {
+            type = SeasidePerson::PhonePagerType;
+        } else if (number.contexts().contains(QContactDetail::ContextWork)) {
+            type = SeasidePerson::PhoneWorkType;
         }
+
+        types.push_back(type);
     }
 
     return types;
@@ -494,16 +489,16 @@ QList<int> SeasidePerson::emailAddressTypes() const
     QList<int> types;
     types.reserve((emails.length()));
 
-    foreach(const QContactEmailAddress &email, emails) {
-        if (email.contexts().contains(QContactDetail::ContextHome)) {
-            types.push_back(SeasidePerson::EmailHomeType);
-        } else if (email.contexts().contains(QContactDetail::ContextWork)) {
-            types.push_back(SeasidePerson::EmailWorkType);
+    foreach (const QContactEmailAddress &email, emails) {
+        int type = SeasidePerson::EmailHomeType;
+
+        if (email.contexts().contains(QContactDetail::ContextWork)) {
+            type = SeasidePerson::EmailWorkType;
         } else if (email.contexts().contains(QContactDetail::ContextOther)) {
-            types.push_back(SeasidePerson::EmailOtherType);
-        } else {
-            qWarning() << "Warning: Could not get email type '" << email.contexts() << "'";
+            type = SeasidePerson::EmailOtherType;
         }
+
+        types.push_back(type);
     }
 
     return types;
@@ -608,16 +603,16 @@ QList<int> SeasidePerson::addressTypes() const
     QList<int> types;
     types.reserve((addresses.length()));
 
-    foreach(const QContactAddress &address, addresses) {
-        if (address.contexts().contains(QContactDetail::ContextHome)) {
-            types.push_back(SeasidePerson::AddressHomeType);
-        } else if (address.contexts().contains(QContactDetail::ContextWork)) {
-            types.push_back(SeasidePerson::AddressWorkType);
+    foreach (const QContactAddress &address, addresses) {
+        int type = SeasidePerson::AddressHomeType;
+
+        if (address.contexts().contains(QContactDetail::ContextWork)) {
+            type = SeasidePerson::AddressWorkType;
         } else if (address.contexts().contains(QContactDetail::ContextOther)) {
-            types.push_back(SeasidePerson::AddressOtherType);
-        } else {
-            qWarning() << "Warning: Could not get address type '" << address.contexts() << "'";
+            type = SeasidePerson::AddressOtherType;
         }
+
+        types.push_back(type);
     }
 
     return types;
@@ -664,16 +659,16 @@ QList<int> SeasidePerson::websiteTypes() const
     QList<int> types;
     types.reserve((urls.length()));
 
-    foreach(const QContactUrl &url, urls) {
-        if (url.contexts().contains(QContactDetail::ContextHome)) {
-            types.push_back(SeasidePerson::WebsiteHomeType);
-        } else if (url.contexts().contains(QContactDetail::ContextWork)) {
-            types.push_back(SeasidePerson::WebsiteWorkType);
+    foreach (const QContactUrl &url, urls) {
+        int type = SeasidePerson::WebsiteHomeType;
+
+        if (url.contexts().contains(QContactDetail::ContextWork)) {
+            type = SeasidePerson::WebsiteWorkType;
         } else if (url.contexts().contains(QContactDetail::ContextOther)) {
-            types.push_back(SeasidePerson::WebsiteOtherType);
-        } else {
-            qWarning() << "Warning: Could not get website type '" << url.contexts() << "'";
+            type = SeasidePerson::WebsiteOtherType;
         }
+
+        types.push_back(type);
     }
 
     return types;
