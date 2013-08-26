@@ -183,6 +183,10 @@ private:
     bool isFiltered() const;
     void updateFilters(const QString &pattern, int property);
 
+    void invalidateRows(int begin, int count, bool removeFromModel = true);
+
+    SeasideCache::CacheItem *existingItem(const ContactIdType &contactId) const;
+
     SeasidePerson *personFromItem(SeasideCache::CacheItem *item) const;
 
     QVector<ContactIdType> m_filteredContactIds;
@@ -197,6 +201,9 @@ private:
     SeasideCache::FetchDataType m_fetchTypes;
     int m_requiredProperty;
     bool m_searchByFirstNameCharacter;
+
+    mutable SeasideCache::CacheItem *m_lastItem;
+    mutable ContactIdType m_lastId;
 };
 
 #endif

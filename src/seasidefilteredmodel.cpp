@@ -128,6 +128,7 @@ SeasideFilteredModel::SeasideFilteredModel(QObject *parent)
     , m_fetchTypes(SeasideCache::FetchNone)
     , m_requiredProperty(NoPropertyRequired)
     , m_searchByFirstNameCharacter(false)
+    , m_lastItem(0)
 {
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
     setRoleNames(roleNames());
@@ -271,7 +272,7 @@ bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
     if (m_filterParts.isEmpty() && m_requiredProperty == NoPropertyRequired)
         return true;
 
-    SeasideCache::CacheItem *item = SeasideCache::existingItem(contactId);
+    SeasideCache::CacheItem *item = existingItem(contactId);
     if (!item)
         return false;
 
@@ -372,7 +373,7 @@ void SeasideFilteredModel::insertRange(
 void SeasideFilteredModel::removeRange(int index, int count)
 {
     beginRemoveRows(QModelIndex(), index, index + count - 1);
-    m_filteredContactIds.remove(index, count);
+    invalidateRows(index, count);
     endRemoveRows();
 }
 
@@ -389,7 +390,7 @@ void SeasideFilteredModel::refineIndex()
 
         if (count > 0) {
             beginRemoveRows(QModelIndex(), i, i + count - 1);
-            m_filteredContactIds.remove(i, count);
+            invalidateRows(i, count);
             endRemoveRows();
         } else {
             ++i;
@@ -423,7 +424,7 @@ void SeasideFilteredModel::populateIndex()
 
 QVariantMap SeasideFilteredModel::get(int row) const
 {
-    SeasideCache::CacheItem *cacheItem = SeasideCache::existingItem(m_contactIds->at(row));
+    SeasideCache::CacheItem *cacheItem = existingItem(m_contactIds->at(row));
     if (!cacheItem)
         return QVariantMap();
 
@@ -446,7 +447,7 @@ QVariantMap SeasideFilteredModel::get(int row) const
 
 QVariant SeasideFilteredModel::get(int row, int role) const
 {
-    SeasideCache::CacheItem *cacheItem = SeasideCache::existingItem(m_contactIds->at(row));
+    SeasideCache::CacheItem *cacheItem = existingItem(m_contactIds->at(row));
     if (!cacheItem)
         return QVariant();
 
@@ -512,7 +513,7 @@ QVariant SeasideFilteredModel::data(const QModelIndex &index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    SeasideCache::CacheItem *cacheItem = SeasideCache::existingItem(m_contactIds->at(index.row()));
+    SeasideCache::CacheItem *cacheItem = existingItem(m_contactIds->at(index.row()));
     if (!cacheItem)
         return QVariant();
 
@@ -585,6 +586,7 @@ void SeasideFilteredModel::sourceAboutToRemoveItems(int begin, int end)
 {
     if (!isFiltered()) {
         beginRemoveRows(QModelIndex(), begin, end);
+        invalidateRows(begin, (end - begin) + 1, false);
     }
 }
 
@@ -646,7 +648,7 @@ void SeasideFilteredModel::sourceDataChanged(int begin, int end)
             } else if (f >= 0 && !match) {
                 // The contact is in the filtered set but is not a match to the filter; remove it.
                 beginRemoveRows(QModelIndex(), f, f);
-                m_filteredContactIds.remove(f);
+                invalidateRows(f, 1);
                 endRemoveRows();
             } else if (f >= 0) {
                 const QModelIndex index = createIndex(f, 0);
@@ -768,6 +770,7 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, int property)
         const bool hadMatches = m_contactIds->count() > 0;
         if (hadMatches) {
             beginRemoveRows(QModelIndex(), 0, m_contactIds->count() - 1);
+            invalidateRows(0, m_contactIds->count(), false);
         }
 
         m_referenceContactIds = SeasideCache::contacts(SeasideCache::FilterNone);
@@ -800,5 +803,29 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, int property)
 void SeasideFilteredModel::updateRegistration()
 {
     SeasideCache::registerModel(this, static_cast<SeasideCache::FilterType>(m_effectiveFilterType), m_fetchTypes);
+}
+
+void SeasideFilteredModel::invalidateRows(int begin, int count, bool removeFromModel)
+{
+    for (int index = begin; index < (begin + count); ++index) {
+        if (m_filteredContactIds.at(index) == m_lastId) {
+            m_lastId = ContactIdType();
+            m_lastItem = 0;
+        }
+    }
+
+    if (removeFromModel) {
+        m_filteredContactIds.remove(begin, count);
+    }
+}
+
+SeasideCache::CacheItem *SeasideFilteredModel::existingItem(const ContactIdType &contactId) const
+{
+    // Cache the last item lookup - repeated property lookups will be for the same index
+    if (contactId != m_lastId) {
+        m_lastId = contactId;
+        m_lastItem = SeasideCache::existingItem(m_lastId);
+    }
+    return m_lastItem;
 }
 
