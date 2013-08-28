@@ -183,7 +183,7 @@ private:
     bool isFiltered() const;
     void updateFilters(const QString &pattern, int property);
 
-    void invalidateRows(int begin, int count, bool removeFromModel = true);
+    void invalidateRows(int begin, int count, bool filteredIndex = true, bool removeFromModel = true);
 
     SeasideCache::CacheItem *existingItem(const ContactIdType &contactId) const;
 
