@@ -586,7 +586,7 @@ void SeasideFilteredModel::sourceAboutToRemoveItems(int begin, int end)
 {
     if (!isFiltered()) {
         beginRemoveRows(QModelIndex(), begin, end);
-        invalidateRows(begin, (end - begin) + 1, false);
+        invalidateRows(begin, (end - begin) + 1, false, false);
     }
 }
 
@@ -770,7 +770,7 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, int property)
         const bool hadMatches = m_contactIds->count() > 0;
         if (hadMatches) {
             beginRemoveRows(QModelIndex(), 0, m_contactIds->count() - 1);
-            invalidateRows(0, m_contactIds->count(), false);
+            invalidateRows(0, m_contactIds->count(), true, false);
         }
 
         m_referenceContactIds = SeasideCache::contacts(SeasideCache::FilterNone);
@@ -805,16 +805,19 @@ void SeasideFilteredModel::updateRegistration()
     SeasideCache::registerModel(this, static_cast<SeasideCache::FilterType>(m_effectiveFilterType), m_fetchTypes);
 }
 
-void SeasideFilteredModel::invalidateRows(int begin, int count, bool removeFromModel)
+void SeasideFilteredModel::invalidateRows(int begin, int count, bool filteredIndex, bool removeFromModel)
 {
+    const QVector<ContactIdType> *contactIds(filteredIndex ? &m_filteredContactIds : m_referenceContactIds);
+
     for (int index = begin; index < (begin + count); ++index) {
-        if (m_filteredContactIds.at(index) == m_lastId) {
+        if (contactIds->at(index) == m_lastId) {
             m_lastId = ContactIdType();
             m_lastItem = 0;
         }
     }
 
     if (removeFromModel) {
+        Q_ASSERT(filteredIndex);
         m_filteredContactIds.remove(begin, count);
     }
 }
