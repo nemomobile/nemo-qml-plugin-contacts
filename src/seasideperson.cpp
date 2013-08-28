@@ -1138,6 +1138,8 @@ void SeasidePerson::addressResolved(const QString &, const QString &, SeasideCac
 
 void SeasidePerson::itemUpdated(SeasideCache::CacheItem *)
 {
+    // We don't know what has changed - report everything changed
+    updateContactDetails(QContact());
 }
 
 void SeasidePerson::itemAboutToBeRemoved(SeasideCache::CacheItem *item)
