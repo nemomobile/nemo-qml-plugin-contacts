@@ -172,6 +172,12 @@ public:
     Q_PROPERTY(QString displayLabel READ displayLabel NOTIFY displayLabelChanged)
     QString displayLabel() const;
 
+    Q_PROPERTY(QString primaryName READ primaryName NOTIFY primaryNameChanged)
+    QString primaryName() const;
+
+    Q_PROPERTY(QString secondaryName READ secondaryName NOTIFY secondaryNameChanged)
+    QString secondaryName() const;
+
     Q_PROPERTY(QString companyName READ companyName WRITE setCompanyName NOTIFY companyNameChanged)
     QString companyName() const;
     void setCompanyName(const QString &name);
@@ -327,6 +333,8 @@ signals:
     void lastNameChanged();
     void middleNameChanged();
     void displayLabelChanged();
+    void primaryNameChanged();
+    void secondaryNameChanged();
     void companyNameChanged();
     void nicknameChanged();
     void titleChanged();
@@ -361,6 +369,9 @@ public slots:
 
 private:
     void updateContactDetails(const QContact &oldContact);
+
+    QString getPrimaryName(const QContact &contact) const;
+    QString getSecondaryName(const QContact &contact) const;
 
     enum AttachState {
         Unattached = 0,

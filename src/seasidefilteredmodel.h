@@ -49,6 +49,7 @@ class SeasideFilteredModel : public SeasideCache::ListModel
     Q_PROPERTY(bool populated READ isPopulated NOTIFY populatedChanged)
     Q_PROPERTY(FilterType filterType READ filterType WRITE setFilterType NOTIFY filterTypeChanged)
     Q_PROPERTY(DisplayLabelOrder displayLabelOrder READ displayLabelOrder WRITE setDisplayLabelOrder NOTIFY displayLabelOrderChanged)
+    Q_PROPERTY(QString sortProperty READ sortProperty NOTIFY sortPropertyChanged)
     Q_PROPERTY(QString filterPattern READ filterPattern WRITE setFilterPattern NOTIFY filterPatternChanged)
     Q_PROPERTY(int requiredProperty READ requiredProperty WRITE setRequiredProperty NOTIFY requiredPropertyChanged)
     Q_PROPERTY(bool searchByFirstNameCharacter READ searchByFirstNameCharacter WRITE setSearchByFirstNameCharacter NOTIFY searchByFirstNameCharacterChanged)
@@ -89,7 +90,9 @@ public:
         EmailAddressesRole,
         AccountUrisRole,
         AccountPathsRole,
-        PersonRole
+        PersonRole,
+        PrimaryNameRole,
+        SecondaryNameRole
     };
 
     typedef SeasideCache::ContactIdType ContactIdType;
@@ -113,6 +116,8 @@ public:
 
     DisplayLabelOrder displayLabelOrder() const;
     void setDisplayLabelOrder(DisplayLabelOrder order);
+
+    QString sortProperty() const;
 
     Q_INVOKABLE QVariantMap get(int row) const;
     Q_INVOKABLE QVariant get(int row, int role) const;
@@ -163,6 +168,7 @@ public:
 
     void makePopulated();
     void updateDisplayLabelOrder();
+    void updateSortProperty();
 
 signals:
     void populatedChanged();
@@ -171,6 +177,7 @@ signals:
     void requiredPropertyChanged();
     void searchByFirstNameCharacterChanged();
     void displayLabelOrderChanged();
+    void sortPropertyChanged();
     void countChanged();
 
 private:

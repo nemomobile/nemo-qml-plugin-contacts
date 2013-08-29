@@ -54,8 +54,8 @@
 namespace {
 
 const QByteArray displayLabelRole("displayLabel");
-const QByteArray firstNameRole("firstName");
-const QByteArray lastNameRole("lastName");
+const QByteArray firstNameRole("firstName");        // To be deprecated
+const QByteArray lastNameRole("lastName");          // To be deprecated
 const QByteArray sectionBucketRole("sectionBucket");
 const QByteArray favoriteRole("favorite");
 const QByteArray avatarRole("avatar");
@@ -67,6 +67,8 @@ const QByteArray emailAddressesRole("emailAddresses");
 const QByteArray accountUrisRole("accountUris");
 const QByteArray accountPathsRole("accountPaths");
 const QByteArray personRole("person");
+const QByteArray primaryNameRole("primaryName");
+const QByteArray secondaryNameRole("secondaryName");
 
 }
 
@@ -162,6 +164,8 @@ QHash<int, QByteArray> SeasideFilteredModel::roleNames() const
     roles.insert(AccountUrisRole, accountUrisRole);
     roles.insert(AccountPathsRole, accountPathsRole);
     roles.insert(PersonRole, personRole);
+    roles.insert(PrimaryNameRole, primaryNameRole);
+    roles.insert(SecondaryNameRole, secondaryNameRole);
     return roles;
 }
 
@@ -179,6 +183,12 @@ SeasideFilteredModel::DisplayLabelOrder SeasideFilteredModel::displayLabelOrder(
 void SeasideFilteredModel::setDisplayLabelOrder(DisplayLabelOrder)
 {
     // For compatibility only.
+    qWarning() << "PeopleModel::displayLabelOrder is now readonly";
+}
+
+QString SeasideFilteredModel::sortProperty() const
+{
+    return SeasideCache::sortProperty();
 }
 
 SeasideFilteredModel::FilterType SeasideFilteredModel::filterType() const
@@ -430,6 +440,8 @@ QVariantMap SeasideFilteredModel::get(int row) const
 
     QVariantMap m;
     m.insert(displayLabelRole, data(cacheItem, Qt::DisplayRole));
+    m.insert(primaryNameRole, data(cacheItem, PrimaryNameRole));
+    m.insert(secondaryNameRole, data(cacheItem, SecondaryNameRole));
     m.insert(firstNameRole, data(cacheItem, FirstNameRole));
     m.insert(lastNameRole, data(cacheItem, LastNameRole));
     m.insert(sectionBucketRole, data(cacheItem, SectionBucketRole));
@@ -526,11 +538,25 @@ QVariant SeasideFilteredModel::data(SeasideCache::CacheItem *cacheItem, int role
 
     if (role == ContactIdRole) {
         return cacheItem->iid;
-    } else if (role == FirstNameRole || role == LastNameRole) {
+    } else if (role == PrimaryNameRole || role == SecondaryNameRole) {
         QContactName name = contact.detail<QContactName>();
-        return role == FirstNameRole
-                ? name.firstName()
-                : name.lastName();
+        const QString firstName(name.firstName());
+        const QString lastName(name.lastName());
+        const bool firstNameFirst(displayLabelOrder() == FirstNameFirst);
+
+        if (role == SecondaryNameRole) {
+            return firstNameFirst ? lastName : firstName;
+        }
+
+        if (firstName.isEmpty() && lastName.isEmpty()) {
+            // No real name details - fall back to the display label for primary name
+            return data(cacheItem, Qt::DisplayRole);
+        }
+        return firstNameFirst ? firstName : lastName;
+    } else if (role == FirstNameRole || role == LastNameRole) {
+        // These roles are to be deprecated; users should migrate to primary/secondaryName
+        QContactName name = contact.detail<QContactName>();
+        return role == FirstNameRole ? name.firstName() : name.lastName();
     } else if (role == FavoriteRole) {
         return contact.detail<QContactFavorite>().isFavorite();
     } else if (role == AvatarRole || role == AvatarUrlRole) {
@@ -678,10 +704,12 @@ void SeasideFilteredModel::makePopulated()
 
 void SeasideFilteredModel::updateDisplayLabelOrder()
 {
-    if (!m_contactIds->isEmpty())
-        emit dataChanged(createIndex(0, 0), createIndex(0, m_contactIds->count() - 1));
-
     emit displayLabelOrderChanged();
+}
+
+void SeasideFilteredModel::updateSortProperty()
+{
+    emit sortPropertyChanged();
 }
 
 int SeasideFilteredModel::importContacts(const QString &path)

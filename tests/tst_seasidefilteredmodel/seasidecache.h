@@ -38,7 +38,7 @@ public:
     };
 
     enum DisplayLabelOrder {
-        FirstNameFirst,
+        FirstNameFirst = 0,
         LastNameFirst
     };
 
@@ -112,6 +112,7 @@ public:
 
         virtual void makePopulated() = 0;
         virtual void updateDisplayLabelOrder() = 0;
+        virtual void updateSortProperty() = 0;
     };
 
     struct ResolveListener
@@ -157,6 +158,7 @@ public:
     static void unregisterResolveListener(ResolveListener *listener);
 
     static DisplayLabelOrder displayLabelOrder();
+    static QString sortProperty();
 
     static int contactId(const QContact &contact);
 

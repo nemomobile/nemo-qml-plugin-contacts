@@ -358,21 +358,12 @@ QChar SeasideCache::determineNameGroup(const CacheItem *cacheItem)
     if (!cacheItem)
         return QChar();
 
+    const QContactName nameDetail = cacheItem->contact.detail<QContactName>();
+    const QString sort(sortProperty() == QString::fromLatin1("firstName") ? nameDetail.firstName() : nameDetail.lastName());
+
     QChar group;
-    QString first;
-    QString last;
-    QContactName nameDetail = cacheItem->contact.detail<QContactName>();
-    if (SeasideCache::displayLabelOrder() == FirstNameFirst) {
-        first = nameDetail.firstName();
-        last = nameDetail.lastName();
-    } else {
-        first = nameDetail.lastName();
-        last = nameDetail.firstName();
-    }
-    if (!first.isEmpty()) {
-        group = first[0].toUpper();
-    } else if (!last.isEmpty()) {
-        group = last[0].toUpper();
+    if (!sort.isEmpty()) {
+        group = sort[0].toUpper();
     } else if (!cacheItem->displayLabel.isEmpty()) {
         group = cacheItem->displayLabel[0].toUpper();
     }
@@ -498,6 +489,11 @@ QString SeasideCache::generateDisplayLabelFromNonNameDetails(const QContact &)
 SeasideCache::DisplayLabelOrder SeasideCache::displayLabelOrder()
 {
     return FirstNameFirst;
+}
+
+QString SeasideCache::sortProperty()
+{
+    return QString::fromLatin1("firstName");
 }
 
 void SeasideCache::populate(FilterType filterType)

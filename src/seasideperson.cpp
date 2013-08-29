@@ -147,7 +147,12 @@ void SeasidePerson::setFirstName(const QString &name)
     QContactName nameDetail = mContact->detail<QContactName>();
     nameDetail.setFirstName(name);
     mContact->saveDetail(&nameDetail);
+
     emit firstNameChanged();
+
+    const bool firstNameFirst(SeasideCache::displayLabelOrder() == SeasideCache::FirstNameFirst);
+    emit firstNameFirst ? primaryNameChanged() : secondaryNameChanged();
+
     recalculateDisplayLabel();
 }
 
@@ -162,7 +167,12 @@ void SeasidePerson::setLastName(const QString &name)
     QContactName nameDetail = mContact->detail<QContactName>();
     nameDetail.setLastName(name);
     mContact->saveDetail(&nameDetail);
+
     emit lastNameChanged();
+
+    const bool firstNameFirst(SeasideCache::displayLabelOrder() == SeasideCache::FirstNameFirst);
+    emit firstNameFirst ? secondaryNameChanged() : primaryNameChanged();
+
     recalculateDisplayLabel();
 }
 
@@ -201,6 +211,9 @@ void SeasidePerson::recalculateDisplayLabel(SeasideCache::DisplayLabelOrder orde
         mDisplayLabel = newDisplayLabel;
         emit const_cast<SeasidePerson*>(this)->displayLabelChanged();
 
+        // It's also possible the primaryName changed
+        emit const_cast<SeasidePerson*>(this)->primaryNameChanged();
+
         // TODO: If required, store this to the contact backend to prevent later recalculation
     }
 }
@@ -212,6 +225,21 @@ QString SeasidePerson::displayLabel() const
     }
 
     return mDisplayLabel;
+}
+
+QString SeasidePerson::primaryName() const
+{
+    QString primaryName(getPrimaryName(*mContact));
+    if (!primaryName.isEmpty())
+        return primaryName;
+
+    // No real name details - fall back to the display label for primary name
+    return displayLabel();
+}
+
+QString SeasidePerson::secondaryName() const
+{
+    return getSecondaryName(*mContact);
 }
 
 QString SeasidePerson::sectionBucket() const
@@ -920,6 +948,12 @@ void SeasidePerson::updateContactDetails(const QContact &oldContact)
     if (oldContact.id() != mContact->id())
         emit contactChanged();
 
+    if (getPrimaryName(oldContact) != primaryName())
+        emit primaryNameChanged();
+
+    if (getSecondaryName(oldContact) != secondaryName())
+        emit secondaryNameChanged();
+
     QContactName oldName = oldContact.detail<QContactName>();
     QContactName newName = mContact->detail<QContactName>();
 
@@ -1002,6 +1036,28 @@ void SeasidePerson::updateContactDetails(const QContact &oldContact)
     emit accountIconPathsChanged();
 
     recalculateDisplayLabel();
+}
+
+QString SeasidePerson::getPrimaryName(const QContact &contact) const
+{
+    const QContactName nameDetail = contact.detail<QContactName>();
+    const QString firstName(nameDetail.firstName());
+    const QString lastName(nameDetail.lastName());
+
+    if (firstName.isEmpty() && lastName.isEmpty()) {
+        return QString();
+    }
+
+    const bool firstNameFirst(SeasideCache::displayLabelOrder() == SeasideCache::FirstNameFirst);
+    return firstNameFirst ? firstName : lastName;
+}
+
+QString SeasidePerson::getSecondaryName(const QContact &contact) const
+{
+    const QContactName nameDetail = contact.detail<QContactName>();
+
+    const bool firstNameFirst(SeasideCache::displayLabelOrder() == SeasideCache::FirstNameFirst);
+    return firstNameFirst ? nameDetail.lastName() : nameDetail.firstName();
 }
 
 void SeasidePerson::ensureComplete()
