@@ -211,10 +211,9 @@ void SeasidePerson::recalculateDisplayLabel(SeasideCache::DisplayLabelOrder orde
         mDisplayLabel = newDisplayLabel;
         emit const_cast<SeasidePerson*>(this)->displayLabelChanged();
 
-        // It's also possible the primaryName changed
+        // It's also possible the primaryName and secondaryName changed
         emit const_cast<SeasidePerson*>(this)->primaryNameChanged();
-
-        // TODO: If required, store this to the contact backend to prevent later recalculation
+        emit const_cast<SeasidePerson*>(this)->secondaryNameChanged();
     }
 }
 
