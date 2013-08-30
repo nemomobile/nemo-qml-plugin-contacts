@@ -496,6 +496,11 @@ QString SeasideCache::sortProperty()
     return QString::fromLatin1("firstName");
 }
 
+QString SeasideCache::groupProperty()
+{
+    return QString::fromLatin1("firstName");
+}
+
 void SeasideCache::populate(FilterType filterType)
 {
     m_populated[filterType] = true;

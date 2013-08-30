@@ -113,6 +113,7 @@ public:
         virtual void makePopulated() = 0;
         virtual void updateDisplayLabelOrder() = 0;
         virtual void updateSortProperty() = 0;
+        virtual void updateGroupProperty() = 0;
     };
 
     struct ResolveListener
@@ -159,6 +160,7 @@ public:
 
     static DisplayLabelOrder displayLabelOrder();
     static QString sortProperty();
+    static QString groupProperty();
 
     static int contactId(const QContact &contact);
 
