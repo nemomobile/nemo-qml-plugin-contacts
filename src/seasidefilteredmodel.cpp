@@ -191,6 +191,11 @@ QString SeasideFilteredModel::sortProperty() const
     return SeasideCache::sortProperty();
 }
 
+QString SeasideFilteredModel::groupProperty() const
+{
+    return SeasideCache::groupProperty();
+}
+
 SeasideFilteredModel::FilterType SeasideFilteredModel::filterType() const
 {
     return m_filterType;
@@ -710,6 +715,11 @@ void SeasideFilteredModel::updateDisplayLabelOrder()
 void SeasideFilteredModel::updateSortProperty()
 {
     emit sortPropertyChanged();
+}
+
+void SeasideFilteredModel::updateGroupProperty()
+{
+    emit groupPropertyChanged();
 }
 
 int SeasideFilteredModel::importContacts(const QString &path)

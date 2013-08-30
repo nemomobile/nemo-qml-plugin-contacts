@@ -50,6 +50,7 @@ class SeasideFilteredModel : public SeasideCache::ListModel
     Q_PROPERTY(FilterType filterType READ filterType WRITE setFilterType NOTIFY filterTypeChanged)
     Q_PROPERTY(DisplayLabelOrder displayLabelOrder READ displayLabelOrder WRITE setDisplayLabelOrder NOTIFY displayLabelOrderChanged)
     Q_PROPERTY(QString sortProperty READ sortProperty NOTIFY sortPropertyChanged)
+    Q_PROPERTY(QString groupProperty READ groupProperty NOTIFY groupPropertyChanged)
     Q_PROPERTY(QString filterPattern READ filterPattern WRITE setFilterPattern NOTIFY filterPatternChanged)
     Q_PROPERTY(int requiredProperty READ requiredProperty WRITE setRequiredProperty NOTIFY requiredPropertyChanged)
     Q_PROPERTY(bool searchByFirstNameCharacter READ searchByFirstNameCharacter WRITE setSearchByFirstNameCharacter NOTIFY searchByFirstNameCharacterChanged)
@@ -118,6 +119,7 @@ public:
     void setDisplayLabelOrder(DisplayLabelOrder order);
 
     QString sortProperty() const;
+    QString groupProperty() const;
 
     Q_INVOKABLE QVariantMap get(int row) const;
     Q_INVOKABLE QVariant get(int row, int role) const;
@@ -169,6 +171,7 @@ public:
     void makePopulated();
     void updateDisplayLabelOrder();
     void updateSortProperty();
+    void updateGroupProperty();
 
 signals:
     void populatedChanged();
@@ -178,6 +181,7 @@ signals:
     void searchByFirstNameCharacterChanged();
     void displayLabelOrderChanged();
     void sortPropertyChanged();
+    void groupPropertyChanged();
     void countChanged();
 
 private:
