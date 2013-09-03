@@ -363,6 +363,7 @@ signals:
     void mergeCandidatesChanged();
     void aggregationOperationFinished();
     void addressResolved();
+    void dataChanged();
 
 public slots:
     void recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order = SeasideCache::FirstNameFirst) const;
@@ -384,8 +385,11 @@ private:
     QList<int> mConstituents;
     QList<int> mCandidates;
     bool mComplete;
+    bool m_changesReported;
     AttachState mAttachState;
     SeasideCache::CacheItem *mItem;
+
+    void emitChangeSignal(void (SeasidePerson::*f)()) { m_changesReported = true; (this->*f)(); }
 
     friend class SeasideCache;
     friend class tst_SeasidePerson;
