@@ -944,49 +944,51 @@ void SeasidePerson::setContact(const QContact &contact)
 
 void SeasidePerson::updateContactDetails(const QContact &oldContact)
 {
+    m_changesReported = false;
+
     if (oldContact.id() != mContact->id())
-        emit contactChanged();
+        emitChangeSignal(&SeasidePerson::contactChanged);
 
     if (getPrimaryName(oldContact) != primaryName())
-        emit primaryNameChanged();
+        emitChangeSignal(&SeasidePerson::primaryNameChanged);
 
     if (getSecondaryName(oldContact) != secondaryName())
-        emit secondaryNameChanged();
+        emitChangeSignal(&SeasidePerson::secondaryNameChanged);
 
     QContactName oldName = oldContact.detail<QContactName>();
     QContactName newName = mContact->detail<QContactName>();
 
     if (oldName.firstName() != newName.firstName())
-        emit firstNameChanged();
+        emitChangeSignal(&SeasidePerson::firstNameChanged);
 
     if (oldName.lastName() != newName.lastName())
-        emit lastNameChanged();
+        emitChangeSignal(&SeasidePerson::lastNameChanged);
 
     QContactOrganization oldCompany = oldContact.detail<QContactOrganization>();
     QContactOrganization newCompany = mContact->detail<QContactOrganization>();
 
     if (oldCompany.name() != newCompany.name())
-        emit companyNameChanged();
+        emitChangeSignal(&SeasidePerson::companyNameChanged);
 
     QContactFavorite oldFavorite = oldContact.detail<QContactFavorite>();
     QContactFavorite newFavorite = mContact->detail<QContactFavorite>();
 
     if (oldFavorite.isFavorite() != newFavorite.isFavorite())
-        emit favoriteChanged();
+        emitChangeSignal(&SeasidePerson::favoriteChanged);
 
     QContactAvatar oldAvatar = oldContact.detail<QContactAvatar>();
     QContactAvatar newAvatar = mContact->detail<QContactAvatar>();
 
     if (oldAvatar.imageUrl() != newAvatar.imageUrl()) {
-        emit avatarUrlChanged();
-        emit avatarPathChanged();
+        emitChangeSignal(&SeasidePerson::avatarUrlChanged);
+        emitChangeSignal(&SeasidePerson::avatarPathChanged);
     }
 
     QContactGlobalPresence oldPresence = oldContact.detail<QContactGlobalPresence>();
     QContactGlobalPresence newPresence = mContact->detail<QContactGlobalPresence>();
 
     if (oldPresence.presenceState() != newPresence.presenceState())
-        emit globalPresenceStateChanged();
+        emitChangeSignal(&SeasidePerson::globalPresenceStateChanged);
 
     QList<QContactPresence> oldPresences = oldContact.details<QContactPresence>();
     QList<QContactPresence> newPresences = mContact->details<QContactPresence>();
@@ -1016,23 +1018,32 @@ void SeasidePerson::updateContactDetails(const QContact &oldContact)
         }
 
         if (statesChanged) {
-            emit presenceStatesChanged();
+            emitChangeSignal(&SeasidePerson::presenceStatesChanged);
         }
         if (messagesChanged) {
-            emit presenceMessagesChanged();
+            emitChangeSignal(&SeasidePerson::presenceMessagesChanged);
         }
         if (urisChanged) {
-            emit presenceAccountProvidersChanged();
+            emitChangeSignal(&SeasidePerson::presenceAccountProvidersChanged);
         }
     }
 
-    // TODO: differencing of list type details
-    emit phoneNumbersChanged();
-    emit emailAddressesChanged();
-    emit accountUrisChanged();
-    emit accountPathsChanged();
-    emit accountProvidersChanged();
-    emit accountIconPathsChanged();
+    if (oldContact.details<QContactPhoneNumber>() != mContact->details<QContactPhoneNumber>()) {
+        emitChangeSignal(&SeasidePerson::phoneNumbersChanged);
+    }
+    if (oldContact.details<QContactEmailAddress>() != mContact->details<QContactEmailAddress>()) {
+        emitChangeSignal(&SeasidePerson::emailAddressesChanged);
+    }
+    if (oldContact.details<QContactOnlineAccount>() != mContact->details<QContactOnlineAccount>()) {
+        emitChangeSignal(&SeasidePerson::accountUrisChanged);
+        emitChangeSignal(&SeasidePerson::accountPathsChanged);
+        emitChangeSignal(&SeasidePerson::accountProvidersChanged);
+        emitChangeSignal(&SeasidePerson::accountIconPathsChanged);
+    }
+
+    if (m_changesReported) {
+        emit dataChanged();
+    }
 
     recalculateDisplayLabel();
 }
