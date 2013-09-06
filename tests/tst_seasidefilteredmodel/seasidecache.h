@@ -90,7 +90,7 @@ public:
         quint64 statusFlags;
         ContactState contactState;
         ItemListener *listeners;
-        QChar nameGroup;
+        QString nameGroup;
         QString displayLabel;
     };
 
@@ -171,9 +171,9 @@ public:
 #endif
     static ContactIdType selfContactId();
     static QContact contactById(const ContactIdType &id);
-    static QChar nameGroup(const CacheItem *cacheItem);
-    static QChar determineNameGroup(const CacheItem *cacheItem);
-    static QList<QChar> allNameGroups();
+    static QString nameGroup(const CacheItem *cacheItem);
+    static QString determineNameGroup(const CacheItem *cacheItem);
+    static QStringList allNameGroups();
 
     static void ensureCompletion(CacheItem *cacheItem);
     static void refreshContact(CacheItem *cacheItem);
@@ -225,7 +225,7 @@ public:
 #endif
 
     static SeasideCache *instancePtr;
-    static QList<QChar> allContactNameGroups;
+    static QStringList allContactNameGroups;
 
     ContactIdType idAt(int index) const;
 };

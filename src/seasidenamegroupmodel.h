@@ -46,7 +46,7 @@ class SeasideNameGroup
 {
 public:
     SeasideNameGroup() : count(0) {}
-    SeasideNameGroup(const QChar &n, const QSet<quint32> &ids = QSet<quint32>(), int c = -1)
+    SeasideNameGroup(const QString &n, const QSet<quint32> &ids = QSet<quint32>(), int c = -1)
         : name(n), count(c), contactIds(ids)
     {
         if (count == -1) {
@@ -56,7 +56,7 @@ public:
 
     inline bool operator==(const SeasideNameGroup &other) { return other.name == name; }
 
-    QChar name;
+    QString name;
     int count;
     QSet<quint32> contactIds;
 };
@@ -89,7 +89,7 @@ public:
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role) const;
 
-    void nameGroupsUpdated(const QHash<QChar, QSet<quint32> > &groups);
+    void nameGroupsUpdated(const QHash<QString, QSet<quint32> > &groups);
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     virtual
