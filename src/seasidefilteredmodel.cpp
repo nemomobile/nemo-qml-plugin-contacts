@@ -300,7 +300,7 @@ bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
     }
 
     if (m_searchByFirstNameCharacter && !m_filterPattern.isEmpty())
-        return m_filterPattern[0].toUpper() == SeasideCache::nameGroup(item);
+        return m_filterPattern == SeasideCache::nameGroup(item);
 
     void *key = const_cast<void *>(static_cast<const void *>(this));
     SeasideCache::ItemListener *listener = item->listener(key);

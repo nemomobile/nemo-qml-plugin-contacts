@@ -56,6 +56,10 @@ class tst_SeasidePerson : public QObject
 {
     Q_OBJECT
 
+public:
+    // Ensure that the cache has been initialized
+    tst_SeasidePerson() : m_nameGroups(SeasideCache::allNameGroups()) {}
+
 private slots:
     void firstName();
     void lastName();
@@ -83,6 +87,9 @@ private slots:
     void vcard();
     void syncTarget();
     void constituents();
+
+private:
+    QStringList m_nameGroups;
 };
 
 void tst_SeasidePerson::firstName()
