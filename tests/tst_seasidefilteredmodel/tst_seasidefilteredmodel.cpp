@@ -645,10 +645,13 @@ void tst_SeasideFilteredModel::searchByFirstNameCharacter()
     model.setFilterPattern("A");
     QCOMPARE(model.rowCount(), 4);
 
+    /* This is easy to support, but slows down the filtering logic
+    // I don't think we should continue to support this
     model.setFilterPattern("r");    // not case-sensitive
     QCOMPARE(model.rowCount(), 1);
     model.setFilterPattern("aaron");    // only first letter counts
     QCOMPARE(model.rowCount(), 4);
+    */
 
     SeasideCache::CacheItem *cacheItem = SeasideCache::existingItem(cache.idAt(0));
     QString origName = cacheItem->contact.detail<QContactName>().firstName();

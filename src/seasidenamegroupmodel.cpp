@@ -49,8 +49,8 @@ SeasideNameGroupModel::SeasideNameGroupModel(QObject *parent)
     setRoleNames(roleNames());
 #endif
 
-    QList<QChar> allGroups = SeasideCache::allNameGroups();
-    QHash<QChar, QSet<quint32> > existingGroups = SeasideCache::nameGroupMembers();
+    QStringList allGroups = SeasideCache::allNameGroups();
+    QHash<QString, QSet<quint32> > existingGroups = SeasideCache::nameGroupMembers();
     if (!existingGroups.isEmpty()) {
         for (int i=0; i<allGroups.count(); i++)
             m_groups << SeasideNameGroup(allGroups[i], existingGroups.value(allGroups[i]));
@@ -118,20 +118,20 @@ QVariant SeasideNameGroupModel::data(const QModelIndex &index, int role) const
     return QVariant();
 }
 
-void SeasideNameGroupModel::nameGroupsUpdated(const QHash<QChar, QSet<quint32> > &groups)
+void SeasideNameGroupModel::nameGroupsUpdated(const QHash<QString, QSet<quint32> > &groups)
 {
     if (groups.isEmpty())
         return;
 
     bool wasEmpty = m_groups.isEmpty();
     if (wasEmpty) {
-        QList<QChar> allGroups = SeasideCache::allNameGroups();
+        QStringList allGroups = SeasideCache::allNameGroups();
         beginInsertRows(QModelIndex(), 0, allGroups.count() - 1);
         for (int i=0; i<allGroups.count(); i++)
             m_groups << SeasideNameGroup(allGroups[i]);
     }
 
-    QHash<QChar, QSet<quint32> >::const_iterator it = groups.constBegin(), end = groups.constEnd();
+    QHash<QString, QSet<quint32> >::const_iterator it = groups.constBegin(), end = groups.constEnd();
     for ( ; it != end; ++it) {
         QList<SeasideNameGroup>::iterator existingIt = m_groups.begin(), existingEnd = m_groups.end();
         for ( ; existingIt != existingEnd; ++existingIt) {

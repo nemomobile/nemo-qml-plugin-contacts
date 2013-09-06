@@ -62,44 +62,18 @@ static const Contact contactsData[] =
 /*7*/   { "Robin",  "Burchell", true,  false, 0,                           "9876543", 0 }
 };
 
-static QList<QChar> getAllContactNameGroups()
+static QStringList getAllContactNameGroups()
 {
-    QList<QChar> groups;
-    groups << QLatin1Char('A')
-           << QLatin1Char('B')
-           << QLatin1Char('C')
-           << QLatin1Char('D')
-           << QLatin1Char('E')
-           << QLatin1Char('F')
-           << QLatin1Char('G')
-           << QLatin1Char('H')
-           << QLatin1Char('I')
-           << QLatin1Char('J')
-           << QLatin1Char('K')
-           << QLatin1Char('L')
-           << QLatin1Char('M')
-           << QLatin1Char('N')
-           << QLatin1Char('O')
-           << QLatin1Char('P')
-           << QLatin1Char('Q')
-           << QLatin1Char('R')
-           << QLatin1Char('S')
-           << QLatin1Char('T')
-           << QLatin1Char('U')
-           << QLatin1Char('V')
-           << QLatin1Char('W')
-           << QLatin1Char('X')
-           << QLatin1Char('Y')
-           << QLatin1Char('Z')
-           << QChar(0x00c5)     // Å
-           << QChar(0x00c4)     // Ä
-           << QChar(0x00d6)     // Ö
-           << QLatin1Char('#');
+    QStringList groups;
+    for (char c = 'A'; c <= 'Z'; ++c) {
+        groups.append(QString(QChar::fromLatin1(c)));
+    }
+    groups.append(QString::fromLatin1("#"));
     return groups;
 }
 
 SeasideCache *SeasideCache::instancePtr = 0;
-QList<QChar> SeasideCache::allContactNameGroups = getAllContactNameGroups();
+QStringList SeasideCache::allContactNameGroups = getAllContactNameGroups();
 
 SeasideCache *SeasideCache::instance()
 {
@@ -345,46 +319,38 @@ QContact SeasideCache::contactById(const ContactIdType &id)
 #endif
 }
 
-QChar SeasideCache::nameGroup(const CacheItem *cacheItem)
+QString SeasideCache::nameGroup(const CacheItem *cacheItem)
 {
     if (!cacheItem)
-        return QChar();
+        return QString();
 
     return cacheItem->nameGroup;
 }
 
-QChar SeasideCache::determineNameGroup(const CacheItem *cacheItem)
+QString SeasideCache::determineNameGroup(const CacheItem *cacheItem)
 {
     if (!cacheItem)
-        return QChar();
+        return QString();
 
     const QContactName nameDetail = cacheItem->contact.detail<QContactName>();
     const QString sort(sortProperty() == QString::fromLatin1("firstName") ? nameDetail.firstName() : nameDetail.lastName());
 
-    QChar group;
+    QString group;
     if (!sort.isEmpty()) {
-        group = sort[0].toUpper();
+        group = QString(sort[0].toUpper());
     } else if (!cacheItem->displayLabel.isEmpty()) {
-        group = cacheItem->displayLabel[0].toUpper();
-    }
-
-    // XXX temporary workaround for non-latin names: use non-name details to try to find a
-    // latin character group
-    if (!group.isNull() && group.toLatin1() != group) {
-        QString displayLabel = generateDisplayLabelFromNonNameDetails(cacheItem->contact);
-        if (!displayLabel.isEmpty())
-            group = displayLabel[0].toUpper();
+        group = QString(cacheItem->displayLabel[0].toUpper());
     }
 
     if (group.isNull() || !allContactNameGroups.contains(group)) {
-        group = QLatin1Char('#');   // 'other' group
+        group = QString::fromLatin1("#");   // 'other' group
     }
     return group;
 }
 
-QList<QChar> SeasideCache::allNameGroups()
+QStringList SeasideCache::allNameGroups()
 {
-    return QList<QChar>();
+    return allContactNameGroups;
 }
 
 void SeasideCache::ensureCompletion(CacheItem *)
