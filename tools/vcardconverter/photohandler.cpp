@@ -32,14 +32,12 @@
 
 #include "photohandler.h"
 
-#ifdef QT_VERSION_5
-#include <QStandardPaths>
-#else
+#ifndef QT_VERSION_5
 #include <QDesktopServices>
 #include <QContactThumbnail>
 #endif
 #include <QContactAvatar>
-#include <QUuid>
+#include <QCryptographicHash>
 #include <QDir>
 #include <QImage>
 
@@ -78,6 +76,18 @@ void PhotoHandler::propertyProcessed(const QVersitDocument &, const QVersitPrope
     }
 #endif
 
+    QByteArray photoData = property.variantValue().toByteArray();
+    if (photoData.isEmpty()) {
+        return;
+    }
+
+    QImage img;
+    bool loaded = img.loadFromData(photoData);
+    if (!loaded) {
+        qWarning() << "Failed to load avatar image from vCard PHOTO data";
+        return;
+    }
+
     // We will save the avatar image to disk in the system's data location
     // Since we're importing user data, it should not require privileged access
     const QString subdirectory(QString::fromLatin1(".local/share/system/Contacts/avatars"));
@@ -91,18 +101,10 @@ void PhotoHandler::propertyProcessed(const QVersitDocument &, const QVersitPrope
     }
 
     // construct the filename of the new avatar image.
-    QString photoFilePath = QUuid::createUuid().toString();
-    photoFilePath = photoFilePath.mid(1, photoFilePath.length() - 2) + QLatin1String(".jpg");
-    photoFilePath = photoDirPath + QDir::separator() + photoFilePath;
+    QString photoFilePath = QString::fromLatin1(QCryptographicHash::hash(photoData, QCryptographicHash::Sha1).toHex());
+    photoFilePath = photoDirPath + QDir::separator() + photoFilePath + QString::fromLatin1(".jpg");
 
     // save the file to disk
-    QImage img;
-    bool loaded = img.loadFromData(property.variantValue().toByteArray());
-    if (!loaded) {
-        qWarning() << "Failed to load avatar image from vCard PHOTO data";
-        return;
-    }
-
     bool saved = img.save(photoFilePath);
     if (!saved) {
         qWarning() << "Failed to save avatar image from vCard PHOTO data to" << photoFilePath;
