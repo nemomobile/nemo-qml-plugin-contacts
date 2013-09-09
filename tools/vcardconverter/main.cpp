@@ -89,9 +89,7 @@ private:
 
 void invalidUsage(const QString &app)
 {
-    qWarning("Usage: %s [OPTIONS] <filename>", qPrintable(app));
-    qWarning("Options:  -e|--export    : export contacts to VCF file");
-    qWarning("          -a|--aggregate : export aggregate contact data");
+    qWarning("Usage: %s [-e | --export] <filename>", qPrintable(app));
     ::exit(1);
 }
 
@@ -100,7 +98,6 @@ int main(int argc, char **argv)
     QCoreApplication qca(argc, argv);
 
     bool import = true;
-    bool aggregateData = false;
     QString filename;
 
     const QString app(QString::fromLatin1(argv[0]));
@@ -112,8 +109,6 @@ int main(int argc, char **argv)
                 invalidUsage(app);
             } else if (arg == QString::fromLatin1("-e") || arg == QString::fromLatin1("--export")) {
                 import = false;
-            } else if (arg == QString::fromLatin1("-a") || arg == QString::fromLatin1("--aggregate")) {
-                aggregateData = true;
             } else {
                 qWarning("%s: unknown option: '%s'", qPrintable(app), qPrintable(arg));
                 invalidUsage(app);
@@ -162,7 +157,7 @@ int main(int argc, char **argv)
 #else
         filter.setDetailDefinitionName(QContactSyncTarget::DefinitionName, QContactSyncTarget::FieldSyncTarget);
 #endif
-        filter.setValue(QString::fromLatin1(aggregateData ? "aggregate" : "local"));
+        filter.setValue(QString::fromLatin1("local"));
 
         QContactManager mgr;
         QList<QContact> localContacts(mgr.contacts(filter));
