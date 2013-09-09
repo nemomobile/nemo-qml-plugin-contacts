@@ -76,8 +76,55 @@ void PhotoHandler::propertyProcessed(const QVersitDocument &, const QVersitPrope
     }
 #endif
 
-    QByteArray photoData = property.variantValue().toByteArray();
+    // The data might be either a URL, a file path, or encoded image data
+    bool encodedData = false;
+    foreach (const QString &parameter, property.parameters().keys()) {
+        // If there is an 'encoding=' or 'type=' parameter, assume encoded data
+        if ((parameter.compare(QString::fromLatin1("encoding"), Qt::CaseInsensitive) == 0) ||
+            (parameter.compare(QString::fromLatin1("type"), Qt::CaseInsensitive) == 0)) {
+            encodedData = true;
+            break;
+        }
+    }
+
+    QUrl url;
+
+    if (!encodedData) {
+        // Assume the data is a URL
+        QString path(property.variantValue().toString());
+        url = QUrl(path);
+
+        // Treat remote URL as a true URL; local file should be copied into our cache
+        if (url.isValid() && !url.scheme().isEmpty() && !url.isLocalFile()) {
+            QContactAvatar newAvatar;
+            newAvatar.setImageUrl(url);
+            updatedDetails->append(newAvatar);
+
+            // we have successfully processed this PHOTO property.
+            *alreadyProcessed = true;
+            return;
+        } else {
+            // See if we can resolve the data as a local file
+            url = QUrl::fromLocalFile(path);
+        }
+    }
+
+    QByteArray photoData;
+
+    if (!encodedData) {
+        QFile file(url.toLocalFile());
+        if (!file.open(QIODevice::ReadOnly)) {
+            qWarning() << "Unable to process photo data as file:" << property.variantValue().toString();
+            return;
+        } else {
+            photoData = file.readAll();
+        }
+    } else {
+        photoData = property.variantValue().toByteArray();
+    }
+
     if (photoData.isEmpty()) {
+        qWarning() << "Failed to extract avatar data from vCard PHOTO property";
         return;
     }
 
@@ -101,7 +148,7 @@ void PhotoHandler::propertyProcessed(const QVersitDocument &, const QVersitPrope
     }
 
     // construct the filename of the new avatar image.
-    QString photoFilePath = QString::fromLatin1(QCryptographicHash::hash(photoData, QCryptographicHash::Sha1).toHex());
+    QString photoFilePath = QString::fromLatin1(QCryptographicHash::hash(photoData, QCryptographicHash::Md5).toHex());
     photoFilePath = photoDirPath + QDir::separator() + photoFilePath + QString::fromLatin1(".jpg");
 
     // save the file to disk
