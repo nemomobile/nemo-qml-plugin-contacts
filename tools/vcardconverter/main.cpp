@@ -46,7 +46,7 @@
 #include <QVersitWriter>
 
 // Custom Photo Handler
-#include "photohandler.h"
+#include <seasidephotohandler.h>
 
 USE_CONTACTS_NAMESPACE
 USE_VERSIT_NAMESPACE
@@ -131,7 +131,7 @@ int main(int argc, char **argv)
     }
 
     if (import) {
-        PhotoHandler photoHandler;
+        SeasidePhotoHandler photoHandler;
         QVersitContactImporter importer;
         importer.setPropertyHandler(&photoHandler);
 
