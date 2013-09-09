@@ -35,11 +35,15 @@
 #include <QTimer>
 
 // Contacts
+#include <QContactDetailFilter>
 #include <QContactSaveRequest>
+#include <QContactSyncTarget>
 
 // Versit
-#include <QVersitReader>
+#include <QVersitContactExporter>
 #include <QVersitContactImporter>
+#include <QVersitReader>
+#include <QVersitWriter>
 
 // Custom Photo Handler
 #include "photohandler.h"
@@ -47,11 +51,11 @@
 USE_CONTACTS_NAMESPACE
 USE_VERSIT_NAMESPACE
 
-class RequestHandler : public QObject
+class SaveRequestHandler : public QObject
 {
     Q_OBJECT
 public:
-    RequestHandler(QObject *object)
+    SaveRequestHandler(QObject *object)
         : QObject(object) { }
 
     void startRequest(QContactSaveRequest *request)
@@ -75,7 +79,7 @@ private slots:
             return;
 
         QContactSaveRequest *request = static_cast<QContactSaveRequest *>(sender());
-        qDebug("Saved %d contacts", request->contacts().count());
+        qDebug("Wrote %d contacts", request->contacts().count());
         QCoreApplication::instance()->exit();
     }
 
@@ -83,39 +87,91 @@ private:
     QContactSaveRequest *request;
 };
 
+void invalidUsage(const QString &app)
+{
+    qWarning("Usage: %s [-e | --export] <filename>", qPrintable(app));
+    ::exit(1);
+}
+
 int main(int argc, char **argv)
 {
     QCoreApplication qca(argc, argv);
-    QContactSaveRequest req;
 
-    PhotoHandler photoHandler;
-    QVersitContactImporter importer;
-    importer.setPropertyHandler(&photoHandler);
+    bool import = true;
+    QString filename;
+
+    const QString app(QString::fromLatin1(argv[0]));
 
     for (int i = 1; i < argc; ++i) {
-        QFile vcf(argv[i]);
-        if (!vcf.open(QIODevice::ReadOnly)) {
-            qWarning("vcardconverter: %s cannot be opened", argv[i]);
-            exit(1);
+        const QString arg(QString::fromLatin1(argv[i]));
+        if (arg.startsWith('-')) {
+            if (!filename.isNull()) {
+                invalidUsage(app);
+            } else if (arg == QString::fromLatin1("-e") || arg == QString::fromLatin1("--export")) {
+                import = false;
+            } else {
+                qWarning("%s: unknown option: '%s'", qPrintable(app), qPrintable(arg));
+                invalidUsage(app);
+            }
+        } else {
+            filename = arg;
         }
+    }
+
+    if (filename.isNull()) {
+        qWarning("%s: filename must be specified", qPrintable(app));
+        invalidUsage(app);
+    }
+
+    QFile vcf(filename);
+    QIODevice::OpenMode mode(import ? QIODevice::ReadOnly : QIODevice::WriteOnly | QIODevice::Truncate);
+    if (!vcf.open(mode)) {
+        qWarning("%s: file cannot be opened: '%s'", qPrintable(app), qPrintable(filename));
+        ::exit(1);
+    }
+
+    if (import) {
+        PhotoHandler photoHandler;
+        QVersitContactImporter importer;
+        importer.setPropertyHandler(&photoHandler);
 
         QVersitReader reader(&vcf);
         reader.startReading();
         reader.waitForFinished();
 
-       importer.importDocuments(reader.results());
+        importer.importDocuments(reader.results());
+        qDebug("Importing %d contacts", importer.contacts().count());
+
+        SaveRequestHandler *rq = new SaveRequestHandler(QCoreApplication::instance());
+
+        QContactSaveRequest *save = new QContactSaveRequest(rq);
+        save->setManager(new QContactManager(rq));
+        save->setContacts(importer.contacts());
+
+        rq->startRequest(save);
+        return qca.exec();
+    } else {
+        QContactDetailFilter filter;
+#ifdef USING_QTPIM
+        filter.setDetailType(QContactSyncTarget::Type, QContactSyncTarget::FieldSyncTarget);
+#else
+        filter.setDetailDefinitionName(QContactSyncTarget::DefinitionName, QContactSyncTarget::FieldSyncTarget);
+#endif
+        filter.setValue(QString::fromLatin1("local"));
+
+        QContactManager mgr;
+        QList<QContact> localContacts(mgr.contacts(filter));
+
+        QVersitContactExporter exporter;
+        exporter.exportContacts(localContacts);
+        qDebug("Exporting %d contacts", exporter.documents().count());
+
+        QVersitWriter writer(&vcf);
+        writer.startWriting(exporter.documents());
+        writer.waitForFinished();
+        qDebug("Wrote %d contacts", exporter.documents().count());
+        return 0;
     }
-
-    qDebug("Saving %d contacts", importer.contacts().count());
-
-    req.setManager(new QContactManager(&req));
-    req.setContacts(importer.contacts());
-    req.start();
-
-    RequestHandler *rq = new RequestHandler(QCoreApplication::instance());
-    rq->startRequest(&req);
-
-    return qca.exec();
 }
 
 #include "main.moc"
