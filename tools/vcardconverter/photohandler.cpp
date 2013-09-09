@@ -65,9 +65,6 @@ void PhotoHandler::propertyProcessed(const QVersitDocument &, const QVersitPrope
     if (property.name().toLower() != QLatin1String("photo"))
         return;
 
-    // we will save the avatar image to disk at some generic data services location.
-    QString photoDirPath;
-
 #ifndef QT_VERSION_5
     // The Qt4 / QtMobility version has QContactThumbnail support.
     // We need to remove any such thumbnail detail from the output,
@@ -79,12 +76,12 @@ void PhotoHandler::propertyProcessed(const QVersitDocument &, const QVersitPrope
             --i;
         }
     }
-
-    photoDirPath = QDesktopServices::storageLocation(QDesktopServices::HomeLocation)
-                  + QLatin1String("/.local/share/data/avatars/");
-#else
-    photoDirPath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
 #endif
+
+    // We will save the avatar image to disk in the system's data location
+    // Since we're importing user data, it should not require privileged access
+    const QString subdirectory(QString::fromLatin1(".local/share/system/Contacts/avatars"));
+    const QString photoDirPath(QDir::home().filePath(subdirectory));
 
     // create the photo file dir if it doesn't exist.
     QDir photoDir;
@@ -96,7 +93,7 @@ void PhotoHandler::propertyProcessed(const QVersitDocument &, const QVersitPrope
     // construct the filename of the new avatar image.
     QString photoFilePath = QUuid::createUuid().toString();
     photoFilePath = photoFilePath.mid(1, photoFilePath.length() - 2) + QLatin1String(".jpg");
-    photoFilePath = photoDirPath + photoFilePath;
+    photoFilePath = photoDirPath + QDir::separator() + photoFilePath;
 
     // save the file to disk
     QImage img;
