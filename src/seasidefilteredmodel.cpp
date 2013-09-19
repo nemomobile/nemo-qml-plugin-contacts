@@ -207,7 +207,7 @@ void SeasideFilteredModel::setFilterType(FilterType type)
         const bool wasPopulated = SeasideCache::isPopulated(static_cast<SeasideCache::FilterType>(m_filterType));
 
         // FilterNone == FilterAll when there is a filter pattern.
-        const bool filtered = isFiltered();
+        const bool filtered = !m_filterPattern.isEmpty();
         const bool equivalentFilter = (type == FilterAll || type == FilterNone) &&
                                       (m_filterType == FilterAll || m_filterType == FilterNone) &&
                                       filtered;
@@ -218,7 +218,7 @@ void SeasideFilteredModel::setFilterType(FilterType type)
             m_referenceIndex = 0;
             m_filterIndex = 0;
 
-            m_effectiveFilterType = (m_filterType != FilterNone || !filtered) ? m_filterType : FilterAll;
+            m_effectiveFilterType = (m_filterType != FilterNone || m_filterPattern.isEmpty()) ? m_filterType : FilterAll;
             updateRegistration();
 
             if (!filtered) {
@@ -752,7 +752,7 @@ SeasidePerson *SeasideFilteredModel::personFromItem(SeasideCache::CacheItem *ite
 
 bool SeasideFilteredModel::isFiltered() const
 {
-    return !m_filterPattern.isEmpty() || (m_requiredProperty != NoPropertyRequired);
+    return m_effectiveFilterType != FilterNone && (!m_filterPattern.isEmpty() || (m_requiredProperty != NoPropertyRequired));
 }
 
 void SeasideFilteredModel::updateFilters(const QString &pattern, int property)
@@ -794,20 +794,15 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, int property)
     m_referenceIndex = 0;
     m_filterIndex = 0;
 
-    if (!filtered && m_filterType == FilterNone) {
+    if (m_filterType == FilterNone && m_effectiveFilterType == FilterNone && !m_filterPattern.isEmpty()) {
+        // Start showing filtered results
         m_effectiveFilterType = FilterAll;
         updateRegistration();
 
         m_referenceContactIds = SeasideCache::contacts(SeasideCache::FilterAll);
         populateIndex();
-    } else if (!filtered) {
-        m_filteredContactIds = *m_referenceContactIds;
-        m_contactIds = &m_filteredContactIds;
-
-        refineIndex();
-    } else if (refinement) {
-        refineIndex();
-    } else if (removeFilter && m_filterType == FilterNone) {
+    } else if (m_filterType == FilterNone && m_effectiveFilterType == FilterAll && m_filterPattern.isEmpty()) {
+        // We should no longer show any results
         m_effectiveFilterType = FilterNone;
         updateRegistration();
 
@@ -824,6 +819,13 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, int property)
         if (hadMatches) {
             endRemoveRows();
         }
+    } else if (!filtered) {
+        m_filteredContactIds = *m_referenceContactIds;
+        m_contactIds = &m_filteredContactIds;
+
+        refineIndex();
+    } else if (refinement) {
+        refineIndex();
     } else {
         updateIndex();
 
