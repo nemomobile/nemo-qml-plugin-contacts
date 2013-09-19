@@ -201,6 +201,7 @@ public:
 
     static QString generateDisplayLabel(const QContact &contact, DisplayLabelOrder order = FirstNameFirst);
     static QString generateDisplayLabelFromNonNameDetails(const QContact &contact);
+    static QUrl filteredAvatarUrl(const QContact &contact, const QStringList &metadataFragments = QStringList());
 
     void populate(FilterType filterType);
     void insert(FilterType filterType, int index, const QVector<ContactIdType> &ids);
