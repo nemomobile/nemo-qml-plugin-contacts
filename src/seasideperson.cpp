@@ -328,17 +328,31 @@ void SeasidePerson::setAvatarPath(QUrl avatarPath)
 
 QUrl SeasidePerson::avatarUrl() const
 {
-    QContactAvatar avatarDetail = mContact->detail<QContactAvatar>();
-    return avatarDetail.imageUrl();
+    return filteredAvatarUrl();
 }
 
 void SeasidePerson::setAvatarUrl(QUrl avatarUrl)
 {
-    QContactAvatar avatarDetail = mContact->detail<QContactAvatar>();
-    avatarDetail.setImageUrl(avatarUrl);
-    mContact->saveDetail(&avatarDetail);
+    // we always set the avatar with the metadata flag "local".
+    QContactAvatar localAvatar;
+    QList<QContactAvatar> avatars = mContact->details<QContactAvatar>();
+    for (int i = 0; i < avatars.size(); ++i) {
+        if (avatars[i].value(QContactAvatar__FieldAvatarMetadata) == QString(QLatin1String("local"))) {
+            localAvatar = avatars[i];
+            break;
+        }
+    }
+
+    localAvatar.setImageUrl(avatarUrl);
+    localAvatar.setValue(QContactAvatar__FieldAvatarMetadata, QString(QLatin1String("local")));
+    mContact->saveDetail(&localAvatar);
     emit avatarUrlChanged();
     emit avatarPathChanged();
+}
+
+QUrl SeasidePerson::filteredAvatarUrl(const QStringList &metadataFragments) const
+{
+    return SeasideCache::filteredAvatarUrl(*mContact, metadataFragments);
 }
 
 namespace { // Helper functions

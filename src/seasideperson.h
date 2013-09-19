@@ -201,6 +201,7 @@ public:
     Q_PROPERTY(QUrl avatarUrl READ avatarUrl WRITE setAvatarUrl NOTIFY avatarUrlChanged)
     QUrl avatarUrl() const;
     void setAvatarUrl(QUrl avatarUrl);
+    Q_INVOKABLE QUrl filteredAvatarUrl(const QStringList &metadataFragments = QStringList()) const;
 
     Q_PROPERTY(QStringList phoneNumbers READ phoneNumbers WRITE setPhoneNumbers NOTIFY phoneNumbersChanged)
     QStringList phoneNumbers() const;

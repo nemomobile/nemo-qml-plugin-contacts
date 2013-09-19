@@ -571,7 +571,7 @@ QVariant SeasideFilteredModel::data(SeasideCache::CacheItem *cacheItem, int role
     } else if (role == FavoriteRole) {
         return contact.detail<QContactFavorite>().isFavorite();
     } else if (role == AvatarRole || role == AvatarUrlRole) {
-        QUrl avatarUrl = contact.detail<QContactAvatar>().imageUrl();
+        QUrl avatarUrl = SeasideCache::filteredAvatarUrl(contact);
         if (role == AvatarUrlRole || !avatarUrl.isEmpty()) {
             return avatarUrl;
         }
