@@ -452,8 +452,11 @@ QString SeasideCache::generateDisplayLabelFromNonNameDetails(const QContact &)
     return QString();
 }
 
-QUrl SeasideCache::filteredAvatarUrl(const QContact &, const QStringList &)
+QUrl SeasideCache::filteredAvatarUrl(const QContact &contact, const QStringList &)
 {
+    foreach (const QContactAvatar &av, contact.details<QContactAvatar>()) {
+        return av.imageUrl();
+    }
     return QUrl();
 }
 
