@@ -187,7 +187,6 @@ private:
     void populateIndex();
     void refineIndex();
     void updateIndex();
-    void updateContactData(const ContactIdType &contactId, FilterType filter);
     void updateRegistration();
 
     bool isFiltered() const;
