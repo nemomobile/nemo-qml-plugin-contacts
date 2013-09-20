@@ -185,7 +185,7 @@ void SeasideCache::reset()
         contact.saveDetail(&statusFlags);
 
 #ifdef USING_QTPIM
-        m_cacheIndices.insert(apiId(contact), m_cache.count());
+        m_cacheIndices.insert(internalId(contact), m_cache.count());
 #endif
         m_cache.append(CacheItem(contact));
 
@@ -201,16 +201,16 @@ void SeasideCache::reset()
     insert(FilterOnline, 0, getContactsForFilterType(FilterOnline));
 }
 
-QVector<SeasideCache::ContactIdType> SeasideCache::getContactsForFilterType(FilterType filterType)
+QList<quint32> SeasideCache::getContactsForFilterType(FilterType filterType)
 {
-    QVector<ContactIdType> ids;
+    QList<quint32> ids;
 
     for (uint i = 0; i < sizeof(contactsData) / sizeof(Contact); ++i) {
         if ((filterType == FilterAll) ||
             (filterType == FilterFavorites && contactsData[i].isFavorite) ||
             (filterType == FilterOnline && contactsData[i].isOnline)) {
 #ifdef USING_QTPIM
-            ids.append(instancePtr->m_cache[i].contact.id());
+            ids.append(internalId(instancePtr->m_cache[i].contact.id()));
 #else
             ids.append(i + 1);
 #endif
@@ -267,8 +267,9 @@ int SeasideCache::contactId(const QContact &contact)
 SeasideCache::CacheItem *SeasideCache::existingItem(const ContactIdType &id)
 {
 #ifdef USING_QTPIM
-    if (instancePtr->m_cacheIndices.contains(id)) {
-        return &instancePtr->m_cache[instancePtr->m_cacheIndices[id]];
+    quint32 iid(internalId(id));
+    if (instancePtr->m_cacheIndices.contains(iid)) {
+        return &instancePtr->m_cache[instancePtr->m_cacheIndices[iid]];
     }
 #else
     if (id != 0 && id <= instancePtr->m_cache.count()) {
@@ -278,11 +279,22 @@ SeasideCache::CacheItem *SeasideCache::existingItem(const ContactIdType &id)
     return 0;
 }
 
+#ifdef USING_QTPIM
+SeasideCache::CacheItem *SeasideCache::existingItem(quint32 iid)
+{
+    if (instancePtr->m_cacheIndices.contains(iid)) {
+        return &instancePtr->m_cache[instancePtr->m_cacheIndices[iid]];
+    }
+    return 0;
+}
+#endif
+
 SeasideCache::CacheItem *SeasideCache::itemById(const ContactIdType &id, bool)
 {
 #ifdef USING_QTPIM
-    if (instancePtr->m_cacheIndices.contains(id)) {
-        return &instancePtr->m_cache[instancePtr->m_cacheIndices[id]];
+    quint32 iid(internalId(id));
+    if (instancePtr->m_cacheIndices.contains(iid)) {
+        return &instancePtr->m_cache[instancePtr->m_cacheIndices[iid]];
     }
 #else
     if (id != 0 && id <= instancePtr->m_cache.count()) {
@@ -313,7 +325,8 @@ SeasideCache::CacheItem *SeasideCache::itemById(int id, bool)
 QContact SeasideCache::contactById(const ContactIdType &id)
 {
 #ifdef USING_QTPIM
-    return instancePtr->m_cache[instancePtr->m_cacheIndices[id]].contact;
+    quint32 iid(internalId(id));
+    return instancePtr->m_cache[instancePtr->m_cacheIndices[iid]].contact;
 #else
     return instancePtr->m_cache[id - 1].contact;
 #endif
@@ -432,7 +445,7 @@ void SeasideCache::fetchMergeCandidates(const QContact &contact)
     }
 }
 
-const QVector<SeasideCache::ContactIdType> *SeasideCache::contacts(FilterType filterType)
+const QList<quint32> *SeasideCache::contacts(FilterType filterType)
 {
     return &instancePtr->m_contacts[filterType];
 }
@@ -483,7 +496,7 @@ void SeasideCache::populate(FilterType filterType)
         m_models[filterType]->makePopulated();
 }
 
-void SeasideCache::insert(FilterType filterType, int index, const QVector<ContactIdType> &ids)
+void SeasideCache::insert(FilterType filterType, int index, const QList<quint32> &ids)
 {
     if (m_models[filterType])
         m_models[filterType]->sourceAboutToInsertItems(index, index + ids.count() - 1);
@@ -502,7 +515,8 @@ void SeasideCache::remove(FilterType filterType, int index, int count)
     if (m_models[filterType])
         m_models[filterType]->sourceAboutToRemoveItems(index, index + count - 1);
 
-    m_contacts[filterType].remove(index, count);
+    QList<quint32>::iterator it = m_contacts[filterType].begin() + index;
+    m_contacts[filterType].erase(it, it + count);
 
     if (m_models[filterType]) {
         m_models[filterType]->sourceItemsRemoved();
@@ -546,10 +560,10 @@ void SeasideCache::setFirstName(FilterType filterType, int index, const QString 
         m_models[filterType]->sourceDataChanged(index, index);
 }
 
-SeasideCache::ContactIdType SeasideCache::idAt(int index) const
+quint32 SeasideCache::idAt(int index) const
 {
 #ifdef USING_QTPIM
-    return m_cache[index].contact.id();
+    return internalId(m_cache[index].contact.id());
 #else
     return index + 1;
 #endif

@@ -81,15 +81,6 @@ struct FilterData : public SeasideCache::ItemListener
     void itemAboutToBeRemoved(SeasideCache::CacheItem *) { delete this; }
 };
 
-// We could squeeze a little more performance out of QVector by inserting all the items in a
-// single hit, but tests are more important right now.
-static void insert(
-        QVector<SeasideFilteredModel::ContactIdType> *destination, int to, const QVector<SeasideFilteredModel::ContactIdType> &source)
-{
-    for (int i = 0; i < source.count(); ++i)
-        destination->insert(to + i, source.at(i));
-}
-
 // Splits a string at word boundaries identified by QTextBoundaryFinder and returns a list of
 // of the fragments that occur between StartWord and EndWord boundaries.
 static QStringList splitWords(const QString &string)
@@ -282,12 +273,12 @@ void insert(QSet<T> &set, const QList<T> &list)
         set.insert(item);
 }
 
-bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
+bool SeasideFilteredModel::filterId(quint32 iid) const
 {
     if (m_filterParts.isEmpty() && m_requiredProperty == NoPropertyRequired)
         return true;
 
-    SeasideCache::CacheItem *item = existingItem(contactId);
+    SeasideCache::CacheItem *item = existingItem(iid);
     if (!item)
         return false;
 
@@ -376,8 +367,7 @@ bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
     return true;
 }
 
-void SeasideFilteredModel::insertRange(
-        int index, int count, const QVector<ContactIdType> &source, int sourceIndex)
+void SeasideFilteredModel::insertRange(int index, int count, const QList<quint32> &source, int sourceIndex)
 {
     beginInsertRows(QModelIndex(), index, index + count - 1);
     for (int i = 0; i < count; ++i)
@@ -853,26 +843,27 @@ void SeasideFilteredModel::updateRegistration()
 
 void SeasideFilteredModel::invalidateRows(int begin, int count, bool filteredIndex, bool removeFromModel)
 {
-    const QVector<ContactIdType> *contactIds(filteredIndex ? &m_filteredContactIds : m_referenceContactIds);
+    const QList<quint32> *contactIds(filteredIndex ? &m_filteredContactIds : m_referenceContactIds);
 
     for (int index = begin; index < (begin + count); ++index) {
         if (contactIds->at(index) == m_lastId) {
-            m_lastId = ContactIdType();
+            m_lastId = 0;
             m_lastItem = 0;
         }
     }
 
     if (removeFromModel) {
         Q_ASSERT(filteredIndex);
-        m_filteredContactIds.remove(begin, count);
+        QList<quint32>::iterator it = m_filteredContactIds.begin() + begin;
+        m_filteredContactIds.erase(it, it + count);
     }
 }
 
-SeasideCache::CacheItem *SeasideFilteredModel::existingItem(const ContactIdType &contactId) const
+SeasideCache::CacheItem *SeasideFilteredModel::existingItem(quint32 iid) const
 {
     // Cache the last item lookup - repeated property lookups will be for the same index
-    if (contactId != m_lastId) {
-        m_lastId = contactId;
+    if (iid != m_lastId) {
+        m_lastId = iid;
         m_lastItem = SeasideCache::existingItem(m_lastId);
     }
     return m_lastItem;
