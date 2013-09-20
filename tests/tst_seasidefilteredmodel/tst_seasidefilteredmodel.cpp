@@ -68,8 +68,6 @@ private slots:
     void mixedFilters();
 
 private:
-    QVariant idAt(int index) const { return QVariant::fromValue<ContactIdType>(cache.idAt(index)); }
-
     SeasideCache cache;
 };
 
@@ -421,7 +419,7 @@ void tst_SeasideFilteredModel::rowsInserted()
     // Remove the exitsting index values
     cache.remove(SeasideCache::FilterAll, 0, 7);
 
-    cache.insert(SeasideCache::FilterAll, 0, QVector<ContactIdType>()
+    cache.insert(SeasideCache::FilterAll, 0, QList<quint32>()
             << cache.idAt(2) << cache.idAt(5));
 
     SeasideFilteredModel model;
@@ -432,7 +430,7 @@ void tst_SeasideFilteredModel::rowsInserted()
     QCOMPARE(model.rowCount(), 2);
 
     // 0 1 2 5
-    cache.insert(SeasideCache::FilterAll, 0, QVector<ContactIdType>()
+    cache.insert(SeasideCache::FilterAll, 0, QList<quint32>()
             << cache.idAt(0) << cache.idAt(1));
     QCOMPARE(model.rowCount(), 4);
     QCOMPARE(insertedSpy.count(), 1);
@@ -446,7 +444,7 @@ void tst_SeasideFilteredModel::rowsInserted()
     QCOMPARE(model.rowCount(), 1);
 
     // 1 3
-    cache.insert(SeasideCache::FilterAll, 3, QVector<ContactIdType>()
+    cache.insert(SeasideCache::FilterAll, 3, QList<quint32>()
             << cache.idAt(3) << cache.idAt(4));
     QCOMPARE(model.rowCount(), 2);
     QCOMPARE(insertedSpy.count(), 1);
