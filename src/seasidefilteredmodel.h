@@ -35,7 +35,6 @@
 #include <seasidecache.h>
 
 #include <QStringList>
-#include <QVector>
 
 #include <QContact>
 
@@ -145,11 +144,11 @@ public:
     Q_INVOKABLE void setFilter(FilterType type) { setFilterType(type); }
     Q_INVOKABLE void search(const QString &pattern) { setFilterPattern(pattern); }
 
-    bool filterId(const ContactIdType &contactId) const;
+    bool filterId(quint32 contactId) const;
 
     // For synchronizeLists()
-    bool filterValue(const ContactIdType &contactId) const { return filterId(contactId); }
-    void insertRange(int index, int count, const QVector<ContactIdType> &source, int sourceIndex);
+    bool filterValue(quint32 contactId) const { return filterId(contactId); }
+    void insertRange(int index, int count, const QList<quint32> &source, int sourceIndex);
     void removeRange(int index, int count);
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
@@ -188,7 +187,6 @@ private:
     void populateIndex();
     void refineIndex();
     void updateIndex();
-    void updateContactData(const ContactIdType &contactId, FilterType filter);
     void updateRegistration();
 
     bool isFiltered() const;
@@ -196,13 +194,13 @@ private:
 
     void invalidateRows(int begin, int count, bool filteredIndex = true, bool removeFromModel = true);
 
-    SeasideCache::CacheItem *existingItem(const ContactIdType &contactId) const;
+    SeasideCache::CacheItem *existingItem(quint32 iid) const;
 
     SeasidePerson *personFromItem(SeasideCache::CacheItem *item) const;
 
-    QVector<ContactIdType> m_filteredContactIds;
-    const QVector<ContactIdType> *m_contactIds;
-    const QVector<ContactIdType> *m_referenceContactIds;
+    QList<quint32> m_filteredContactIds;
+    const QList<quint32> *m_contactIds;
+    const QList<quint32> *m_referenceContactIds;
     QStringList m_filterParts;
     QString m_filterPattern;
     int m_filterIndex;
@@ -214,7 +212,7 @@ private:
     bool m_searchByFirstNameCharacter;
 
     mutable SeasideCache::CacheItem *m_lastItem;
-    mutable ContactIdType m_lastId;
+    mutable quint32 m_lastId;
 };
 
 #endif

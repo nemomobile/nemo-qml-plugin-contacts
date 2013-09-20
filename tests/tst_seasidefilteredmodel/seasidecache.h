@@ -8,7 +8,6 @@
 #include <QContactId>
 
 #include <QAbstractListModel>
-#include <QVector>
 
 // Provide enough of SeasideCache's interface to support SeasideFilteredModel
 
@@ -165,6 +164,9 @@ public:
     static int contactId(const QContact &contact);
 
     static CacheItem *existingItem(const ContactIdType &id);
+#ifdef USING_QTPIM
+    static CacheItem *existingItem(quint32 iid);
+#endif
     static CacheItem *itemById(const ContactIdType &id, bool requireComplete = true);
 #ifdef USING_QTPIM
     static CacheItem *itemById(int id, bool requireComplete = true);
@@ -196,7 +198,7 @@ public:
 
     static void fetchMergeCandidates(const QContact &contact);
 
-    static const QVector<ContactIdType> *contacts(FilterType filterType);
+    static const QList<quint32> *contacts(FilterType filterType);
     static bool isPopulated(FilterType filterType);
 
     static QString generateDisplayLabel(const QContact &contact, DisplayLabelOrder order = FirstNameFirst);
@@ -204,7 +206,7 @@ public:
     static QUrl filteredAvatarUrl(const QContact &contact, const QStringList &metadataFragments = QStringList());
 
     void populate(FilterType filterType);
-    void insert(FilterType filterType, int index, const QVector<ContactIdType> &ids);
+    void insert(FilterType filterType, int index, const QList<quint32> &ids);
     void remove(FilterType filterType, int index, int count);
 
     static int importContacts(const QString &path);
@@ -214,21 +216,21 @@ public:
 
     void reset();
 
-    static QVector<ContactIdType> getContactsForFilterType(FilterType filterType);
+    static QList<quint32> getContactsForFilterType(FilterType filterType);
 
-    QVector<ContactIdType> m_contacts[FilterTypesCount];
+    QList<quint32> m_contacts[FilterTypesCount];
     ListModel *m_models[FilterTypesCount];
     bool m_populated[FilterTypesCount];
 
-    QVector<CacheItem> m_cache;
+    QList<CacheItem> m_cache;
 #ifdef USING_QTPIM
-    QHash<ContactIdType, int> m_cacheIndices;
+    QHash<quint32, int> m_cacheIndices;
 #endif
 
     static SeasideCache *instancePtr;
     static QStringList allContactNameGroups;
 
-    ContactIdType idAt(int index) const;
+    quint32 idAt(int index) const;
 };
 
 

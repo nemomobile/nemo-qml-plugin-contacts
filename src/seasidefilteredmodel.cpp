@@ -81,15 +81,6 @@ struct FilterData : public SeasideCache::ItemListener
     void itemAboutToBeRemoved(SeasideCache::CacheItem *) { delete this; }
 };
 
-// We could squeeze a little more performance out of QVector by inserting all the items in a
-// single hit, but tests are more important right now.
-static void insert(
-        QVector<SeasideFilteredModel::ContactIdType> *destination, int to, const QVector<SeasideFilteredModel::ContactIdType> &source)
-{
-    for (int i = 0; i < source.count(); ++i)
-        destination->insert(to + i, source.at(i));
-}
-
 // Splits a string at word boundaries identified by QTextBoundaryFinder and returns a list of
 // of the fragments that occur between StartWord and EndWord boundaries.
 static QStringList splitWords(const QString &string)
@@ -207,7 +198,7 @@ void SeasideFilteredModel::setFilterType(FilterType type)
         const bool wasPopulated = SeasideCache::isPopulated(static_cast<SeasideCache::FilterType>(m_filterType));
 
         // FilterNone == FilterAll when there is a filter pattern.
-        const bool filtered = isFiltered();
+        const bool filtered = !m_filterPattern.isEmpty();
         const bool equivalentFilter = (type == FilterAll || type == FilterNone) &&
                                       (m_filterType == FilterAll || m_filterType == FilterNone) &&
                                       filtered;
@@ -218,7 +209,7 @@ void SeasideFilteredModel::setFilterType(FilterType type)
             m_referenceIndex = 0;
             m_filterIndex = 0;
 
-            m_effectiveFilterType = (m_filterType != FilterNone || !filtered) ? m_filterType : FilterAll;
+            m_effectiveFilterType = (m_filterType != FilterNone || m_filterPattern.isEmpty()) ? m_filterType : FilterAll;
             updateRegistration();
 
             if (!filtered) {
@@ -282,12 +273,12 @@ void insert(QSet<T> &set, const QList<T> &list)
         set.insert(item);
 }
 
-bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
+bool SeasideFilteredModel::filterId(quint32 iid) const
 {
     if (m_filterParts.isEmpty() && m_requiredProperty == NoPropertyRequired)
         return true;
 
-    SeasideCache::CacheItem *item = existingItem(contactId);
+    SeasideCache::CacheItem *item = existingItem(iid);
     if (!item)
         return false;
 
@@ -376,8 +367,7 @@ bool SeasideFilteredModel::filterId(const ContactIdType &contactId) const
     return true;
 }
 
-void SeasideFilteredModel::insertRange(
-        int index, int count, const QVector<ContactIdType> &source, int sourceIndex)
+void SeasideFilteredModel::insertRange(int index, int count, const QList<quint32> &source, int sourceIndex)
 {
     beginInsertRows(QModelIndex(), index, index + count - 1);
     for (int i = 0; i < count; ++i)
@@ -752,7 +742,7 @@ SeasidePerson *SeasideFilteredModel::personFromItem(SeasideCache::CacheItem *ite
 
 bool SeasideFilteredModel::isFiltered() const
 {
-    return !m_filterPattern.isEmpty() || (m_requiredProperty != NoPropertyRequired);
+    return m_effectiveFilterType != FilterNone && (!m_filterPattern.isEmpty() || (m_requiredProperty != NoPropertyRequired));
 }
 
 void SeasideFilteredModel::updateFilters(const QString &pattern, int property)
@@ -794,20 +784,15 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, int property)
     m_referenceIndex = 0;
     m_filterIndex = 0;
 
-    if (!filtered && m_filterType == FilterNone) {
+    if (m_filterType == FilterNone && m_effectiveFilterType == FilterNone && !m_filterPattern.isEmpty()) {
+        // Start showing filtered results
         m_effectiveFilterType = FilterAll;
         updateRegistration();
 
         m_referenceContactIds = SeasideCache::contacts(SeasideCache::FilterAll);
         populateIndex();
-    } else if (!filtered) {
-        m_filteredContactIds = *m_referenceContactIds;
-        m_contactIds = &m_filteredContactIds;
-
-        refineIndex();
-    } else if (refinement) {
-        refineIndex();
-    } else if (removeFilter && m_filterType == FilterNone) {
+    } else if (m_filterType == FilterNone && m_effectiveFilterType == FilterAll && m_filterPattern.isEmpty()) {
+        // We should no longer show any results
         m_effectiveFilterType = FilterNone;
         updateRegistration();
 
@@ -824,6 +809,13 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, int property)
         if (hadMatches) {
             endRemoveRows();
         }
+    } else if (!filtered) {
+        m_filteredContactIds = *m_referenceContactIds;
+        m_contactIds = &m_filteredContactIds;
+
+        refineIndex();
+    } else if (refinement) {
+        refineIndex();
     } else {
         updateIndex();
 
@@ -851,26 +843,27 @@ void SeasideFilteredModel::updateRegistration()
 
 void SeasideFilteredModel::invalidateRows(int begin, int count, bool filteredIndex, bool removeFromModel)
 {
-    const QVector<ContactIdType> *contactIds(filteredIndex ? &m_filteredContactIds : m_referenceContactIds);
+    const QList<quint32> *contactIds(filteredIndex ? &m_filteredContactIds : m_referenceContactIds);
 
     for (int index = begin; index < (begin + count); ++index) {
         if (contactIds->at(index) == m_lastId) {
-            m_lastId = ContactIdType();
+            m_lastId = 0;
             m_lastItem = 0;
         }
     }
 
     if (removeFromModel) {
         Q_ASSERT(filteredIndex);
-        m_filteredContactIds.remove(begin, count);
+        QList<quint32>::iterator it = m_filteredContactIds.begin() + begin;
+        m_filteredContactIds.erase(it, it + count);
     }
 }
 
-SeasideCache::CacheItem *SeasideFilteredModel::existingItem(const ContactIdType &contactId) const
+SeasideCache::CacheItem *SeasideFilteredModel::existingItem(quint32 iid) const
 {
     // Cache the last item lookup - repeated property lookups will be for the same index
-    if (contactId != m_lastId) {
-        m_lastId = contactId;
+    if (iid != m_lastId) {
+        m_lastId = iid;
         m_lastItem = SeasideCache::existingItem(m_lastId);
     }
     return m_lastItem;
