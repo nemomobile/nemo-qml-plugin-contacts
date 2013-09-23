@@ -36,7 +36,10 @@
 
 // Contacts
 #include <QContactDetailFilter>
-#include <QContactSaveRequest>
+#include <QContactFetchHint>
+#include <QContactGuid>
+#include <QContactManager>
+#include <QContactSortOrder>
 #include <QContactSyncTarget>
 
 // Versit
@@ -51,46 +54,37 @@
 USE_CONTACTS_NAMESPACE
 USE_VERSIT_NAMESPACE
 
-class SaveRequestHandler : public QObject
-{
-    Q_OBJECT
-public:
-    SaveRequestHandler(QObject *object)
-        : QObject(object) { }
-
-    void startRequest(QContactSaveRequest *request)
-    {
-        this->request = request;
-        QTimer::singleShot(0, this, SLOT(internalStartRequest()));
-    }
-
-private slots:
-
-    void internalStartRequest()
-    {
-        connect(request, SIGNAL(stateChanged(QContactAbstractRequest::State)),
-                SLOT(onStateChanged(QContactAbstractRequest::State)));
-        request->start();
-    }
-
-    void onStateChanged(QContactAbstractRequest::State state)
-    {
-        if (state != QContactAbstractRequest::FinishedState)
-            return;
-
-        QContactSaveRequest *request = static_cast<QContactSaveRequest *>(sender());
-        qDebug("Wrote %d contacts", request->contacts().count());
-        QCoreApplication::instance()->exit();
-    }
-
-private:
-    QContactSaveRequest *request;
-};
+namespace {
 
 void invalidUsage(const QString &app)
 {
     qWarning("Usage: %s [-e | --export] <filename>", qPrintable(app));
     ::exit(1);
+}
+
+QContactDetailFilter localContactFilter()
+{
+    QContactDetailFilter filter;
+#ifdef USING_QTPIM
+    filter.setDetailType(QContactSyncTarget::Type, QContactSyncTarget::FieldSyncTarget);
+#else
+    filter.setDetailDefinitionName(QContactSyncTarget::DefinitionName, QContactSyncTarget::FieldSyncTarget);
+#endif
+    filter.setValue(QString::fromLatin1("local"));
+    return filter;
+}
+
+QContactDetailFilter guidFilter()
+{
+    QContactDetailFilter filter;
+#ifdef USING_QTPIM
+    filter.setDetailType(QContactGuid::Type, QContactGuid::FieldGuid);
+#else
+    filter.setDetailDefinitionName(QContactGuid::DefinitionName, QContactGuid::FieldGuid);
+#endif
+    return filter;
+}
+
 }
 
 int main(int argc, char **argv)
@@ -127,8 +121,10 @@ int main(int argc, char **argv)
     QIODevice::OpenMode mode(import ? QIODevice::ReadOnly : QIODevice::WriteOnly | QIODevice::Truncate);
     if (!vcf.open(mode)) {
         qWarning("%s: file cannot be opened: '%s'", qPrintable(app), qPrintable(filename));
-        ::exit(1);
+        ::exit(2);
     }
+
+    QContactManager mgr;
 
     if (import) {
         SeasidePhotoHandler photoHandler;
@@ -140,27 +136,52 @@ int main(int argc, char **argv)
         reader.waitForFinished();
 
         importer.importDocuments(reader.results());
-        qDebug("Importing %d contacts", importer.contacts().count());
+        QList<QContact> importedContacts(importer.contacts());
 
-        SaveRequestHandler *rq = new SaveRequestHandler(QCoreApplication::instance());
-
-        QContactSaveRequest *save = new QContactSaveRequest(rq);
-        save->setManager(new QContactManager(rq));
-        save->setContacts(importer.contacts());
-
-        rq->startRequest(save);
-        return qca.exec();
-    } else {
-        QContactDetailFilter filter;
+        // Find all GUIDs for local contacts
+        QContactFetchHint fetchHint;
 #ifdef USING_QTPIM
-        filter.setDetailType(QContactSyncTarget::Type, QContactSyncTarget::FieldSyncTarget);
+        fetchHint.setDetailTypesHint(QList<QContactDetail::DetailType>() << QContactGuid::Type);
 #else
-        filter.setDetailDefinitionName(QContactSyncTarget::DefinitionName, QContactSyncTarget::FieldSyncTarget);
+        fetchHint.setDetailDefinitionsHint(QStringList() << QContactGuid::DefinitionName);
 #endif
-        filter.setValue(QString::fromLatin1("local"));
 
-        QContactManager mgr;
-        QList<QContact> localContacts(mgr.contacts(filter));
+        QSet<QString> existingGuids;
+        QContactFilter filter(localContactFilter() & guidFilter());
+        foreach (const QContact &contact, mgr.contacts(filter, QList<QContactSortOrder>(), fetchHint)) {
+            existingGuids.insert(contact.detail<QContactGuid>().guid());
+        }
+
+        int existingCount = 0;
+
+        // Ignore any contacts we already have (by GUID)
+        QList<QContact>::iterator it = importedContacts.begin();
+        while (it != importedContacts.end()) {
+            const QString guid = (*it).detail<QContactGuid>().guid();
+            if (!guid.isEmpty() && existingGuids.contains(guid)) {
+                it = importedContacts.erase(it);
+                ++existingCount;
+            } else {
+                ++it;
+            }
+        }
+
+        QString existingDesc(existingCount ? QString::fromLatin1(" (%1 already existing)").arg(existingCount) : QString());
+        qDebug("Importing %d contacts%s", importedContacts.count(), qPrintable(existingDesc));
+
+        QMap<int, QContactManager::Error> errors;
+        mgr.saveContacts(&importedContacts, &errors);
+
+        int importedCount = importedContacts.count();
+        QMap<int, QContactManager::Error>::const_iterator eit = errors.constBegin(), eend = errors.constEnd();
+        for ( ; eit != eend; ++eit) {
+            const QContact &failed(importedContacts.at(eit.key()));
+            qDebug() << "  Unable to import contact" << failed.detail<QContactDisplayLabel>().label() << "error:" << eit.value();
+            --importedCount;
+        }
+        qDebug("Wrote %d contacts", importedCount);
+    } else {
+        QList<QContact> localContacts(mgr.contacts(localContactFilter()));
 
         QVersitContactExporter exporter;
         exporter.exportContacts(localContacts);
@@ -170,9 +191,8 @@ int main(int argc, char **argv)
         writer.startWriting(exporter.documents());
         writer.waitForFinished();
         qDebug("Wrote %d contacts", exporter.documents().count());
-        return 0;
     }
-}
 
-#include "main.moc"
+    return 0;
+}
 
