@@ -526,9 +526,11 @@ void tst_SeasidePerson::vcard()
 
     QString vcard = person->vCard();
 
-    QVERIFY(vcard.indexOf("N:Fish;Star;") > 0);
-    QVERIFY(vcard.indexOf("FN:Star Fish") > 0);
+    QVERIFY(vcard.indexOf("N:Fish;Star;;;") > 0);
     QVERIFY(vcard.indexOf("TEL:12345678") > 0);
+
+    // If we were exporting version 3.0, FN would also be expected
+    //QVERIFY(vcard.indexOf("FN:Star Fish") > 0);
 }
 
 void tst_SeasidePerson::syncTarget()
