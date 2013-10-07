@@ -100,6 +100,15 @@ QStringList splitWords(const QString &string)
     return rv;
 }
 
+QString stringPreceding(const QString &s, const QChar &c)
+{
+    int index = s.indexOf(c);
+    if (index != -1) {
+        return s.left(index);
+    }
+    return s;
+}
+
 }
 
 struct FilterData : public SeasideCache::ItemListener
@@ -109,6 +118,8 @@ struct FilterData : public SeasideCache::ItemListener
 
     void prepareFilter(SeasideCache::CacheItem *item)
     {
+        static const QChar atSymbol(QChar::fromLatin1('@'));
+
         if (filterKey.isEmpty()) {
             QSet<QString> matchTokens;
 
@@ -131,13 +142,13 @@ struct FilterData : public SeasideCache::ItemListener
             insert(matchTokens, splitWords(nickname.nickname()));
 
             foreach (const QContactPhoneNumber &detail, item->contact.details<QContactPhoneNumber>())
-                insert(matchTokens, splitWords(detail.number()));
+                insert(matchTokens, splitWords(detail.value(QContactPhoneNumber__FieldNormalizedNumber).toString()));
             foreach (const QContactEmailAddress &detail, item->contact.details<QContactEmailAddress>())
-                insert(matchTokens, splitWords(detail.emailAddress()));
+                insert(matchTokens, splitWords(stringPreceding(detail.emailAddress(), atSymbol)));
             foreach (const QContactOrganization &detail, item->contact.details<QContactOrganization>())
                 insert(matchTokens, splitWords(detail.name()));
             foreach (const QContactOnlineAccount &detail, item->contact.details<QContactOnlineAccount>()) {
-                insert(matchTokens, splitWords(detail.accountUri()));
+                insert(matchTokens, splitWords(stringPreceding(detail.accountUri(), atSymbol)));
                 insert(matchTokens, splitWords(detail.serviceProvider()));
             }
             foreach (const QContactGlobalPresence &detail, item->contact.details<QContactGlobalPresence>())
