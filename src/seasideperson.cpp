@@ -333,19 +333,21 @@ QUrl SeasidePerson::avatarUrl() const
 
 void SeasidePerson::setAvatarUrl(QUrl avatarUrl)
 {
-    // we always set the avatar with the metadata flag "local".
+    static const QString localMetadata(QString::fromLatin1("local"));
+
     QContactAvatar localAvatar;
-    QList<QContactAvatar> avatars = mContact->details<QContactAvatar>();
-    for (int i = 0; i < avatars.size(); ++i) {
-        if (avatars[i].value(QContactAvatar__FieldAvatarMetadata) == QString(QLatin1String("local"))) {
-            localAvatar = avatars[i];
+    foreach (const QContactAvatar &avatar, mContact->details<QContactAvatar>()) {
+        // Find the existing local data, if there is one
+        if (avatar.value(QContactAvatar__FieldAvatarMetadata).toString() == localMetadata) {
+            localAvatar = avatar;
             break;
         }
     }
 
     localAvatar.setImageUrl(avatarUrl);
-    localAvatar.setValue(QContactAvatar__FieldAvatarMetadata, QString(QLatin1String("local")));
+    localAvatar.setValue(QContactAvatar__FieldAvatarMetadata, localMetadata);
     mContact->saveDetail(&localAvatar);
+
     emit avatarUrlChanged();
     emit avatarPathChanged();
 }
@@ -1143,6 +1145,26 @@ QString SeasidePerson::vCard() const
     writer.waitForFinished();
 
     return QString::fromUtf8(vcard);
+}
+
+QStringList SeasidePerson::avatarUrls() const
+{
+    return avatarUrlsExcluding(QStringList());
+}
+
+QStringList SeasidePerson::avatarUrlsExcluding(const QStringList &excludeMetadata) const
+{
+    QStringList urls;
+
+    foreach (const QContactAvatar &avatar, mContact->details<QContactAvatar>()) {
+        const QString metadata(avatar.value(QContactAvatar__FieldAvatarMetadata).toString());
+        if (excludeMetadata.contains(metadata))
+            continue;
+
+        urls.append(avatar.imageUrl().toString());
+    }
+
+    return urls;
 }
 
 void SeasidePerson::fetchConstituents()

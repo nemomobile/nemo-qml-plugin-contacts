@@ -295,6 +295,8 @@ public:
     Q_INVOKABLE void resetContactData();
 
     Q_INVOKABLE QString vCard() const;
+    Q_INVOKABLE QStringList avatarUrls() const;
+    Q_INVOKABLE QStringList avatarUrlsExcluding(const QStringList &excludeMetadata) const;
 
     Q_INVOKABLE void aggregateInto(SeasidePerson *person);
     Q_INVOKABLE void disaggregateFrom(SeasidePerson *person);
