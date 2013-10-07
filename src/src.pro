@@ -8,11 +8,11 @@ CONFIG += qt plugin hide_symbols
 
 equals(QT_MAJOR_VERSION, 4) {
     QT += declarative
-    PKGCONFIG += contactcache
+    PKGCONFIG += contactcache mlocale
 }
 equals(QT_MAJOR_VERSION, 5) {
     QT += qml
-    PKGCONFIG += contactcache-qt5
+    PKGCONFIG += contactcache-qt5 mlocale5
 }
 
 equals(QT_MAJOR_VERSION, 4): target.path = $$[QT_INSTALL_IMPORTS]/$$PLUGIN_IMPORT_PATH
