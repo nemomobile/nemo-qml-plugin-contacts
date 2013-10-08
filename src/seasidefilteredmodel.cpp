@@ -49,6 +49,9 @@
 #include <QContactPresence>
 #include <QTextBoundaryFinder>
 
+#include <MLocale>
+#include <MBreakIterator>
+
 #include <QtDebug>
 
 namespace {
@@ -70,6 +73,42 @@ const QByteArray personRole("person");
 const QByteArray primaryNameRole("primaryName");
 const QByteArray secondaryNameRole("secondaryName");
 
+const ML10N::MLocale mLocale;
+
+template<typename T>
+void insert(QSet<T> &set, const QList<T> &list)
+{
+    foreach (const T &item, list)
+        set.insert(item);
+}
+
+// Splits a string at word boundaries identified by MBreakIterator
+QStringList splitWords(const QString &string)
+{
+    QStringList rv;
+
+    ML10N::MBreakIterator it(mLocale, string, ML10N::MBreakIterator::WordIterator);
+    while (it.hasNext()) {
+        const int position = it.next();
+        const QString word(string.mid(position, (it.peekNext() - position)).trimmed());
+        if (!word.isEmpty()) {
+            // Decompose to normal form D, which makes diacritic-insensitive matching simpler
+            rv.append(mLocale.toLower(word).normalized(QString::NormalizationForm_D));
+        }
+    }
+
+    return rv;
+}
+
+QString stringPreceding(const QString &s, const QChar &c)
+{
+    int index = s.indexOf(c);
+    if (index != -1) {
+        return s.left(index);
+    }
+    return s;
+}
+
 }
 
 struct FilterData : public SeasideCache::ItemListener
@@ -77,40 +116,93 @@ struct FilterData : public SeasideCache::ItemListener
     // Store additional filter keys with the cache item
     QStringList filterKey;
 
+    void prepareFilter(SeasideCache::CacheItem *item)
+    {
+        static const QChar atSymbol(QChar::fromLatin1('@'));
+
+        if (filterKey.isEmpty()) {
+            QSet<QString> matchTokens;
+
+            // split the display label and filter details into words
+            QContactName name = item->contact.detail<QContactName>();
+            insert(matchTokens, splitWords(name.firstName()));
+            insert(matchTokens, splitWords(name.middleName()));
+            insert(matchTokens, splitWords(name.lastName()));
+            insert(matchTokens, splitWords(name.prefix()));
+            insert(matchTokens, splitWords(name.suffix()));
+
+            // Include the custom label - it may contain the user's customized name for the contact
+#ifdef USING_QTPIM
+            insert(matchTokens, splitWords(name.value<QString>(QContactName__FieldCustomLabel)));
+#else
+            insert(matchTokens, splitWords(name.customLabel()));
+#endif
+
+            QContactNickname nickname = item->contact.detail<QContactNickname>();
+            insert(matchTokens, splitWords(nickname.nickname()));
+
+            foreach (const QContactPhoneNumber &detail, item->contact.details<QContactPhoneNumber>())
+                insert(matchTokens, splitWords(detail.value(QContactPhoneNumber__FieldNormalizedNumber).toString()));
+            foreach (const QContactEmailAddress &detail, item->contact.details<QContactEmailAddress>())
+                insert(matchTokens, splitWords(stringPreceding(detail.emailAddress(), atSymbol)));
+            foreach (const QContactOrganization &detail, item->contact.details<QContactOrganization>())
+                insert(matchTokens, splitWords(detail.name()));
+            foreach (const QContactOnlineAccount &detail, item->contact.details<QContactOnlineAccount>()) {
+                insert(matchTokens, splitWords(stringPreceding(detail.accountUri(), atSymbol)));
+                insert(matchTokens, splitWords(detail.serviceProvider()));
+            }
+            foreach (const QContactGlobalPresence &detail, item->contact.details<QContactGlobalPresence>())
+                insert(matchTokens, splitWords(detail.nickname()));
+            foreach (const QContactPresence &detail, item->contact.details<QContactPresence>())
+                insert(matchTokens, splitWords(detail.nickname()));
+
+            filterKey = matchTokens.toList();
+        }
+    }
+
+    bool partialMatch(const QString &value) const
+    {
+        QString::const_iterator vbegin = value.constBegin(), vend = value.constEnd();
+
+        // If any of our tokens start with the value, this is a match
+        foreach (const QString &word, filterKey) {
+            QString::const_iterator wbegin = word.constBegin(), wend = word.constEnd();
+
+            QString::const_iterator vit = vbegin, wit = wbegin;
+            while (wit != wend) {
+                if (*wit != *vit)
+                    break;
+
+                // Preceding base chars match - are there any continuing diacritics?
+                QString::const_iterator vmatch = vit++, wmatch = wit++;
+                while (vit != vend && (*vit).category() == QChar::Mark_NonSpacing)
+                     ++vit;
+                while (wit != wend && (*wit).category() == QChar::Mark_NonSpacing)
+                     ++wit;
+
+                if ((vit - vmatch) > 1) {
+                    // The match value contains diacritics - the word needs to match them
+                    QString subValue(value.mid(vmatch - vbegin, vit - vmatch));
+                    QString subWord(word.mid(wmatch - wbegin, wit - wmatch));
+                    if (subValue.compare(subWord) != 0)
+                        break;
+                } else {
+                    // Ignore any diacritics in our word
+                }
+
+                if (vit == vend) {
+                    // We have matched to the end of the value
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     void itemUpdated(SeasideCache::CacheItem *) { filterKey.clear(); }
     void itemAboutToBeRemoved(SeasideCache::CacheItem *) { delete this; }
 };
-
-// Splits a string at word boundaries identified by QTextBoundaryFinder and returns a list of
-// of the fragments that occur between StartWord and EndWord boundaries.
-static QStringList splitWords(const QString &string)
-{
-    QStringList words;
-    QTextBoundaryFinder finder(QTextBoundaryFinder::Word, string);
-
-    for (int start = 0; finder.position() != -1 && finder.position() < string.length();) {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-        if (!(finder.boundaryReasons() & QTextBoundaryFinder::StartOfItem)) {
-#else
-        if (!(finder.boundaryReasons() & QTextBoundaryFinder::StartWord)) {
-#endif
-            finder.toNextBoundary();
-            start = finder.position();
-        }
-
-        finder.toNextBoundary();
-
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-        if (finder.position() > start && finder.boundaryReasons() & QTextBoundaryFinder::EndOfItem) {
-#else
-        if (finder.position() > start && finder.boundaryReasons() & QTextBoundaryFinder::EndWord) {
-#endif
-            words.append(string.mid(start, finder.position() - start));
-            start = finder.position();
-        }
-    }
-    return words;
-}
 
 SeasideFilteredModel::SeasideFilteredModel(QObject *parent)
     : SeasideCache::ListModel(parent)
@@ -266,13 +358,6 @@ void SeasideFilteredModel::setSearchByFirstNameCharacter(bool searchByFirstNameC
     }
 }
 
-template<typename T>
-void insert(QSet<T> &set, const QList<T> &list)
-{
-    foreach (const T &item, list)
-        set.insert(item);
-}
-
 bool SeasideFilteredModel::filterId(quint32 iid) const
 {
     if (m_filterParts.isEmpty() && m_requiredProperty == NoPropertyRequired)
@@ -298,69 +383,14 @@ bool SeasideFilteredModel::filterId(quint32 iid) const
     if (!listener) {
         listener = item->appendListener(new FilterData, key);
     }
+
     FilterData *filterData = static_cast<FilterData *>(listener);
-
-    // split the display label and filter into words.
-    //
-    // TODO: i18n will require different splitting for thai and possibly
-    // other locales, see MBreakIterator
-    if (filterData->filterKey.isEmpty()) {
-        QSet<QString> matchTokens;
-
-        QContactName name = item->contact.detail<QContactName>();
-        insert(matchTokens, splitWords(name.firstName()));
-        insert(matchTokens, splitWords(name.middleName()));
-        insert(matchTokens, splitWords(name.lastName()));
-        insert(matchTokens, splitWords(name.prefix()));
-        insert(matchTokens, splitWords(name.suffix()));
-
-        QContactNickname nickname = item->contact.detail<QContactNickname>();
-        insert(matchTokens, splitWords(nickname.nickname()));
-
-        // Include the custom label - it may contain the user's customized name for the contact
-#ifdef USING_QTPIM
-        insert(matchTokens, splitWords(item->contact.detail<QContactName>().value<QString>(QContactName__FieldCustomLabel)));
-#else
-        insert(matchTokens, splitWords(item->contact.detail<QContactName>().customLabel()));
-#endif
-
-        foreach (const QContactPhoneNumber &detail, item->contact.details<QContactPhoneNumber>())
-            insert(matchTokens, splitWords(detail.number()));
-        foreach (const QContactEmailAddress &detail, item->contact.details<QContactEmailAddress>())
-            insert(matchTokens, splitWords(detail.emailAddress()));
-        foreach (const QContactOrganization &detail, item->contact.details<QContactOrganization>())
-            insert(matchTokens, splitWords(detail.name()));
-        foreach (const QContactOnlineAccount &detail, item->contact.details<QContactOnlineAccount>()) {
-            insert(matchTokens, splitWords(detail.accountUri()));
-            insert(matchTokens, splitWords(detail.serviceProvider()));
-        }
-        foreach (const QContactGlobalPresence &detail, item->contact.details<QContactGlobalPresence>())
-            insert(matchTokens, splitWords(detail.nickname()));
-        foreach (const QContactPresence &detail, item->contact.details<QContactPresence>())
-            insert(matchTokens, splitWords(detail.nickname()));
-
-        filterData->filterKey = matchTokens.toList();
-    }
+    filterData->prepareFilter(item);
 
     // search forwards over the label components for each filter word, making
     // sure to find all filter words before considering it a match.
-    for (int i = 0; i < m_filterParts.size(); i++) {
-        bool found = false;
-        const QString &part(m_filterParts.at(i));
-        for (int j = 0; j < filterData->filterKey.size(); j++) {
-            // TODO: for good i18n, we need to search insensitively taking
-            // diacritics into account, QString's functions alone aren't good
-            // enough
-            if (filterData->filterKey.at(j).startsWith(part, Qt::CaseInsensitive)) {
-                found = true;
-                break;
-            }
-        }
-
-        // if the current filter word wasn't found in the search
-        // string, then it wasn't a match. we require all words
-        // to match.
-        if (!found)
+    foreach (const QString &part, m_filterParts) {
+        if (!filterData->partialMatch(part))
             return false;
     }
 

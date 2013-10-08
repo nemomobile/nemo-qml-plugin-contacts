@@ -17,6 +17,7 @@ PkgConfigBR:
     - QtContacts
     - qtcontacts-sqlite-extensions >= 0.1.1
     - contactcache >= 0.0.27
+    - mlocale5
 Provides:
     - nemo-qml-plugins-contacts > 0.3.26
 Obsoletes:
