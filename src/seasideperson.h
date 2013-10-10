@@ -211,6 +211,10 @@ public:
     QList<int> phoneNumberTypes() const;
     Q_INVOKABLE void setPhoneNumberType(int which, DetailType type);
 
+    Q_PROPERTY(QVariantList phoneDetails READ phoneDetails WRITE setPhoneDetails NOTIFY phoneDetailsChanged)
+    QVariantList phoneDetails() const;
+    void setPhoneDetails(const QVariantList &phoneDetails);
+
     Q_PROPERTY(QStringList emailAddresses READ emailAddresses WRITE setEmailAddresses NOTIFY emailAddressesChanged)
     QStringList emailAddresses() const;
     void setEmailAddresses(const QStringList &emailAddresses);
@@ -218,6 +222,10 @@ public:
     Q_PROPERTY(QList<int> emailAddressTypes READ emailAddressTypes NOTIFY emailAddressTypesChanged)
     QList<int> emailAddressTypes() const;
     Q_INVOKABLE void setEmailAddressType(int which, DetailType type);
+
+    Q_PROPERTY(QVariantList emailDetails READ emailDetails WRITE setEmailDetails NOTIFY emailDetailsChanged)
+    QVariantList emailDetails() const;
+    void setEmailDetails(const QVariantList &emailDetails);
 
     Q_PROPERTY(QStringList addresses READ addresses WRITE setAddresses NOTIFY addressesChanged)
     QStringList addresses() const;
@@ -227,6 +235,10 @@ public:
     QList<int> addressTypes() const;
     Q_INVOKABLE void setAddressType(int which, DetailType type);
 
+    Q_PROPERTY(QVariantList addressDetails READ addressDetails WRITE setAddressDetails NOTIFY addressDetailsChanged)
+    QVariantList addressDetails() const;
+    void setAddressDetails(const QVariantList &addressDetails);
+
     Q_PROPERTY(QStringList websites READ websites WRITE setWebsites NOTIFY websitesChanged)
     QStringList websites() const;
     void setWebsites(const QStringList &sites);
@@ -234,6 +246,10 @@ public:
     Q_PROPERTY(QList<int> websiteTypes READ websiteTypes NOTIFY websiteTypesChanged)
     QList<int> websiteTypes() const;
     Q_INVOKABLE void setWebsiteType(int which, DetailType type);
+
+    Q_PROPERTY(QVariantList websiteDetails READ websiteDetails WRITE setWebsiteDetails NOTIFY websiteDetailsChanged)
+    QVariantList websiteDetails() const;
+    void setWebsiteDetails(const QVariantList &websiteDetails);
 
     Q_PROPERTY(QDateTime birthday READ birthday WRITE setBirthday NOTIFY birthdayChanged RESET resetBirthday)
     QDateTime birthday() const;
@@ -269,6 +285,10 @@ public:
 
     Q_PROPERTY(QStringList accountIconPaths READ accountIconPaths NOTIFY accountIconPathsChanged)
     QStringList accountIconPaths() const;
+
+    Q_PROPERTY(QVariantList accountDetails READ accountDetails WRITE setAccountDetails NOTIFY accountDetailsChanged)
+    QVariantList accountDetails() const;
+    void setAccountDetails(const QVariantList &accountDetails);
 
     Q_PROPERTY(QString syncTarget READ syncTarget CONSTANT)
     QString syncTarget() const;
@@ -346,12 +366,16 @@ signals:
     void avatarUrlChanged();
     void phoneNumbersChanged();
     void phoneNumberTypesChanged();
+    void phoneDetailsChanged();
     void emailAddressesChanged();
     void emailAddressTypesChanged();
+    void emailDetailsChanged();
     void addressesChanged();
     void addressTypesChanged();
+    void addressDetailsChanged();
     void websitesChanged();
     void websiteTypesChanged();
+    void websiteDetailsChanged();
     void birthdayChanged();
     void anniversaryChanged();
     void globalPresenceStateChanged();
@@ -362,6 +386,7 @@ signals:
     void accountPathsChanged();
     void accountProvidersChanged();
     void accountIconPathsChanged();
+    void accountDetailsChanged();
     void constituentsChanged();
     void mergeCandidatesChanged();
     void aggregationOperationFinished();
