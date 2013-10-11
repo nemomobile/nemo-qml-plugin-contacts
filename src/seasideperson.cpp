@@ -1587,17 +1587,17 @@ QStringList SeasidePerson::avatarUrls() const
 
 QStringList SeasidePerson::avatarUrlsExcluding(const QStringList &excludeMetadata) const
 {
-    QStringList urls;
+    QSet<QString> urls;
 
     foreach (const QContactAvatar &avatar, mContact->details<QContactAvatar>()) {
         const QString metadata(avatar.value(QContactAvatar__FieldAvatarMetadata).toString());
         if (excludeMetadata.contains(metadata))
             continue;
 
-        urls.append(avatar.imageUrl().toString());
+        urls.insert(avatar.imageUrl().toString());
     }
 
-    return urls;
+    return urls.toList();
 }
 
 void SeasidePerson::fetchConstituents()
