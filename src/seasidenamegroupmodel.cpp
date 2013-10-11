@@ -168,14 +168,15 @@ int SeasideNameGroupModel::countFilteredContacts(const QSet<quint32> &contactIds
 
         // Check if these contacts are included by the current filter
         foreach (quint32 iid, contactIds) {
-            SeasideCache::CacheItem *item = SeasideCache::existingItem(iid);
-            Q_ASSERT(item);
-
-            bool haveMatch = (m_requiredProperty & AccountUriRequired) && (item->statusFlags & QContactStatusFlags::HasOnlineAccount);
-            haveMatch |= (m_requiredProperty & PhoneNumberRequired) && (item->statusFlags & QContactStatusFlags::HasPhoneNumber);
-            haveMatch |= (m_requiredProperty & EmailAddressRequired) && (item->statusFlags & QContactStatusFlags::HasEmailAddress);
-            if (haveMatch)
-                ++count;
+            if (SeasideCache::CacheItem *item = SeasideCache::existingItem(iid)) {
+                bool haveMatch = (m_requiredProperty & AccountUriRequired) && (item->statusFlags & QContactStatusFlags::HasOnlineAccount);
+                haveMatch |= (m_requiredProperty & PhoneNumberRequired) && (item->statusFlags & QContactStatusFlags::HasPhoneNumber);
+                haveMatch |= (m_requiredProperty & EmailAddressRequired) && (item->statusFlags & QContactStatusFlags::HasEmailAddress);
+                if (haveMatch)
+                    ++count;
+            } else {
+                qWarning() << "SeasideNameGroupModel: obsolete contact" << iid;
+            }
         }
 
         return count;
