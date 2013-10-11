@@ -339,8 +339,13 @@ void SeasidePerson::setAvatarUrl(QUrl avatarUrl)
     foreach (const QContactAvatar &avatar, mContact->details<QContactAvatar>()) {
         // Find the existing local data, if there is one
         if (avatar.value(QContactAvatar__FieldAvatarMetadata).toString() == localMetadata) {
-            localAvatar = avatar;
-            break;
+            if (localAvatar.isEmpty()) {
+                localAvatar = avatar;
+            } else {
+                // We can only have one local avatar
+                QContactAvatar obsoleteAvatar(avatar);
+                mContact->removeDetail(&obsoleteAvatar);
+            }
         }
     }
 
