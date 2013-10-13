@@ -62,16 +62,21 @@ void invalidUsage(const QString &app)
     ::exit(1);
 }
 
-QContactDetailFilter localContactFilter()
+QContactFilter localContactFilter()
 {
-    QContactDetailFilter filter;
+    // Contacts that are local to the device have sync target 'local' or 'was_local'
+    QContactDetailFilter filterLocal, filterWasLocal;
 #ifdef USING_QTPIM
-    filter.setDetailType(QContactSyncTarget::Type, QContactSyncTarget::FieldSyncTarget);
+    filterLocal.setDetailType(QContactSyncTarget::Type, QContactSyncTarget::FieldSyncTarget);
+    filterWasLocal.setDetailType(QContactSyncTarget::Type, QContactSyncTarget::FieldSyncTarget);
 #else
-    filter.setDetailDefinitionName(QContactSyncTarget::DefinitionName, QContactSyncTarget::FieldSyncTarget);
+    filterLocal.setDetailDefinitionName(QContactSyncTarget::DefinitionName, QContactSyncTarget::FieldSyncTarget);
+    filterWasLocal.setDetailDefinitionName(QContactSyncTarget::DefinitionName, QContactSyncTarget::FieldSyncTarget);
 #endif
-    filter.setValue(QString::fromLatin1("local"));
-    return filter;
+    filterLocal.setValue(QString::fromLatin1("local"));
+    filterWasLocal.setValue(QString::fromLatin1("was_local"));
+
+    return filterLocal | filterWasLocal;
 }
 
 QContactDetailFilter guidFilter()
