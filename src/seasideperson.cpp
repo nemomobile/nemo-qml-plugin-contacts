@@ -1278,8 +1278,10 @@ namespace {
 
 const QString accountDetailUri(QString::fromLatin1("accountUri"));
 const QString accountDetailPath(QString::fromLatin1("accountPath"));
-const QString accountDetailServiceProvider(QString::fromLatin1("serviceProvider"));
+const QString accountDetailDisplayName(QString::fromLatin1("accountDisplayName"));
 const QString accountDetailIconPath(QString::fromLatin1("iconPath"));
+const QString accountDetailServiceProvider(QString::fromLatin1("serviceProvider"));
+const QString accountDetailServiceProviderDisplayName(QString::fromLatin1("serviceProviderDisplayName"));
 
 }
 
@@ -1292,8 +1294,10 @@ QVariantList SeasidePerson::accountDetails() const
         QVariantMap item(detailProperties(detail));
         item.insert(accountDetailUri, detail.value(QContactOnlineAccount::FieldAccountUri).toString());
         item.insert(accountDetailPath, detail.value(QContactOnlineAccount__FieldAccountPath).toString());
-        item.insert(accountDetailServiceProvider, detail.value(QContactOnlineAccount::FieldServiceProvider).toString());
+        item.insert(accountDetailDisplayName, detail.value(QContactOnlineAccount__FieldAccountDisplayName).toString());
         item.insert(accountDetailIconPath, detail.value(QContactOnlineAccount__FieldAccountIconPath).toString());
+        item.insert(accountDetailServiceProvider, detail.value(QContactOnlineAccount::FieldServiceProvider).toString());
+        item.insert(accountDetailServiceProviderDisplayName, detail.value(QContactOnlineAccount__FieldServiceProviderDisplayName).toString());
         item.insert(detailIndex, index++);
         rv.append(item);
     }
@@ -1313,8 +1317,10 @@ void SeasidePerson::setAccountDetails(const QVariantList &accountDetails)
         const QVariant indexValue = detail[detailIndex];
         const QVariant accountUriValue = detail[accountDetailUri];
         const QVariant accountPathValue = detail[accountDetailPath];
-        const QVariant serviceProviderValue = detail[accountDetailServiceProvider];
+        const QVariant accountDisplayNameValue = detail[accountDetailDisplayName];
         const QVariant iconPathValue = detail[accountDetailIconPath];
+        const QVariant serviceProviderValue = detail[accountDetailServiceProvider];
+        const QVariant serviceProviderDisplayNameValue = detail[accountDetailServiceProviderDisplayName];
 
         QContactOnlineAccount updated;
         const int index = indexValue.isValid() ? indexValue.value<int>() : -1;
@@ -1331,8 +1337,10 @@ void SeasidePerson::setAccountDetails(const QVariantList &accountDetails)
 
         updated.setAccountUri(accountUriValue.value<QString>());
         updated.setValue(QContactOnlineAccount__FieldAccountPath, accountPathValue.value<QString>());
-        updated.setServiceProvider(serviceProviderValue.value<QString>());
+        updated.setValue(QContactOnlineAccount__FieldAccountDisplayName, accountDisplayNameValue.value<QString>());
         updated.setValue(QContactOnlineAccount__FieldAccountIconPath, iconPathValue.value<QString>());
+        updated.setServiceProvider(serviceProviderValue.value<QString>());
+        updated.setValue(QContactOnlineAccount__FieldServiceProviderDisplayName, serviceProviderDisplayNameValue.value<QString>());
 
         updatedAccounts.append(updated);
     }
