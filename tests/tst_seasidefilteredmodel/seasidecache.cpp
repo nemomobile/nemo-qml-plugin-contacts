@@ -569,5 +569,3 @@ quint32 SeasideCache::idAt(int index) const
 #endif
 }
 
-// Instantiate the contact ID functions for qtcontacts-sqlite
-#include <qtcontacts-extensions_impl.h>

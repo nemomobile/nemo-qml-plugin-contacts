@@ -35,6 +35,8 @@
 #include <synchronizelists.h>
 
 #include <qtcontacts-extensions.h>
+#include <qtcontacts-extensions_impl.h>
+
 #include <QContactStatusFlags>
 
 #include <QContactAvatar>
@@ -82,6 +84,12 @@ void insert(QSet<T> &set, const QList<T> &list)
         set.insert(item);
 }
 
+QString makeSearchToken(const QString &word)
+{
+    // Decompose to normal form D, which makes diacritic-insensitive matching simpler
+    return mLocale.toLower(word).normalized(QString::NormalizationForm_D);
+}
+
 // Splits a string at word boundaries identified by MBreakIterator
 QStringList splitWords(const QString &string)
 {
@@ -92,8 +100,7 @@ QStringList splitWords(const QString &string)
         const int position = it.next();
         const QString word(string.mid(position, (it.peekNext() - position)).trimmed());
         if (!word.isEmpty()) {
-            // Decompose to normal form D, which makes diacritic-insensitive matching simpler
-            rv.append(mLocale.toLower(word).normalized(QString::NormalizationForm_D));
+            rv.append(makeSearchToken(word));
         }
     }
 
@@ -119,6 +126,9 @@ struct FilterData : public SeasideCache::ItemListener
     void prepareFilter(SeasideCache::CacheItem *item)
     {
         static const QChar atSymbol(QChar::fromLatin1('@'));
+        static const QChar plusSymbol(QChar::fromLatin1('+'));
+        static const QtContactsSqliteExtensions::NormalizePhoneNumberFlags normalizeFlags(QtContactsSqliteExtensions::KeepPhoneNumberDialString |
+                                                                                          QtContactsSqliteExtensions::ValidatePhoneNumber);
 
         if (filterKey.isEmpty()) {
             QSet<QString> matchTokens;
@@ -141,8 +151,18 @@ struct FilterData : public SeasideCache::ItemListener
             QContactNickname nickname = item->contact.detail<QContactNickname>();
             insert(matchTokens, splitWords(nickname.nickname()));
 
-            foreach (const QContactPhoneNumber &detail, item->contact.details<QContactPhoneNumber>())
-                insert(matchTokens, splitWords(detail.value(QContactPhoneNumber__FieldNormalizedNumber).toString()));
+            foreach (const QContactPhoneNumber &detail, item->contact.details<QContactPhoneNumber>()) {
+                // For phone numbers, match on the normalized from (punctuation stripped)
+                // When we can extract a localized version of the number, add that also
+                QString normalized(QtContactsSqliteExtensions::normalizePhoneNumber(detail.number(), normalizeFlags));
+                if (!normalized.isEmpty()) {
+                    if (normalized.startsWith(plusSymbol)) {
+                        normalized = normalized.mid(1);
+                    }
+                    matchTokens.insert(makeSearchToken(normalized));
+                }
+            }
+
             foreach (const QContactEmailAddress &detail, item->contact.details<QContactEmailAddress>())
                 insert(matchTokens, splitWords(stringPreceding(detail.emailAddress(), atSymbol)));
             foreach (const QContactOrganization &detail, item->contact.details<QContactOrganization>())
