@@ -232,8 +232,12 @@ QString SeasidePerson::primaryName() const
     if (!primaryName.isEmpty())
         return primaryName;
 
-    // No real name details - fall back to the display label for primary name
-    return displayLabel();
+    if (secondaryName().isEmpty()) {
+        // No real name details - fall back to the display label for primary name
+        return displayLabel();
+    }
+
+    return QString();
 }
 
 QString SeasidePerson::secondaryName() const
