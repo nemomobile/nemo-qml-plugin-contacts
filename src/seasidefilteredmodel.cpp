@@ -54,6 +54,8 @@
 #include <MLocale>
 #include <MBreakIterator>
 
+#include <QCoreApplication>
+#include <QEvent>
 #include <QtDebug>
 
 namespace {
@@ -123,7 +125,18 @@ struct FilterData : public SeasideCache::ItemListener
     // Store additional filter keys with the cache item
     QStringList filterKey;
 
-    void prepareFilter(SeasideCache::CacheItem *item)
+    static FilterData *getItemFilterData(SeasideCache::CacheItem *item, const SeasideFilteredModel *model)
+    {
+        void *key = const_cast<void *>(static_cast<const void *>(model));
+        SeasideCache::ItemListener *listener = item->listener(key);
+        if (!listener) {
+            listener = item->appendListener(new FilterData, key);
+        }
+
+        return static_cast<FilterData *>(listener);
+    }
+
+    bool prepareFilter(SeasideCache::CacheItem *item)
     {
         static const QChar atSymbol(QChar::fromLatin1('@'));
         static const QChar plusSymbol(QChar::fromLatin1('+'));
@@ -177,7 +190,10 @@ struct FilterData : public SeasideCache::ItemListener
                 insert(matchTokens, splitWords(detail.nickname()));
 
             filterKey = matchTokens.toList();
+            return true;
         }
+
+        return false;
     }
 
     bool partialMatch(const QString &value) const
@@ -228,6 +244,7 @@ SeasideFilteredModel::SeasideFilteredModel(QObject *parent)
     : SeasideCache::ListModel(parent)
     , m_filterIndex(0)
     , m_referenceIndex(0)
+    , m_filterUpdateIndex(-1)
     , m_filterType(FilterAll)
     , m_effectiveFilterType(FilterAll)
     , m_fetchTypes(SeasideCache::FetchNone)
@@ -241,8 +258,9 @@ SeasideFilteredModel::SeasideFilteredModel(QObject *parent)
 
     updateRegistration();
 
-    m_referenceContactIds = SeasideCache::contacts(SeasideCache::FilterAll);
-    m_contactIds = m_referenceContactIds;
+    m_allContactIds = SeasideCache::contacts(SeasideCache::FilterAll);
+    m_referenceContactIds = m_allContactIds;
+    m_contactIds = m_allContactIds;
 }
 
 SeasideFilteredModel::~SeasideFilteredModel()
@@ -398,13 +416,7 @@ bool SeasideFilteredModel::filterId(quint32 iid) const
     if (m_searchByFirstNameCharacter && !m_filterPattern.isEmpty())
         return m_filterPattern == SeasideCache::nameGroup(item);
 
-    void *key = const_cast<void *>(static_cast<const void *>(this));
-    SeasideCache::ItemListener *listener = item->listener(key);
-    if (!listener) {
-        listener = item->appendListener(new FilterData, key);
-    }
-
-    FilterData *filterData = static_cast<FilterData *>(listener);
+    FilterData *filterData = FilterData::getItemFilterData(item, this);
     filterData->prepareFilter(item);
 
     // search forwards over the label components for each filter word, making
@@ -778,6 +790,12 @@ QString SeasideFilteredModel::exportContacts()
     return SeasideCache::exportContacts();
 }
 
+void SeasideFilteredModel::prepareSearchFilters()
+{
+    m_filterUpdateIndex = 0;
+    updateSearchFilters();
+}
+
 SeasidePerson *SeasideFilteredModel::personFromItem(SeasideCache::CacheItem *item) const
 {
     if (!item)
@@ -839,7 +857,7 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, int property)
         m_effectiveFilterType = FilterAll;
         updateRegistration();
 
-        m_referenceContactIds = SeasideCache::contacts(SeasideCache::FilterAll);
+        m_referenceContactIds = m_allContactIds;
         populateIndex();
     } else if (m_filterType == FilterNone && m_effectiveFilterType == FilterAll && m_filterPattern.isEmpty()) {
         // We should no longer show any results
@@ -917,5 +935,40 @@ SeasideCache::CacheItem *SeasideFilteredModel::existingItem(quint32 iid) const
         m_lastItem = SeasideCache::existingItem(m_lastId);
     }
     return m_lastItem;
+}
+
+void SeasideFilteredModel::updateSearchFilters()
+{
+    static const int maxBatchSize = 100;
+
+    for (int n = 0; m_filterUpdateIndex < m_allContactIds->count(); ++m_filterUpdateIndex) {
+        SeasideCache::CacheItem *item = existingItem(m_allContactIds->at(m_filterUpdateIndex));
+        if (!item)
+            continue;
+
+        FilterData *filterData = FilterData::getItemFilterData(item, this);
+        if (filterData->prepareFilter(item)) {
+            if (++n == maxBatchSize) {
+                // Schedule further processing
+                QCoreApplication::postEvent(this, new QEvent(QEvent::UpdateRequest));
+                return;
+            }
+        }
+    }
+
+    // Nothing left to process
+    m_filterUpdateIndex = -1;
+}
+
+bool SeasideFilteredModel::event(QEvent *event)
+{
+    if (event->type() != QEvent::UpdateRequest)
+        return QObject::event(event);
+
+    if (m_filterUpdateIndex != -1) {
+        updateSearchFilters();
+    }
+
+    return true;
 }
 

@@ -135,6 +135,8 @@ public:
     Q_INVOKABLE int importContacts(const QString &path);
     Q_INVOKABLE QString exportContacts();
 
+    Q_INVOKABLE void prepareSearchFilters();
+
     QModelIndex index(const QModelIndex &parent, int row, int column) const;
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role) const;
@@ -198,13 +200,19 @@ private:
 
     SeasidePerson *personFromItem(SeasideCache::CacheItem *item) const;
 
+    void updateSearchFilters();
+
+    bool event(QEvent *);
+
     QList<quint32> m_filteredContactIds;
     const QList<quint32> *m_contactIds;
     const QList<quint32> *m_referenceContactIds;
+    const QList<quint32> *m_allContactIds;
     QStringList m_filterParts;
     QString m_filterPattern;
     int m_filterIndex;
     int m_referenceIndex;
+    int m_filterUpdateIndex;
     FilterType m_filterType;
     FilterType m_effectiveFilterType;
     SeasideCache::FetchDataType m_fetchTypes;
