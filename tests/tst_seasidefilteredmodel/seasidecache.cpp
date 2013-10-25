@@ -473,6 +473,16 @@ QUrl SeasideCache::filteredAvatarUrl(const QContact &contact, const QStringList 
     return QUrl();
 }
 
+QString SeasideCache::normalizePhoneNumber(const QString &input)
+{
+    return input;
+}
+
+QString SeasideCache::minimizePhoneNumber(const QString &input)
+{
+    return input;
+}
+
 SeasideCache::DisplayLabelOrder SeasideCache::displayLabelOrder()
 {
     return FirstNameFirst;

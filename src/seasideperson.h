@@ -66,6 +66,9 @@ public:
 
     SeasidePerson *selfPerson() const;
 
+    Q_INVOKABLE QString normalizePhoneNumber(const QString &input);
+    Q_INVOKABLE QString minimizePhoneNumber(const QString &input);
+
 signals:
     // Not currently emitted:
     void selfPersonChanged();

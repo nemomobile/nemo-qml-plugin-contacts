@@ -77,6 +77,16 @@ SeasidePerson *SeasidePersonAttached::selfPerson() const
     return static_cast<SeasidePerson *>(item->itemData);
 }
 
+QString SeasidePersonAttached::normalizePhoneNumber(const QString &input)
+{
+    return SeasideCache::normalizePhoneNumber(input);
+}
+
+QString SeasidePersonAttached::minimizePhoneNumber(const QString &input)
+{
+    return SeasideCache::minimizePhoneNumber(input);
+}
+
 SeasidePerson::SeasidePerson(QObject *parent)
     : QObject(parent)
     , mContact(new QContact)
@@ -595,6 +605,8 @@ void updateDetails(QList<T> &existing, QList<T> &modified, QContact *contact, co
 }
 
 const QString phoneDetailNumber(QString::fromLatin1("number"));
+const QString phoneDetailNormalizedNumber(QString::fromLatin1("normalizedNumber"));
+const QString phoneDetailMinimizedNumber(QString::fromLatin1("minimizedNumber"));
 
 }
 
@@ -604,8 +616,14 @@ QVariantList SeasidePerson::phoneDetails() const
 
     int index = 0;
     foreach (const QContactPhoneNumber &detail, mContact->details<QContactPhoneNumber>()) {
+        const QString number(detail.value(QContactPhoneNumber::FieldNumber).toString());
+        const QString normalized(SeasideCache::normalizePhoneNumber(number));
+        const QString minimized(SeasideCache::minimizePhoneNumber(normalized));
+
         QVariantMap item(detailProperties(detail));
-        item.insert(phoneDetailNumber, detail.value(QContactPhoneNumber::FieldNumber).toString());
+        item.insert(phoneDetailNumber, number);
+        item.insert(phoneDetailNormalizedNumber, normalized);
+        item.insert(phoneDetailMinimizedNumber, minimized);
         item.insert(detailType, ::phoneNumberType(detail));
         item.insert(detailIndex, index++);
         rv.append(item);
@@ -641,6 +659,7 @@ void SeasidePerson::setPhoneDetails(const QVariantList &phoneDetails)
         const int type = typeValue.isValid() ? typeValue.value<int>() : -1;
         ::setPhoneNumberType(updated, static_cast<SeasidePerson::DetailType>(type));
 
+        // Ignore normalized/minized number variants
         updated.setValue(QContactPhoneNumber::FieldNumber, numberValue.value<QString>());
         updatedNumbers.append(updated);
     }
