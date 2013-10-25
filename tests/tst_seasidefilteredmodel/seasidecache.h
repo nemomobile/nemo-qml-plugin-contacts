@@ -205,6 +205,9 @@ public:
     static QString generateDisplayLabelFromNonNameDetails(const QContact &contact);
     static QUrl filteredAvatarUrl(const QContact &contact, const QStringList &metadataFragments = QStringList());
 
+    static QString normalizePhoneNumber(const QString &input);
+    static QString minimizePhoneNumber(const QString &input);
+
     void populate(FilterType filterType);
     void insert(FilterType filterType, int index, const QList<quint32> &ids);
     void remove(FilterType filterType, int index, int count);
