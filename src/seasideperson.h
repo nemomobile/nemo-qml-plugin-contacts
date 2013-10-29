@@ -317,6 +317,8 @@ public:
     Q_INVOKABLE void resolveEmailAddress(const QString &address, bool requireComplete = true);
     Q_INVOKABLE void resolveOnlineAccount(const QString &localUid, const QString &remoteUid, bool requireComplete = true);
 
+    Q_INVOKABLE void unresolve(const QVariant &data);
+
     Q_INVOKABLE static QVariantList removeDuplicatePhoneNumbers(const QVariantList &phoneNumbers);
     Q_INVOKABLE static QVariantList removeDuplicateOnlineAccounts(const QVariantList &onlineAccounts);
     Q_INVOKABLE static QVariantList removeDuplicateEmailAddresses(const QVariantList &emailAddresses);

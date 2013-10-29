@@ -1955,6 +1955,18 @@ void SeasidePerson::resetContactData()
     }
 }
 
+void SeasidePerson::unresolve(const QVariant &data)
+{
+    QVariant previousData(contactData());
+
+    setContactData(data);
+    mContact->setId(QContactId());
+    mComplete = true;
+
+    updateContactDetails(previousData.value<QContact>());
+    emit contactChanged();
+}
+
 QString SeasidePerson::vCard() const
 {
     QVersitContactExporter exporter;
