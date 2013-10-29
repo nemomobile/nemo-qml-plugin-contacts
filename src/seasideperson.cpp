@@ -514,6 +514,7 @@ void SeasidePerson::setPhoneNumbers(const QStringList &phoneNumbers)
 {
     setPropertyFieldFromList<QContactPhoneNumber>(*mContact, QContactPhoneNumber::FieldNumber, phoneNumbers);
     emit phoneNumbersChanged();
+    recalculateDisplayLabel();
 }
 
 QList<int> SeasidePerson::phoneNumberTypes() const
