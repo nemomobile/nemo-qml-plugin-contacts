@@ -611,12 +611,12 @@ const QString phoneDetailMinimizedNumber(QString::fromLatin1("minimizedNumber"))
 
 }
 
-QVariantList SeasidePerson::phoneDetails() const
+QVariantList SeasidePerson::phoneDetails(const QContact &contact)
 {
     QVariantList rv;
 
     int index = 0;
-    foreach (const QContactPhoneNumber &detail, mContact->details<QContactPhoneNumber>()) {
+    foreach (const QContactPhoneNumber &detail, contact.details<QContactPhoneNumber>()) {
         const QString number(detail.value(QContactPhoneNumber::FieldNumber).toString());
         const QString normalized(SeasideCache::normalizePhoneNumber(number));
         const QString minimized(SeasideCache::minimizePhoneNumber(normalized));
@@ -631,6 +631,11 @@ QVariantList SeasidePerson::phoneDetails() const
     }
 
     return rv;
+}
+
+QVariantList SeasidePerson::phoneDetails() const
+{
+    return phoneDetails(*mContact);
 }
 
 void SeasidePerson::setPhoneDetails(const QVariantList &phoneDetails)
@@ -748,12 +753,12 @@ const QString emailDetailAddress(QString::fromLatin1("address"));
 
 }
 
-QVariantList SeasidePerson::emailDetails() const
+QVariantList SeasidePerson::emailDetails(const QContact &contact)
 {
     QVariantList rv;
 
     int index = 0;
-    foreach (const QContactEmailAddress &detail, mContact->details<QContactEmailAddress>()) {
+    foreach (const QContactEmailAddress &detail, contact.details<QContactEmailAddress>()) {
         QVariantMap item(detailProperties(detail));
         item.insert(emailDetailAddress, detail.value(QContactEmailAddress::FieldEmailAddress).toString());
         item.insert(detailType, ::emailAddressType(detail));
@@ -762,6 +767,11 @@ QVariantList SeasidePerson::emailDetails() const
     }
 
     return rv;
+}
+
+QVariantList SeasidePerson::emailDetails() const
+{
+    return emailDetails(*mContact);
 }
 
 void SeasidePerson::setEmailDetails(const QVariantList &emailDetails)
@@ -944,12 +954,12 @@ const QString addressDetailAddress(QString::fromLatin1("address"));
 
 }
 
-QVariantList SeasidePerson::addressDetails() const
+QVariantList SeasidePerson::addressDetails(const QContact &contact)
 {
     QVariantList rv;
 
     int index = 0;
-    foreach (const QContactAddress &detail, mContact->details<QContactAddress>()) {
+    foreach (const QContactAddress &detail, contact.details<QContactAddress>()) {
         QVariantMap item(detailProperties(detail));
         item.insert(addressDetailAddress, ::addressString(detail));
         item.insert(detailType, ::addressType(detail));
@@ -958,6 +968,11 @@ QVariantList SeasidePerson::addressDetails() const
     }
 
     return rv;
+}
+
+QVariantList SeasidePerson::addressDetails() const
+{
+    return addressDetails(*mContact);
 }
 
 void SeasidePerson::setAddressDetails(const QVariantList &addressDetails)
@@ -1081,12 +1096,12 @@ const QString websiteDetailUrl(QString::fromLatin1("url"));
 
 }
 
-QVariantList SeasidePerson::websiteDetails() const
+QVariantList SeasidePerson::websiteDetails(const QContact &contact)
 {
     QVariantList rv;
 
     int index = 0;
-    foreach (const QContactUrl &detail, mContact->details<QContactUrl>()) {
+    foreach (const QContactUrl &detail, contact.details<QContactUrl>()) {
         QVariantMap item(detailProperties(detail));
         item.insert(websiteDetailUrl, detail.value(QContactUrl::FieldUrl).toUrl().toString());
         item.insert(detailType, ::websiteType(detail));
@@ -1095,6 +1110,11 @@ QVariantList SeasidePerson::websiteDetails() const
     }
 
     return rv;
+}
+
+QVariantList SeasidePerson::websiteDetails() const
+{
+    return websiteDetails(*mContact);
 }
 
 void SeasidePerson::setWebsiteDetails(const QVariantList &websiteDetails)
@@ -1309,12 +1329,12 @@ const QString accountDetailServiceProviderDisplayName(QString::fromLatin1("servi
 
 }
 
-QVariantList SeasidePerson::accountDetails() const
+QVariantList SeasidePerson::accountDetails(const QContact &contact)
 {
     QVariantList rv;
 
     int index = 0;
-    foreach (const QContactOnlineAccount &detail, mContact->details<QContactOnlineAccount>()) {
+    foreach (const QContactOnlineAccount &detail, contact.details<QContactOnlineAccount>()) {
         QVariantMap item(detailProperties(detail));
         item.insert(accountDetailUri, detail.value(QContactOnlineAccount::FieldAccountUri).toString());
         item.insert(accountDetailPath, detail.value(QContactOnlineAccount__FieldAccountPath).toString());
@@ -1327,6 +1347,11 @@ QVariantList SeasidePerson::accountDetails() const
     }
 
     return rv;
+}
+
+QVariantList SeasidePerson::accountDetails() const
+{
+    return accountDetails(*mContact);
 }
 
 void SeasidePerson::setAccountDetails(const QVariantList &accountDetails)
