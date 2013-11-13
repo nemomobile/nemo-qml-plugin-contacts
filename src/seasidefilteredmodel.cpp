@@ -529,6 +529,7 @@ bool SeasideFilteredModel::savePerson(SeasidePerson *person)
         // Report that this Person object has changed, since the update
         // resulting from the save will not find any differences
         emit person->dataChanged();
+        return true;
     }
 
     return false;
