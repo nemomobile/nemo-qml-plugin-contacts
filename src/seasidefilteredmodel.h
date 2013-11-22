@@ -92,7 +92,10 @@ public:
         AccountPathsRole,
         PersonRole,
         PrimaryNameRole,
-        SecondaryNameRole
+        SecondaryNameRole,
+        PhoneDetailsRole,
+        EmailDetailsRole,
+        AccountDetailsRole
     };
 
     typedef SeasideCache::ContactIdType ContactIdType;

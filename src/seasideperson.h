@@ -344,6 +344,12 @@ public:
     void mergeCandidatesFetched(const QList<int> &ids);
     void aggregationOperationCompleted();
 
+    static QVariantList phoneDetails(const QContact &contact);
+    static QVariantList emailDetails(const QContact &contact);
+    static QVariantList addressDetails(const QContact &contact);
+    static QVariantList websiteDetails(const QContact &contact);
+    static QVariantList accountDetails(const QContact &contact);
+
     static QString generateDisplayLabel(
                 const QContact &mContact,
                 SeasideCache::DisplayLabelOrder order = SeasideCache::FirstNameFirst);

@@ -76,6 +76,9 @@ const QByteArray accountPathsRole("accountPaths");
 const QByteArray personRole("person");
 const QByteArray primaryNameRole("primaryName");
 const QByteArray secondaryNameRole("secondaryName");
+const QByteArray phoneDetailsRole("phoneDetails");
+const QByteArray emailDetailsRole("emailDetails");
+const QByteArray accountDetailsRole("accountDetails");
 
 const ML10N::MLocale mLocale;
 
@@ -287,6 +290,9 @@ QHash<int, QByteArray> SeasideFilteredModel::roleNames() const
     roles.insert(PersonRole, personRole);
     roles.insert(PrimaryNameRole, primaryNameRole);
     roles.insert(SecondaryNameRole, secondaryNameRole);
+    roles.insert(PhoneDetailsRole, phoneDetailsRole);
+    roles.insert(EmailDetailsRole, emailDetailsRole);
+    roles.insert(AccountDetailsRole, accountDetailsRole);
     return roles;
 }
 
@@ -511,6 +517,9 @@ QVariantMap SeasideFilteredModel::get(int row) const
     m.insert(emailAddressesRole, data(cacheItem, EmailAddressesRole));
     m.insert(accountUrisRole, data(cacheItem, AccountUrisRole));
     m.insert(accountPathsRole, data(cacheItem, AccountPathsRole));
+    m.insert(phoneDetailsRole, data(cacheItem, PhoneDetailsRole));
+    m.insert(emailDetailsRole, data(cacheItem, EmailDetailsRole));
+    m.insert(accountDetailsRole, data(cacheItem, AccountDetailsRole));
     return m;
 }
 
@@ -635,6 +644,12 @@ QVariant SeasideFilteredModel::data(SeasideCache::CacheItem *cacheItem, int role
         return presence.isEmpty()
                 ? QContactPresence::PresenceUnknown
                 : presence.presenceState();
+    } else if (role == PhoneDetailsRole) {
+        return SeasidePerson::phoneDetails(contact);
+    } else if (role == EmailDetailsRole) {
+        return SeasidePerson::emailDetails(contact);
+    } else if (role == AccountDetailsRole) {
+        return SeasidePerson::accountDetails(contact);
     } else if (role == PhoneNumbersRole || role == EmailAddressesRole || role == AccountUrisRole || role == AccountPathsRole) {
         QStringList rv;
         if (role == PhoneNumbersRole) {
