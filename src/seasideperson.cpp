@@ -1450,6 +1450,7 @@ void SeasidePerson::setContact(const QContact &contact)
     QContact oldContact = *mContact;
     *mContact = contact;
 
+    recalculateDisplayLabel();
     updateContactDetails(oldContact);
 }
 
@@ -1555,8 +1556,30 @@ void SeasidePerson::updateContactDetails(const QContact &oldContact)
     if (m_changesReported) {
         emit dataChanged();
     }
+}
 
-    recalculateDisplayLabel();
+void SeasidePerson::emitChangeSignals()
+{
+    emitChangeSignal(&SeasidePerson::contactChanged);
+    emitChangeSignal(&SeasidePerson::primaryNameChanged);
+    emitChangeSignal(&SeasidePerson::secondaryNameChanged);
+    emitChangeSignal(&SeasidePerson::firstNameChanged);
+    emitChangeSignal(&SeasidePerson::lastNameChanged);
+    emitChangeSignal(&SeasidePerson::companyNameChanged);
+    emitChangeSignal(&SeasidePerson::favoriteChanged);
+    emitChangeSignal(&SeasidePerson::avatarUrlChanged);
+    emitChangeSignal(&SeasidePerson::avatarPathChanged);
+    emitChangeSignal(&SeasidePerson::globalPresenceStateChanged);
+    emitChangeSignal(&SeasidePerson::presenceStatesChanged);
+    emitChangeSignal(&SeasidePerson::presenceMessagesChanged);
+    emitChangeSignal(&SeasidePerson::presenceAccountProvidersChanged);
+    emitChangeSignal(&SeasidePerson::phoneNumbersChanged);
+    emitChangeSignal(&SeasidePerson::emailAddressesChanged);
+    emitChangeSignal(&SeasidePerson::accountUrisChanged);
+    emitChangeSignal(&SeasidePerson::accountPathsChanged);
+    emitChangeSignal(&SeasidePerson::accountProvidersChanged);
+    emitChangeSignal(&SeasidePerson::accountIconPathsChanged);
+    emit dataChanged();
 }
 
 QString SeasidePerson::getPrimaryName(const QContact &contact) const
@@ -1716,6 +1739,7 @@ void SeasidePerson::addressResolved(const QString &, const QString &, SeasideCac
 
             // Attach to the contact in the cache item
             mContact = &item->contact;
+            recalculateDisplayLabel();
             updateContactDetails(*oldContact);
 
             // Release our previous contact info
@@ -1736,7 +1760,8 @@ void SeasidePerson::addressResolved(const QString &, const QString &, SeasideCac
 void SeasidePerson::itemUpdated(SeasideCache::CacheItem *)
 {
     // We don't know what has changed - report everything changed
-    updateContactDetails(QContact());
+    recalculateDisplayLabel();
+    emitChangeSignals();
 }
 
 void SeasidePerson::itemAboutToBeRemoved(SeasideCache::CacheItem *item)
