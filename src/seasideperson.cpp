@@ -99,6 +99,7 @@ SeasidePerson::SeasidePerson(QObject *parent)
 SeasidePerson::SeasidePerson(const QContact &contact, QObject *parent)
     : QObject(parent)
     , mContact(new QContact(contact))
+    , mDisplayLabel(generateDisplayLabel(contact))
     , mComplete(true)
     , mAttachState(Unattached)
     , mItem(0)
@@ -108,6 +109,7 @@ SeasidePerson::SeasidePerson(const QContact &contact, QObject *parent)
 SeasidePerson::SeasidePerson(QContact *contact, bool complete, QObject *parent)
     : QObject(parent)
     , mContact(contact)
+    , mDisplayLabel(generateDisplayLabel(*contact))
     , mComplete(complete)
     , mAttachState(Attached)
     , mItem(0)
@@ -229,10 +231,6 @@ void SeasidePerson::recalculateDisplayLabel(SeasideCache::DisplayLabelOrder orde
 
 QString SeasidePerson::displayLabel() const
 {
-    if (mDisplayLabel.isEmpty()) {
-        recalculateDisplayLabel();
-    }
-
     return mDisplayLabel;
 }
 
@@ -1636,6 +1634,8 @@ void SeasidePerson::setContactData(const QVariant &data)
 
     // We don't know if this contact is complete or not - assume it isn't if it has an ID
     mComplete = (id() == 0);
+
+    recalculateDisplayLabel();
 }
 
 void SeasidePerson::resetContactData()
