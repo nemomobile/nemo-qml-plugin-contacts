@@ -407,6 +407,7 @@ public slots:
 
 private:
     void updateContactDetails(const QContact &oldContact);
+    void emitChangeSignals();
 
     QString getPrimaryName(const QContact &contact) const;
     QString getSecondaryName(const QContact &contact) const;
