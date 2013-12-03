@@ -1699,6 +1699,49 @@ void SeasidePerson::resolveOnlineAccount(const QString &localUid, const QString 
     }
 }
 
+QVariantList SeasidePerson::removeDuplicatePhoneNumbers(const QVariantList &phoneNumbers)
+{
+    QVariantList rv;
+
+    foreach (const QVariant &item, phoneNumbers) {
+        const QVariantMap detail(item.value<QVariantMap>());
+        const QVariant &minimized = detail.value(phoneDetailMinimizedNumber);
+
+        // See if we already have a match for this number in minimized form
+        QVariantList::iterator it = rv.begin(), end = rv.end();
+        for ( ; it != end; ++it) {
+            const QVariant &rvItem(*it);
+            const QVariantMap prior(rvItem.value<QVariantMap>());
+            const QVariant &priorMinimized = prior.value(phoneDetailMinimizedNumber);
+
+            if (priorMinimized == minimized) {
+                // This number is already present in minimized form - which is preferred?
+                const QString &normalized = detail.value(phoneDetailNormalizedNumber).toString();
+                const QString &priorNormalized = prior.value(phoneDetailNormalizedNumber).toString();
+
+                const QString &number = detail.value(phoneDetailNumber).toString();
+                const QString &priorNumber = prior.value(phoneDetailNumber).toString();
+
+                const QChar plus(QChar::fromLatin1('+'));
+                if ((normalized[0] == plus && priorNormalized[0] != plus) ||
+                    ((priorNormalized[0] != plus) &&
+                     ((normalized.length() > priorNormalized.length()) ||
+                      (normalized.length() == priorNormalized.length() &&
+                       number.length() > priorNumber.length())))) {
+                    // Prefer this form of the number to the shorter form already present
+                    *it = detail;
+                }
+                break;
+            }
+        }
+        if (it == end) {
+            rv.append(detail);
+        }
+    }
+
+    return rv;
+}
+
 void SeasidePerson::updateContact(const QContact &newContact, QContact *oldContact, SeasideCache::ContactState state)
 {
     Q_UNUSED(oldContact)
