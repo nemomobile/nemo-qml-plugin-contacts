@@ -50,6 +50,8 @@
 
 #include "seasideperson.h"
 
+#include <algorithm>
+
 USE_CONTACTS_NAMESPACE
 
 class tst_SeasidePerson : public QObject
@@ -87,6 +89,7 @@ private slots:
     void vcard();
     void syncTarget();
     void constituents();
+    void removeDuplicatePhoneNumbers();
 
 private:
     QStringList m_nameGroups;
@@ -547,6 +550,62 @@ void tst_SeasidePerson::constituents()
 
     // No constituents in this data
     QCOMPARE(person->constituents(), QList<int>());
+}
+
+void tst_SeasidePerson::removeDuplicatePhoneNumbers()
+{
+    const QString phoneDetailType(QString::fromLatin1("type"));
+    const QString phoneDetailNumber(QString::fromLatin1("number"));
+    const QString phoneDetailNormalizedNumber(QString::fromLatin1("normalizedNumber"));
+    const QString phoneDetailMinimizedNumber(QString::fromLatin1("minimizedNumber"));
+
+    QList<QVariantMap> numbers;
+
+    QStringList numberStrings;
+    numberStrings << QString::fromLatin1("12345678")          // simple
+                  << QString::fromLatin1("(12) 345-678")      // punctuation
+                  << QString::fromLatin1("00112345678")       // extended
+                  << QString::fromLatin1("+0112345678")       // initial plus
+                  << QString::fromLatin1("+00112345678")      // longer initial plus
+                  << QString::fromLatin1("+0011-2345678")     // longer initial plus with punc
+                  << QString::fromLatin1("0000112345678")     // longer extended
+                  << QString::fromLatin1("12345012345678")    // super extended
+                  << QString::fromLatin1("(12345)012345678"); // super extended with punc
+
+    foreach (const QString &num, numberStrings) {
+        QVariantMap number;
+        number.insert(phoneDetailType, SeasidePerson::PhoneHomeType);
+        number.insert(phoneDetailNumber, num);
+        number.insert(phoneDetailNormalizedNumber, SeasideCache::normalizePhoneNumber(num));
+        number.insert(phoneDetailMinimizedNumber, SeasideCache::minimizePhoneNumber(num));
+        numbers.append(number);
+    }
+
+    // Whatever order the numbers are inserted in, the two returned numbers should be the same
+    QStringList expectedList;
+    expectedList << numbers[5].value(phoneDetailNumber).toString()
+                 << numbers[8].value(phoneDetailNumber).toString();
+
+    SeasidePerson person;
+    int indices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+    const int n = sizeof(indices) / sizeof(indices[0]);
+
+    // Test all possible orderings of the input set
+    do {
+        QVariantList numberList;
+        for (int i = 0; i < n; ++i) {
+            numberList << numbers[indices[i]];
+        }
+
+        QVariantList deduplicated(person.removeDuplicatePhoneNumbers(numberList));
+
+        QStringList resultList;
+        foreach (const QVariant &item, deduplicated) {
+            const QVariantMap detail(item.value<QVariantMap>());
+            resultList.append(detail.value(phoneDetailNumber).toString());
+        }
+        QCOMPARE(resultList.toSet(), expectedList.toSet());
+    } while (std::next_permutation(indices, indices + n) == true);
 }
 
 // TODO:
