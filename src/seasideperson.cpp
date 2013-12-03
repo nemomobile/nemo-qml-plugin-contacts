@@ -1722,16 +1722,46 @@ QVariantList SeasidePerson::removeDuplicatePhoneNumbers(const QVariantList &phon
                 const QString &number = detail.value(phoneDetailNumber).toString();
                 const QString &priorNumber = prior.value(phoneDetailNumber).toString();
 
+                // We will allow up to two forms: the longest initial-plus variant, and
+                // the longest non-plus variant, but only if that exceeds the length of
+                // the initial-plus form, where present
+                bool replace(false);
+                bool append(false);
+
                 const QChar plus(QChar::fromLatin1('+'));
-                if ((normalized[0] == plus && priorNormalized[0] != plus) ||
-                    ((priorNormalized[0] != plus) &&
-                     ((normalized.length() > priorNormalized.length()) ||
-                      (normalized.length() == priorNormalized.length() &&
-                       number.length() > priorNumber.length())))) {
+                if (normalized[0] == plus) {
+                    if (priorNormalized[0] == plus) {
+                        // Prefer the longer normalized form, or the longer unnormalized form
+                        // if the normalized forms are equal
+                        replace = (normalized.length() > priorNormalized.length() ||
+                                   (normalized.length() == priorNormalized.length() &&
+                                    number.length() > priorNumber.length()));
+                    } else {
+                        if (normalized.length() >= priorNormalized.length()) {
+                            replace = true;
+                        } else {
+                            append = true;
+                        }
+                    }
+                } else {
+                    if (normalized.length() > priorNormalized.length() ||
+                        (normalized.length() == priorNormalized.length() &&
+                         number.length() > priorNumber.length())) {
+                        if (priorNormalized[0] == plus) {
+                            append = true;
+                        } else {
+                            replace = true;
+                        }
+                    }
+                }
+
+                if (replace) {
                     // Prefer this form of the number to the shorter form already present
                     *it = detail;
+                    break;
+                } else if (!append) {
+                    break;
                 }
-                break;
             }
         }
         if (it == end) {
