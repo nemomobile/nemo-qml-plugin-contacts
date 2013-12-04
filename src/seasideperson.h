@@ -69,6 +69,8 @@ public:
     Q_INVOKABLE QString normalizePhoneNumber(const QString &input);
     Q_INVOKABLE QString minimizePhoneNumber(const QString &input);
 
+    Q_INVOKABLE QVariantList removeDuplicatePhoneNumbers(const QVariantList &phoneNumbers);
+
 signals:
     // Not currently emitted:
     void selfPersonChanged();
@@ -331,7 +333,7 @@ public:
     Q_INVOKABLE void resolveEmailAddress(const QString &address, bool requireComplete = true);
     Q_INVOKABLE void resolveOnlineAccount(const QString &localUid, const QString &remoteUid, bool requireComplete = true);
 
-    Q_INVOKABLE QVariantList removeDuplicatePhoneNumbers(const QVariantList &phoneNumbers);
+    Q_INVOKABLE static QVariantList removeDuplicatePhoneNumbers(const QVariantList &phoneNumbers);
 
     void displayLabelOrderChanged(SeasideCache::DisplayLabelOrder order);
 
