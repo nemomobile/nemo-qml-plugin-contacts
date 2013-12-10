@@ -1722,6 +1722,79 @@ void SeasidePerson::resolveOnlineAccount(const QString &localUid, const QString 
     }
 }
 
+QVariantList SeasidePerson::removeDuplicatePhoneNumbers(const QVariantList &phoneNumbers)
+{
+    QVariantList rv;
+
+    foreach (const QVariant &item, phoneNumbers) {
+        const QVariantMap detail(item.value<QVariantMap>());
+        const QVariant &minimized = detail.value(phoneDetailMinimizedNumber);
+
+        // See if we already have a match for this number in minimized form
+        QVariantList::iterator it = rv.begin(), end = rv.end();
+        for ( ; it != end; ++it) {
+            const QVariant &rvItem(*it);
+            const QVariantMap prior(rvItem.value<QVariantMap>());
+            const QVariant &priorMinimized = prior.value(phoneDetailMinimizedNumber);
+
+            if (priorMinimized == minimized) {
+                // This number is already present in minimized form - which is preferred?
+                const QString &normalized = detail.value(phoneDetailNormalizedNumber).toString();
+                const QString &priorNormalized = prior.value(phoneDetailNormalizedNumber).toString();
+
+                const QString &number = detail.value(phoneDetailNumber).toString();
+                const QString &priorNumber = prior.value(phoneDetailNumber).toString();
+
+                // We will allow up to two forms: the longest initial-plus variant, and
+                // the longest non-plus variant, but only if that exceeds the length of
+                // the initial-plus form, where present
+                bool replace(false);
+                bool append(false);
+
+                const QChar plus(QChar::fromLatin1('+'));
+                if (normalized[0] == plus) {
+                    if (priorNormalized[0] == plus) {
+                        // Prefer the longer normalized form, or the longer unnormalized form
+                        // if the normalized forms are equal
+                        replace = (normalized.length() > priorNormalized.length() ||
+                                   (normalized.length() == priorNormalized.length() &&
+                                    number.length() > priorNumber.length()));
+                    } else {
+                        if (normalized.length() >= priorNormalized.length()) {
+                            replace = true;
+                        } else {
+                            append = true;
+                        }
+                    }
+                } else {
+                    if (normalized.length() > priorNormalized.length() ||
+                        (normalized.length() == priorNormalized.length() &&
+                         number.length() > priorNumber.length())) {
+                        if (priorNormalized[0] == plus) {
+                            append = true;
+                        } else {
+                            replace = true;
+                        }
+                    }
+                }
+
+                if (replace) {
+                    // Prefer this form of the number to the shorter form already present
+                    *it = detail;
+                    break;
+                } else if (!append) {
+                    break;
+                }
+            }
+        }
+        if (it == end) {
+            rv.append(detail);
+        }
+    }
+
+    return rv;
+}
+
 void SeasidePerson::updateContact(const QContact &newContact, QContact *oldContact, SeasideCache::ContactState state)
 {
     Q_UNUSED(oldContact)
