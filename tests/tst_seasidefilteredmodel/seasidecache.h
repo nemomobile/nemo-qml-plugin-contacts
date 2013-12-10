@@ -48,6 +48,10 @@ public:
         ContactComplete
     };
 
+    enum {
+        HasValidOnlineAccount = (QContactStatusFlags::IsOnline << 1)
+    };
+
     struct ItemData
     {
         virtual ~ItemData() {}
