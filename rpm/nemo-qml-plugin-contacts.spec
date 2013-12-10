@@ -21,7 +21,7 @@ BuildRequires:  pkgconfig(QtDeclarative)
 BuildRequires:  pkgconfig(QtGui)
 BuildRequires:  pkgconfig(QtContacts)
 BuildRequires:  pkgconfig(qtcontacts-sqlite-extensions) >= 0.1.27
-BuildRequires:  pkgconfig(contactcache) >= 0.0.38
+BuildRequires:  pkgconfig(contactcache) >= 0.0.50
 BuildRequires:  pkgconfig(mlocale5)
 Provides:   nemo-qml-plugins-contacts > 0.3.26
 Obsoletes:   nemo-qml-plugins-contacts <= 0.3.26
