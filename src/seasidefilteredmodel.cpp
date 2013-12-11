@@ -534,6 +534,10 @@ QVariant SeasideFilteredModel::get(int row, int role) const
 
 bool SeasideFilteredModel::savePerson(SeasidePerson *person)
 {
+    if (!person) {
+        qWarning("savePerson() failed: specified person is null");
+        return false;
+    }
     if (SeasideCache::saveContact(person->contact())) {
         // Report that this Person object has changed, since the update
         // resulting from the save will not find any differences
