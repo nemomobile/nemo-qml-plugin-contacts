@@ -1,2 +1,2 @@
 TEMPLATE = subdirs
-SUBDIRS = vcardconverter
+SUBDIRS = vcardconverter contacts-tool
