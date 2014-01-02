@@ -81,6 +81,7 @@ rm -rf %{buildroot}
 %files tools
 %defattr(-,root,root,-)
 %{_bindir}/vcardconverter
+%{_bindir}/contacts-tool
 # >> files tools
 # << files tools
 
