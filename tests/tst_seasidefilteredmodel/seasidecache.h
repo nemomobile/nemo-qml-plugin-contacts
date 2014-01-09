@@ -33,7 +33,12 @@ public:
         FetchNone = 0,
         FetchAccountUri = (1 << 0),
         FetchPhoneNumber = (1 << 1),
-        FetchEmailAddress = (1 << 2)
+        FetchEmailAddress = (1 << 2),
+        FetchOrganization = (1 << 3),
+        FetchTypesMask = (FetchAccountUri |
+                          FetchPhoneNumber |
+                          FetchEmailAddress |
+                          FetchOrganization)
     };
 
     enum DisplayLabelOrder {
@@ -150,7 +155,7 @@ public:
     SeasideCache();
     ~SeasideCache();
 
-    static void registerModel(ListModel *model, FilterType type, FetchDataType extraData = FetchNone);
+    static void registerModel(ListModel *model, FilterType type, FetchDataType requiredTypes = FetchNone, FetchDataType extraTypes = FetchNone);
     static void unregisterModel(ListModel *model);
 
     static void registerUser(QObject *user);

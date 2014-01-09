@@ -52,9 +52,10 @@ class SeasideFilteredModel : public SeasideCache::ListModel
     Q_PROPERTY(QString groupProperty READ groupProperty NOTIFY groupPropertyChanged)
     Q_PROPERTY(QString filterPattern READ filterPattern WRITE setFilterPattern NOTIFY filterPatternChanged)
     Q_PROPERTY(int requiredProperty READ requiredProperty WRITE setRequiredProperty NOTIFY requiredPropertyChanged)
+    Q_PROPERTY(int searchableProperty READ searchableProperty WRITE setSearchableProperty NOTIFY searchablePropertyChanged)
     Q_PROPERTY(bool searchByFirstNameCharacter READ searchByFirstNameCharacter WRITE setSearchByFirstNameCharacter NOTIFY searchByFirstNameCharacterChanged)
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
-    Q_ENUMS(FilterType RequiredPropertyType DisplayLabelOrder)
+    Q_ENUMS(FilterType RequiredPropertyType SearchablePropertyType DisplayLabelOrder)
 
 public:
     enum FilterType {
@@ -70,6 +71,14 @@ public:
         AccountUriRequired = SeasideCache::FetchAccountUri,
         PhoneNumberRequired = SeasideCache::FetchPhoneNumber,
         EmailAddressRequired = SeasideCache::FetchEmailAddress
+    };
+
+    enum SearchablePropertyType {
+        NoPropertySearchable = 0,
+        AccountUriSearchable = SeasideCache::FetchAccountUri,
+        PhoneNumberSearchable = SeasideCache::FetchPhoneNumber,
+        EmailAddressSearchable = SeasideCache::FetchEmailAddress,
+        OrganizationSearchable = SeasideCache::FetchOrganization
     };
 
     enum DisplayLabelOrder {
@@ -113,6 +122,9 @@ public:
 
     int requiredProperty() const;
     void setRequiredProperty(int type);
+
+    int searchableProperty() const;
+    void setSearchableProperty(int type);
 
     bool searchByFirstNameCharacter() const;
     void setSearchByFirstNameCharacter(bool searchByFirstNameCharacter);
@@ -182,6 +194,7 @@ signals:
     void filterTypeChanged();
     void filterPatternChanged();
     void requiredPropertyChanged();
+    void searchablePropertyChanged();
     void searchByFirstNameCharacterChanged();
     void displayLabelOrderChanged();
     void sortPropertyChanged();
@@ -218,8 +231,8 @@ private:
     int m_filterUpdateIndex;
     FilterType m_filterType;
     FilterType m_effectiveFilterType;
-    SeasideCache::FetchDataType m_fetchTypes;
     int m_requiredProperty;
+    int m_searchableProperty;
     bool m_searchByFirstNameCharacter;
 
     mutable SeasideCache::CacheItem *m_lastItem;

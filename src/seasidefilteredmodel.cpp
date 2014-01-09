@@ -250,8 +250,8 @@ SeasideFilteredModel::SeasideFilteredModel(QObject *parent)
     , m_filterUpdateIndex(-1)
     , m_filterType(FilterAll)
     , m_effectiveFilterType(FilterAll)
-    , m_fetchTypes(SeasideCache::FetchNone)
     , m_requiredProperty(NoPropertyRequired)
+    , m_searchableProperty(NoPropertySearchable)
     , m_searchByFirstNameCharacter(false)
     , m_lastItem(0)
 {
@@ -387,6 +387,21 @@ int SeasideFilteredModel::requiredProperty() const
 void SeasideFilteredModel::setRequiredProperty(int type)
 {
     updateFilters(m_filterPattern, type);
+}
+
+int SeasideFilteredModel::searchableProperty() const
+{
+    return m_searchableProperty;
+}
+
+void SeasideFilteredModel::setSearchableProperty(int type)
+{
+    if (m_searchableProperty != type) {
+        m_searchableProperty = type;
+
+        updateRegistration();
+        emit searchablePropertyChanged();
+    }
 }
 
 bool SeasideFilteredModel::searchByFirstNameCharacter() const
@@ -864,8 +879,6 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, int property)
         changedProperty = true;
 
         // Update our registration to include the data type we need
-        m_fetchTypes = static_cast<SeasideCache::FetchDataType>(m_requiredProperty);
-
         updateRegistration();
     }
 
@@ -926,7 +939,9 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, int property)
 
 void SeasideFilteredModel::updateRegistration()
 {
-    SeasideCache::registerModel(this, static_cast<SeasideCache::FilterType>(m_effectiveFilterType), m_fetchTypes);
+    const SeasideCache::FetchDataType requiredTypes(static_cast<SeasideCache::FetchDataType>(m_requiredProperty));
+    const SeasideCache::FetchDataType extraTypes(static_cast<SeasideCache::FetchDataType>(m_searchableProperty));
+    SeasideCache::registerModel(this, static_cast<SeasideCache::FilterType>(m_effectiveFilterType), requiredTypes, extraTypes);
 }
 
 void SeasideFilteredModel::invalidateRows(int begin, int count, bool filteredIndex, bool removeFromModel)

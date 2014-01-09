@@ -225,7 +225,7 @@ SeasideCache::~SeasideCache()
     instancePtr = 0;
 }
 
-void SeasideCache::registerModel(ListModel *model, FilterType type, FetchDataType)
+void SeasideCache::registerModel(ListModel *model, FilterType type, FetchDataType, FetchDataType)
 {
     for (int i = 0; i < FilterTypesCount; ++i)
         instancePtr->m_models[i] = 0;
