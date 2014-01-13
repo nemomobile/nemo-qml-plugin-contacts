@@ -307,15 +307,15 @@ void SeasidePerson::setNickname(const QString &name)
 
 QString SeasidePerson::title() const
 {
-    QContactName nameDetail = mContact->detail<QContactName>();
-    return nameDetail.prefix();
+    QContactOrganization company = mContact->detail<QContactOrganization>();
+    return company.role();
 }
 
-void SeasidePerson::setTitle(const QString &name)
+void SeasidePerson::setTitle(const QString &role)
 {
-    QContactName nameDetail = mContact->detail<QContactName>();
-    nameDetail.setPrefix(name);
-    mContact->saveDetail(&nameDetail);
+    QContactOrganization companyDetail = mContact->detail<QContactOrganization>();
+    companyDetail.setRole(role);
+    mContact->saveDetail(&companyDetail);
     emit titleChanged();
 }
 
