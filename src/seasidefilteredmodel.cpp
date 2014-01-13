@@ -89,10 +89,42 @@ void insert(QSet<T> &set, const QList<T> &list)
         set.insert(item);
 }
 
+QSet<QString> alphabetCharacters()
+{
+    QSet<QString> rv;
+
+    foreach (const QString &c, mLocale.exemplarCharactersIndex()) {
+        rv.insert(mLocale.toLower(c));
+    }
+
+    return rv;
+}
+
 QString makeSearchToken(const QString &word)
 {
-    // Decompose to normal form D, which makes diacritic-insensitive matching simpler
-    return mLocale.toLower(word).normalized(QString::NormalizationForm_D);
+    const QSet<QString> alphabet(alphabetCharacters());
+
+    // Convert the word to canonical form, lowercase
+    QString canonical(mLocale.toLower(word).normalized(QString::NormalizationForm_C));
+
+    QString token;
+    ML10N::MBreakIterator it(mLocale, canonical, ML10N::MBreakIterator::CharacterIterator);
+    while (it.hasNext()) {
+        const int position = it.next();
+        const QString character(canonical.mid(position, (it.peekNext() - position)));
+        if (!character.isEmpty()) {
+            if (alphabet.contains(character)) {
+                // This character is a member of the alphabet for this locale - do not decompose it
+                token.append(character);
+            } else {
+                // This character is not a member of the alphabet; decompose it to
+                // assist with diacritic-insensitive matching
+                token.append(character.normalized(QString::NormalizationForm_D));
+            }
+        }
+    }
+
+    return token;
 }
 
 // Splits a string at word boundaries identified by MBreakIterator
