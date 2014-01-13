@@ -7,6 +7,8 @@ equals(QT_MAJOR_VERSION, 5) {
     PKGCONFIG += mlocale5
 }
 
+CONFIG += c++11
+
 HEADERS += \
         seasidecache.h \
         seasidefilteredmodel.h \

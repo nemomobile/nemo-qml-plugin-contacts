@@ -100,37 +100,104 @@ QSet<QString> alphabetCharacters()
     return rv;
 }
 
-QString makeSearchToken(const QString &word)
+QMap<uint, QString> decompositionMapping()
 {
-    const QSet<QString> alphabet(alphabetCharacters());
+    QMap<uint, QString> rv;
+
+    rv.insert(0x00df, QString::fromLatin1("ss")); // sharp-s ('sz' ligature)
+    rv.insert(0x00e6, QString::fromLatin1("ae")); // 'ae' ligature
+    rv.insert(0x00f0, QString::fromLatin1("d"));  // eth
+    rv.insert(0x00f8, QString::fromLatin1("o"));  // o with stroke
+    rv.insert(0x00fe, QString::fromLatin1("th")); // thorn
+    rv.insert(0x0111, QString::fromLatin1("d"));  // d with stroke
+    rv.insert(0x0127, QString::fromLatin1("h"));  // h with stroke
+    rv.insert(0x0138, QString::fromLatin1("k"));  // kra
+    rv.insert(0x0142, QString::fromLatin1("l"));  // l with stroke
+    rv.insert(0x014b, QString::fromLatin1("n"));  // eng
+    rv.insert(0x0153, QString::fromLatin1("oe")); // 'oe' ligature
+    rv.insert(0x0167, QString::fromLatin1("t"));  // t with stroke
+    rv.insert(0x017f, QString::fromLatin1("s"));  // long s
+
+    return rv;
+}
+
+QStringList makeSearchToken(const QString &word)
+{
+    static const QSet<QString> alphabet(alphabetCharacters());
+    static const QMap<uint, QString> decompositions(decompositionMapping());
 
     // Convert the word to canonical form, lowercase
     QString canonical(mLocale.toLower(word).normalized(QString::NormalizationForm_C));
 
-    QString token;
+    QStringList tokens;
+
     ML10N::MBreakIterator it(mLocale, canonical, ML10N::MBreakIterator::CharacterIterator);
     while (it.hasNext()) {
         const int position = it.next();
-        const QString character(canonical.mid(position, (it.peekNext() - position)));
-        if (!character.isEmpty()) {
+        const int nextPosition = it.peekNext();
+        if (position < nextPosition) {
+            const QString character(canonical.mid(position, (nextPosition - position)));
+            QStringList matches;
             if (alphabet.contains(character)) {
                 // This character is a member of the alphabet for this locale - do not decompose it
-                token.append(character);
+                matches.append(character);
             } else {
                 // This character is not a member of the alphabet; decompose it to
                 // assist with diacritic-insensitive matching
-                token.append(character.normalized(QString::NormalizationForm_D));
+                QString normalized(character.normalized(QString::NormalizationForm_D));
+                matches.append(normalized);
+
+                // For some characters, we want to match alternative spellings that do not correspond
+                // to decomposition characters
+                const uint codePoint(normalized.at(0).unicode());
+                QMap<uint, QString>::const_iterator dit = decompositions.find(codePoint);
+                if (dit != decompositions.end()) {
+                    matches.append(*dit);
+                }
+            }
+
+            if (tokens.isEmpty()) {
+                tokens.append(QString());
+            }
+
+            int previousCount = tokens.count();
+            for (int i = 1; i < matches.count(); ++i) {
+                // Make an additional copy of the existing tokens, for each new possible match
+                for (int j = 0; j < previousCount; ++j) {
+                    tokens.append(tokens.at(j) + matches.at(i));
+                }
+            }
+            for (int j = 0; j < previousCount; ++j) {
+                tokens[j].append(matches.at(0));
             }
         }
     }
 
-    return token;
+    return tokens;
 }
 
 // Splits a string at word boundaries identified by MBreakIterator
 QStringList splitWords(const QString &string)
 {
     QStringList rv;
+
+    ML10N::MBreakIterator it(mLocale, string, ML10N::MBreakIterator::WordIterator);
+    while (it.hasNext()) {
+        const int position = it.next();
+        const QString word(string.mid(position, (it.peekNext() - position)).trimmed());
+        if (!word.isEmpty()) {
+            foreach (const QString &alternative, makeSearchToken(word)) {
+                rv.append(alternative);
+            }
+        }
+    }
+
+    return rv;
+}
+
+QList<QStringList> extractSearchTerms(const QString &string)
+{
+    QList<QStringList> rv;
 
     ML10N::MBreakIterator it(mLocale, string, ML10N::MBreakIterator::WordIterator);
     while (it.hasNext()) {
@@ -204,12 +271,12 @@ struct FilterData : public SeasideCache::ItemListener
                 // When we can extract a localized version of the number, add that also
                 QString normalized(QtContactsSqliteExtensions::normalizePhoneNumber(detail.number(), normalizeFlags));
                 if (!normalized.isEmpty()) {
-                    matchTokens.insert(makeSearchToken(normalized));
+                    insert(matchTokens, makeSearchToken(normalized));
 
                     if (normalized.startsWith(plusSymbol)) {
                         // Also match for the number without the plus
                         normalized = normalized.mid(1);
-                        matchTokens.insert(makeSearchToken(normalized));
+                        insert(matchTokens, makeSearchToken(normalized));
                     }
                 }
             }
@@ -477,9 +544,17 @@ bool SeasideFilteredModel::filterId(quint32 iid) const
 
     // search forwards over the label components for each filter word, making
     // sure to find all filter words before considering it a match.
-    foreach (const QString &part, m_filterParts) {
-        if (!filterData->partialMatch(part))
+    foreach (const QStringList &part, m_filterParts) {
+        bool match = false;
+        foreach (const QString &alternative, part) {
+            if (filterData->partialMatch(alternative)) {
+                match = true;
+                break;
+            }
+        }
+        if (!match) {
             return false;
+        }
     }
 
     return true;
@@ -900,11 +975,11 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, int property)
 
     if (m_filterPattern != pattern) {
         m_filterPattern = pattern;
-        m_filterParts = splitWords(m_filterPattern);
+        m_filterParts = extractSearchTerms(m_filterPattern);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
         // Qt5 does not recognize '#' as a word
         if (m_filterParts.isEmpty() && !pattern.isEmpty()) {
-            m_filterParts.append(pattern);
+            m_filterParts.append(QStringList() << pattern);
         }
 #endif
         changedPattern = true;

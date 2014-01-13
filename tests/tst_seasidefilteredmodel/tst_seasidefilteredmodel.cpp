@@ -43,6 +43,8 @@
 
 Q_DECLARE_METATYPE(QModelIndex)
 
+static const QByteArray langVar(qgetenv("LANG"));
+
 class tst_SeasideFilteredModel : public QObject
 {
     Q_OBJECT
@@ -58,6 +60,7 @@ private slots:
     void filterPattern();
     void filterWords();
     void filterEmail();
+    void filterCharacters();
     void rowsInserted();
     void rowsRemoved();
     void dataChanged();
@@ -481,6 +484,99 @@ void tst_SeasideFilteredModel::filterEmail()
     QCOMPARE(model.rowCount(), 1);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 0);
+}
+
+void tst_SeasideFilteredModel::filterCharacters()
+{
+    SeasideFilteredModel model;
+
+    QCOMPARE(model.filterType(), SeasideFilteredModel::FilterAll);
+    QCOMPARE(model.filterPattern(), QString());
+    QCOMPARE(model.rowCount(), 7);
+
+    if (!langVar.startsWith("en")) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+        QSKIP("Character matching is not testable with unknown locale");
+#else
+        QSKIP("Character matching is not testable with unknown locale", SkipAll);
+#endif
+    }
+
+    // 0 1 2 3
+    model.setFilterPattern("Elvis");
+    QCOMPARE(model.rowCount(), 4);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 1);
+    QCOMPARE(model.index(QModelIndex(), 1, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 2);
+    QCOMPARE(model.index(QModelIndex(), 2, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 3);
+    QCOMPARE(model.index(QModelIndex(), 3, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 4);
+
+    // 0 1 2 3
+    model.setFilterPattern("elvis");
+    QCOMPARE(model.rowCount(), 4);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 1);
+    QCOMPARE(model.index(QModelIndex(), 1, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 2);
+    QCOMPARE(model.index(QModelIndex(), 2, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 3);
+    QCOMPARE(model.index(QModelIndex(), 3, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 4);
+
+    // 2
+    model.setFilterPattern(QString::fromUtf8(u8"\u00CBlvis")); // 'Ëlvis'
+    QCOMPARE(model.rowCount(), 1);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 3);
+
+    // 2
+    model.setFilterPattern(QString::fromUtf8(u8"\u00EBlvis")); // 'ëlvis'
+    QCOMPARE(model.rowCount(), 1);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 3);
+
+    // <none>
+    model.setFilterPattern(QString::fromUtf8(u8"\u00CAlvis")); // 'Êlvis'
+    QCOMPARE(model.rowCount(), 0);
+
+    // 4
+    model.setFilterPattern(QString::fromUtf8(u8"\u00C6lvis")); // 'Ælvis'
+    QCOMPARE(model.rowCount(), 1);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 5);
+
+    // 4
+    model.setFilterPattern(QString::fromUtf8(u8"\u00E6lvis")); // 'ælvis'
+    QCOMPARE(model.rowCount(), 1);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 5);
+
+    // 4
+    model.setFilterPattern("aelvis");
+    QCOMPARE(model.rowCount(), 1);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 5);
+
+    // <none>
+    model.setFilterPattern("alvis");
+    QCOMPARE(model.rowCount(), 0);
+
+    // 5 6
+    model.setFilterPattern("olvis");
+    QCOMPARE(model.rowCount(), 2);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 6);
+    QCOMPARE(model.index(QModelIndex(), 1, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 7);
+
+    // 5 6
+    model.setFilterPattern(QString::fromUtf8(u8"\u00D8lvis")); // 'Ølvis'
+    QCOMPARE(model.rowCount(), 2);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 6);
+    QCOMPARE(model.index(QModelIndex(), 1, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 7);
+
+    // 6
+    model.setFilterPattern(QString::fromUtf8(u8"\u00D8lvi\u00DF")); // 'Ølviß'
+    QCOMPARE(model.rowCount(), 1);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 7);
+
+    // 6
+    model.setFilterPattern(QString::fromUtf8(u8"olvi\u00DF")); // 'olviß'
+    QCOMPARE(model.rowCount(), 1);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 7);
+
+    // 6
+    model.setFilterPattern("olviss");
+    QCOMPARE(model.rowCount(), 1);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 7);
 }
 
 void tst_SeasideFilteredModel::rowsInserted()

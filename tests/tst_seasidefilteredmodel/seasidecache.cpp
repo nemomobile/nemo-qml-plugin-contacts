@@ -43,6 +43,7 @@
 struct Contact
 {
     const char *firstName;
+    const char *middleName;
     const char *lastName;
     const bool isFavorite;
     const bool isOnline;
@@ -53,13 +54,13 @@ struct Contact
 
 static const Contact contactsData[] =
 {
-/*1*/   { "Aaron",  "Aaronson", false, false, "aaronaa-testing@example.org",      "1234567", 0 },
-/*2*/   { "Aaron",  "Arthur",   false, true,  "aaronar-testing@example.org",      0,         0 },
-/*3*/   { "Aaron",  "Johns",    true,  false, "johns-testing@example.org",        0,         0 },
-/*4*/   { "Arthur", "Johns",    false, true,  "arthur1.johnz-tested@example.org", "2345678", 0 },
-/*5*/   { "Jason",  "Aaronson", false, false, "jay-tester@example.org",           "3456789", 0 },
-/*6*/   { "Joe",    "Johns",    true,  true,  "jj-tester@example.org",            0,         "file:///cache/joe.jpg" },
-/*7*/   { "Robin",  "Burchell", true,  false, 0,                                  "9876543", 0 }
+/*1*/   { "Aaron",  u8"Elvis",           "Aaronson", false, false, "aaronaa-testing@example.org",      "1234567", 0 },
+/*2*/   { "Aaron",  u8"elvis",           "Arthur",   false, true,  "aaronar-testing@example.org",      0,         0 },
+/*3*/   { "Aaron",  u8"\u00CBlvis",      "Johns",    true,  false, "johns-testing@example.org",        0,         0 },                       // 'Ëlvis'
+/*4*/   { "Arthur", u8"Elvi\u00DF",      "Johns",    false, true,  "arthur1.johnz-tested@example.org", "2345678", 0 },                       // 'Elviß'
+/*5*/   { "Jason",  u8"\u00C6lvis",      "Aaronson", false, false, "jay-tester@example.org",           "3456789", 0 },                       // 'Ælvis'
+/*6*/   { "Joe",    u8"\u00D8lvis",      "Johns",    true,  true,  "jj-tester@example.org",            0,         "file:///cache/joe.jpg" }, // 'Ølvis'
+/*7*/   { "Robin",  u8"\u00D8lvi\u00DF", "Burchell", true,  false, 0,                                  "9876543", 0 }                        // 'Ølviß'
 };
 
 static QStringList getAllContactNameGroups()
@@ -156,8 +157,9 @@ void SeasideCache::reset()
 #endif
 
         QContactName name;
-        name.setFirstName(QLatin1String(contactsData[i].firstName));
-        name.setLastName(QLatin1String(contactsData[i].lastName));
+        name.setFirstName(QString::fromLatin1(contactsData[i].firstName));
+        name.setMiddleName(QString::fromUtf8(contactsData[i].middleName));
+        name.setLastName(QString::fromLatin1(contactsData[i].lastName));
         contact.saveDetail(&name);
 
         if (contactsData[i].avatar) {

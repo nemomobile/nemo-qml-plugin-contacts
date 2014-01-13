@@ -224,7 +224,7 @@ private:
     const QList<quint32> *m_contactIds;
     const QList<quint32> *m_referenceContactIds;
     const QList<quint32> *m_allContactIds;
-    QStringList m_filterParts;
+    QList<QStringList> m_filterParts;
     QString m_filterPattern;
     int m_filterIndex;
     int m_referenceIndex;
