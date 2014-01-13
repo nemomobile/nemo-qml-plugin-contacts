@@ -53,13 +53,13 @@ struct Contact
 
 static const Contact contactsData[] =
 {
-/*1*/   { "Aaron",  "Aaronson", false, false, "aaronaa@example.com",       "1234567", 0 },
-/*2*/   { "Aaron",  "Arthur",   false, true,  "aaronar@example.com",       0,         0 },
-/*3*/   { "Aaron",  "Johns",    true,  false, "johns@example.com",         0,         0 },
-/*4*/   { "Arthur", "Johns",    false, true,  "arthur1.johnz@example.org", "2345678", 0 },
-/*5*/   { "Jason",  "Aaronson", false, false, "jay@examplez.org",          "3456789", 0 },
-/*6*/   { "Joe",    "Johns",    true,  true,  "jj@examplez.org",           0,         "file:///cache/joe.jpg" },
-/*7*/   { "Robin",  "Burchell", true,  false, 0,                           "9876543", 0 }
+/*1*/   { "Aaron",  "Aaronson", false, false, "aaronaa-testing@example.org",      "1234567", 0 },
+/*2*/   { "Aaron",  "Arthur",   false, true,  "aaronar-testing@example.org",      0,         0 },
+/*3*/   { "Aaron",  "Johns",    true,  false, "johns-testing@example.org",        0,         0 },
+/*4*/   { "Arthur", "Johns",    false, true,  "arthur1.johnz-tested@example.org", "2345678", 0 },
+/*5*/   { "Jason",  "Aaronson", false, false, "jay-tester@example.org",           "3456789", 0 },
+/*6*/   { "Joe",    "Johns",    true,  true,  "jj-tester@example.org",            0,         "file:///cache/joe.jpg" },
+/*7*/   { "Robin",  "Burchell", true,  false, 0,                                  "9876543", 0 }
 };
 
 static QStringList getAllContactNameGroups()

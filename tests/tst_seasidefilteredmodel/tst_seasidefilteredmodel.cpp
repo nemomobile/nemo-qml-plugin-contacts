@@ -340,6 +340,8 @@ void tst_SeasideFilteredModel::filterPattern()
 
 void tst_SeasideFilteredModel::filterEmail()
 {
+    // Note: we no longer index the domain component of the email address
+
     SeasideFilteredModel model;
     QSignalSpy insertedSpy(&model, SIGNAL(rowsInserted(QModelIndex,int,int)));
     QSignalSpy removedSpy(&model, SIGNAL(rowsRemoved(QModelIndex,int,int)));
@@ -349,7 +351,7 @@ void tst_SeasideFilteredModel::filterEmail()
     QCOMPARE(model.rowCount(), 7);
 
     // 0 1 2 3 4 5
-    model.setFilterPattern("example");
+    model.setFilterPattern("-tes");
     QCOMPARE(model.rowCount(), 6);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
@@ -359,13 +361,13 @@ void tst_SeasideFilteredModel::filterEmail()
     removedSpy.clear();
 
     // 0 1 2 3 4 5
-    model.setFilterPattern("example.");
+    model.setFilterPattern("-test");
     QCOMPARE(model.rowCount(), 6);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 0);
 
     // 0 1 2
-    model.setFilterPattern("example.com");
+    model.setFilterPattern("-testing");
     QCOMPARE(model.rowCount(), 3);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
@@ -375,7 +377,7 @@ void tst_SeasideFilteredModel::filterEmail()
     removedSpy.clear();
 
     // 3 4 5
-    model.setFilterPattern("example.org");
+    model.setFilterPattern("-teste");
     QCOMPARE(model.rowCount(), 3);
     QCOMPARE(insertedSpy.count(), 1);
     QCOMPARE(insertedSpy.at(0).at(1).value<int>(), 0);
@@ -388,7 +390,7 @@ void tst_SeasideFilteredModel::filterEmail()
     removedSpy.clear();
 
     // 4 5
-    model.setFilterPattern("examplez.org");
+    model.setFilterPattern("-tester");
     QCOMPARE(model.rowCount(), 2);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
@@ -398,7 +400,7 @@ void tst_SeasideFilteredModel::filterEmail()
     removedSpy.clear();
 
     // 4
-    model.setFilterPattern("jay@examplez.org");
+    model.setFilterPattern("jay-tester");
     QCOMPARE(model.rowCount(), 1);
     QCOMPARE(insertedSpy.count(), 0);
     QCOMPARE(removedSpy.count(), 1);
