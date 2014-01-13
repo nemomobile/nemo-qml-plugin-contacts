@@ -204,10 +204,13 @@ struct FilterData : public SeasideCache::ItemListener
                 // When we can extract a localized version of the number, add that also
                 QString normalized(QtContactsSqliteExtensions::normalizePhoneNumber(detail.number(), normalizeFlags));
                 if (!normalized.isEmpty()) {
-                    if (normalized.startsWith(plusSymbol)) {
-                        normalized = normalized.mid(1);
-                    }
                     matchTokens.insert(makeSearchToken(normalized));
+
+                    if (normalized.startsWith(plusSymbol)) {
+                        // Also match for the number without the plus
+                        normalized = normalized.mid(1);
+                        matchTokens.insert(makeSearchToken(normalized));
+                    }
                 }
             }
 
