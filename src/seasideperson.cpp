@@ -236,6 +236,10 @@ void SeasidePerson::recalculateDisplayLabel(SeasideCache::DisplayLabelOrder orde
 
 QString SeasidePerson::displayLabel() const
 {
+    if (mDisplayLabel.isEmpty()) {
+        // TODO: localization?
+        return QString::fromLatin1("(Unnamed)");
+    }
     return mDisplayLabel;
 }
 
@@ -247,7 +251,7 @@ QString SeasidePerson::primaryName() const
 
     if (secondaryName().isEmpty()) {
         // No real name details - fall back to the display label for primary name
-        return displayLabel();
+        return mDisplayLabel;
     }
 
     return QString();
@@ -265,8 +269,8 @@ QString SeasidePerson::sectionBucket() const
         return SeasideCache::nameGroup(cacheItem);
     }
 
-    if (!displayLabel().isEmpty()) {
-        return displayLabel().at(0).toUpper();
+    if (!mDisplayLabel.isEmpty()) {
+        return mDisplayLabel.at(0).toUpper();
     }
 
     return QString();

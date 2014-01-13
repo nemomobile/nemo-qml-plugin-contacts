@@ -151,23 +151,26 @@ void tst_SeasidePerson::sectionBucket()
     QScopedPointer<SeasidePerson> person(new SeasidePerson);
     QSignalSpy spy(person.data(), SIGNAL(displayLabelChanged()));
     QCOMPARE(person->displayLabel(), QString("(Unnamed)"));
-    QCOMPARE(spy.count(), 1);
-
-    // XXX This should be in a section bucket of "unnamed" contacts?
-//    QCOMPARE(person->sectionBucket(), QString());
+    QCOMPARE(spy.count(), 0);
+    QCOMPARE(person->sectionBucket(), QString());
 
     // set first
     person->setLastName("Test");
     QCOMPARE(person->displayLabel(), QString::fromLatin1("Test"));
     QCOMPARE(person->sectionBucket(), QString::fromLatin1("T"));
-    QCOMPARE(spy.count(), 2);
+    QCOMPARE(spy.count(), 1);
 
     // change first
-    // TODO: eventually where sectionBucket comes from should be a setting
     person->setFirstName("Another");
-    QCOMPARE(person->displayLabel(), QString::fromLatin1("Another Test"));
-    QCOMPARE(person->sectionBucket(), QString::fromLatin1("A"));
-    QCOMPARE(spy.count(), 3);
+    const bool firstNameFirst(SeasideCache::displayLabelOrder() == SeasideCache::FirstNameFirst);
+    if (firstNameFirst) {
+        QCOMPARE(person->displayLabel(), QString::fromLatin1("Another Test"));
+        QCOMPARE(person->sectionBucket(), QString::fromLatin1("A"));
+    } else {
+        QCOMPARE(person->displayLabel(), QString::fromLatin1("Test Another"));
+        QCOMPARE(person->sectionBucket(), QString::fromLatin1("T"));
+    }
+    QCOMPARE(spy.count(), 2);
 }
 
 void tst_SeasidePerson::companyName()
