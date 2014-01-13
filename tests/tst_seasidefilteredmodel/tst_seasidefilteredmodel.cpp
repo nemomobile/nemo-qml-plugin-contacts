@@ -56,6 +56,7 @@ private slots:
     void populated();
     void filterType();
     void filterPattern();
+    void filterWords();
     void filterEmail();
     void rowsInserted();
     void rowsRemoved();
@@ -336,6 +337,72 @@ void tst_SeasideFilteredModel::filterPattern()
 
     patternSpy.clear();
     removedSpy.clear();
+}
+
+void tst_SeasideFilteredModel::filterWords()
+{
+    // Test that multiple words are filtered correctly
+    SeasideFilteredModel model;
+
+    QCOMPARE(model.filterType(), SeasideFilteredModel::FilterAll);
+    QCOMPARE(model.filterPattern(), QString());
+    QCOMPARE(model.rowCount(), 7);
+
+    // 1
+    model.setFilterPattern("Aaron Arthur");
+    QCOMPARE(model.rowCount(), 1);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 2);
+
+    // 1
+    model.setFilterPattern("Arthur Aaron");
+    QCOMPARE(model.rowCount(), 1);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 2);
+
+    // 2 3 4
+    model.setFilterPattern("A J");
+    QCOMPARE(model.rowCount(), 3);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 3);
+    QCOMPARE(model.index(QModelIndex(), 1, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 4);
+    QCOMPARE(model.index(QModelIndex(), 2, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 5);
+
+    // 2 3 4
+    model.setFilterPattern("J A");
+    QCOMPARE(model.rowCount(), 3);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 3);
+    QCOMPARE(model.index(QModelIndex(), 1, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 4);
+    QCOMPARE(model.index(QModelIndex(), 2, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 5);
+
+    // 2 3
+    model.setFilterPattern("A Johns");
+    QCOMPARE(model.rowCount(), 2);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 3);
+    QCOMPARE(model.index(QModelIndex(), 1, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 4);
+
+    // 2 3
+    model.setFilterPattern("Johns A");
+    QCOMPARE(model.rowCount(), 2);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 3);
+    QCOMPARE(model.index(QModelIndex(), 1, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 4);
+
+    // 2
+    model.setFilterPattern("Johns Aa");
+    QCOMPARE(model.rowCount(), 1);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 3);
+
+    // 2
+    model.setFilterPattern("Aa Johns");
+    QCOMPARE(model.rowCount(), 1);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 3);
+
+    // 3
+    model.setFilterPattern("A Johns 234");
+    QCOMPARE(model.rowCount(), 1);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 4);
+
+    // 3
+    model.setFilterPattern("234 Johns A");
+    QCOMPARE(model.rowCount(), 1);
+    QCOMPARE(model.index(QModelIndex(), 0, 0).data(SeasideFilteredModel::ContactIdRole).toInt(), 4);
 }
 
 void tst_SeasideFilteredModel::filterEmail()
