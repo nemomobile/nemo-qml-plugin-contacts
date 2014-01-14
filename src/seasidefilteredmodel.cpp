@@ -121,13 +121,13 @@ QMap<uint, QString> decompositionMapping()
     return rv;
 }
 
-QStringList makeSearchToken(const QString &word)
+QStringList tokenize(const QString &word)
 {
     static const QSet<QString> alphabet(alphabetCharacters());
     static const QMap<uint, QString> decompositions(decompositionMapping());
 
     // Convert the word to canonical form, lowercase
-    QString canonical(mLocale.toLower(word).normalized(QString::NormalizationForm_C));
+    QString canonical(word.normalized(QString::NormalizationForm_C));
 
     QStringList tokens;
 
@@ -176,17 +176,45 @@ QStringList makeSearchToken(const QString &word)
     return tokens;
 }
 
-// Splits a string at word boundaries identified by MBreakIterator
-QStringList splitWords(const QString &string)
+QList<const QString *> makeSearchToken(const QString &word)
 {
-    QStringList rv;
+    static QMap<uint, const QString *> indexedTokens;
+    static QHash<QString, QList<const QString *> > indexedWords;
+
+    // Index all search text in lower case
+    const QString lowered(mLocale.toLower(word));
+
+    QHash<QString, QList<const QString *> >::const_iterator wit = indexedWords.find(lowered);
+    if (wit == indexedWords.end()) {
+        QList<const QString *> indexed;
+
+        // Index these tokens for later dereferencing
+        foreach (const QString &token, tokenize(lowered)) {
+            uint hashValue(qHash(token));
+            QMap<uint, const QString *>::const_iterator tit = indexedTokens.find(hashValue);
+            if (tit == indexedTokens.end()) {
+                tit = indexedTokens.insert(hashValue, new QString(token));
+            }
+            indexed.append(*tit);
+        }
+
+        wit = indexedWords.insert(lowered, indexed);
+    }
+
+    return *wit;
+}
+
+// Splits a string at word boundaries identified by MBreakIterator
+QList<const QString *> splitWords(const QString &string)
+{
+    QList<const QString *> rv;
 
     ML10N::MBreakIterator it(mLocale, string, ML10N::MBreakIterator::WordIterator);
     while (it.hasNext()) {
         const int position = it.next();
         const QString word(string.mid(position, (it.peekNext() - position)).trimmed());
         if (!word.isEmpty()) {
-            foreach (const QString &alternative, makeSearchToken(word)) {
+            foreach (const QString *alternative, makeSearchToken(word)) {
                 rv.append(alternative);
             }
         }
@@ -199,12 +227,16 @@ QList<QStringList> extractSearchTerms(const QString &string)
 {
     QList<QStringList> rv;
 
-    ML10N::MBreakIterator it(mLocale, string, ML10N::MBreakIterator::WordIterator);
+    // Test all searches in lower case
+    const QString lowered(mLocale.toLower(string));
+
+    ML10N::MBreakIterator it(mLocale, lowered, ML10N::MBreakIterator::WordIterator);
     while (it.hasNext()) {
         const int position = it.next();
-        const QString word(string.mid(position, (it.peekNext() - position)).trimmed());
+        const QString word(lowered.mid(position, (it.peekNext() - position)).trimmed());
         if (!word.isEmpty()) {
-            rv.append(makeSearchToken(word));
+            // Test all searches in lower case
+            rv.append(tokenize(word));
         }
     }
 
@@ -225,7 +257,7 @@ QString stringPreceding(const QString &s, const QChar &c)
 struct FilterData : public SeasideCache::ItemListener
 {
     // Store additional filter keys with the cache item
-    QStringList filterKey;
+    QList<const QString *> filterKey;
 
     static FilterData *getItemFilterData(SeasideCache::CacheItem *item, const SeasideFilteredModel *model)
     {
@@ -246,7 +278,7 @@ struct FilterData : public SeasideCache::ItemListener
                                                                                           QtContactsSqliteExtensions::ValidatePhoneNumber);
 
         if (filterKey.isEmpty()) {
-            QSet<QString> matchTokens;
+            QSet<const QString *> matchTokens;
 
             // split the display label and filter details into words
             QContactName name = item->contact.detail<QContactName>();
@@ -306,8 +338,8 @@ struct FilterData : public SeasideCache::ItemListener
         QString::const_iterator vbegin = value.constBegin(), vend = value.constEnd();
 
         // If any of our tokens start with the value, this is a match
-        foreach (const QString &word, filterKey) {
-            QString::const_iterator wbegin = word.constBegin(), wend = word.constEnd();
+        foreach (const QString *word, filterKey) {
+            QString::const_iterator wbegin = word->constBegin(), wend = word->constEnd();
 
             QString::const_iterator vit = vbegin, wit = wbegin;
             while (wit != wend) {
@@ -324,7 +356,7 @@ struct FilterData : public SeasideCache::ItemListener
                 if ((vit - vmatch) > 1) {
                     // The match value contains diacritics - the word needs to match them
                     QString subValue(value.mid(vmatch - vbegin, vit - vmatch));
-                    QString subWord(word.mid(wmatch - wbegin, wit - wmatch));
+                    QString subWord(word->mid(wmatch - wbegin, wit - wmatch));
                     if (subValue.compare(subWord) != 0)
                         break;
                 } else {
