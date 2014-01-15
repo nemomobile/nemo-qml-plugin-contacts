@@ -49,7 +49,7 @@ SeasideNameGroupModel::SeasideNameGroupModel(QObject *parent)
     setRoleNames(roleNames());
 #endif
 
-    QStringList allGroups = SeasideCache::allNameGroups();
+    const QStringList &allGroups = SeasideCache::allNameGroups();
     QHash<QString, QSet<quint32> > existingGroups = SeasideCache::nameGroupMembers();
     if (!existingGroups.isEmpty()) {
         for (int i=0; i<allGroups.count(); i++)
@@ -124,19 +124,27 @@ void SeasideNameGroupModel::nameGroupsUpdated(const QHash<QString, QSet<quint32>
         return;
 
     bool wasEmpty = m_groups.isEmpty();
+    bool insertedRows = false;
+
     if (wasEmpty) {
-        QStringList allGroups = SeasideCache::allNameGroups();
-        beginInsertRows(QModelIndex(), 0, allGroups.count() - 1);
-        for (int i=0; i<allGroups.count(); i++)
-            m_groups << SeasideNameGroup(allGroups[i]);
+        const QStringList &allGroups = SeasideCache::allNameGroups();
+        if (!allGroups.isEmpty()) {
+            beginInsertRows(QModelIndex(), 0, allGroups.count() - 1);
+            for (int i=0; i<allGroups.count(); i++)
+                m_groups << SeasideNameGroup(allGroups[i]);
+
+            insertedRows = true;
+        }
     }
 
     QHash<QString, QSet<quint32> >::const_iterator it = groups.constBegin(), end = groups.constEnd();
     for ( ; it != end; ++it) {
+        const QString group(it.key());
+
         QList<SeasideNameGroup>::iterator existingIt = m_groups.begin(), existingEnd = m_groups.end();
         for ( ; existingIt != existingEnd; ++existingIt) {
             SeasideNameGroup &existing(*existingIt);
-            if (existing.name == it.key()) {
+            if (existing.name == group) {
                 existing.contactIds = it.value();
                 const int count = countFilteredContacts(existing.contactIds);
                 if (existing.count != count) {
@@ -151,12 +159,33 @@ void SeasideNameGroupModel::nameGroupsUpdated(const QHash<QString, QSet<quint32>
             }
         }
         if (existingIt == existingEnd) {
-            qWarning() << "SeasideNameGroupModel: no match for group" << it.key();
+            // Find the index of this group in the groups list
+            const QStringList &allGroups = SeasideCache::allNameGroups();
+
+            int allIndex = 0;
+            int groupIndex = 0;
+            for ( ; allGroups.at(allIndex) != group; ++allIndex) {
+                if (m_groups.at(groupIndex).name == allGroups.at(allIndex)) {
+                    ++groupIndex;
+                }
+            }
+            if (allIndex < allGroups.count()) {
+                // Insert this group
+                beginInsertRows(QModelIndex(), groupIndex, groupIndex);
+                m_groups.insert(groupIndex, SeasideNameGroup(group, it.value()));
+                endInsertRows();
+
+                insertedRows = true;
+            } else {
+                qWarning() << "Could not find unknown group in allGroups!" << group;
+            }
         }
     }
 
     if (wasEmpty) {
         endInsertRows();
+    }
+    if (insertedRows) {
         emit countChanged();
     }
 }
