@@ -1392,8 +1392,6 @@ void SeasidePerson::setAccountDetails(const QVariantList &accountDetails)
             validIndices.insert(index);
         } else if (index != -1) {
             qWarning() << "Invalid index value for account details:" << index;
-        } else {
-            qWarning() << "Adding new accounts is not supported by setAccountDetails!";
         }
 
         updated.setAccountUri(accountUriValue.value<QString>());
