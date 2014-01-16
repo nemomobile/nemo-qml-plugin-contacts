@@ -70,6 +70,7 @@ public:
     Q_INVOKABLE QString minimizePhoneNumber(const QString &input);
 
     Q_INVOKABLE QVariantList removeDuplicatePhoneNumbers(const QVariantList &phoneNumbers);
+    Q_INVOKABLE QVariantList removeDuplicateOnlineAccounts(const QVariantList &onlineAccounts);
 
 signals:
     // Not currently emitted:
@@ -334,6 +335,7 @@ public:
     Q_INVOKABLE void resolveOnlineAccount(const QString &localUid, const QString &remoteUid, bool requireComplete = true);
 
     Q_INVOKABLE static QVariantList removeDuplicatePhoneNumbers(const QVariantList &phoneNumbers);
+    Q_INVOKABLE static QVariantList removeDuplicateOnlineAccounts(const QVariantList &onlineAccounts);
 
     void displayLabelOrderChanged(SeasideCache::DisplayLabelOrder order);
 
