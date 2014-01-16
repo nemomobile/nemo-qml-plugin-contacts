@@ -92,6 +92,11 @@ QVariantList SeasidePersonAttached::removeDuplicatePhoneNumbers(const QVariantLi
     return SeasidePerson::removeDuplicatePhoneNumbers(phoneNumbers);
 }
 
+QVariantList SeasidePersonAttached::removeDuplicateOnlineAccounts(const QVariantList &onlineAccounts)
+{
+    return SeasidePerson::removeDuplicateOnlineAccounts(onlineAccounts);
+}
+
 SeasidePerson::SeasidePerson(QObject *parent)
     : QObject(parent)
     , mContact(new QContact)
@@ -1797,6 +1802,47 @@ QVariantList SeasidePerson::removeDuplicatePhoneNumbers(const QVariantList &phon
             }
         }
         if (it == end) {
+            rv.append(detail);
+        }
+    }
+
+    return rv;
+}
+
+QVariantList SeasidePerson::removeDuplicateOnlineAccounts(const QVariantList &onlineAccounts)
+{
+    QVariantList rv;
+
+    foreach (const QVariant &item, onlineAccounts) {
+        const QVariantMap detail(item.value<QVariantMap>());
+        const QString uri = detail.value(accountDetailUri).toString().toLower();
+        const QString path = detail.value(accountDetailPath).toString();
+
+        // See if we already have this URI (case-insensitive)
+        QVariantList::iterator it = rv.begin(), end = rv.end();
+        for ( ; it != end; ++it) {
+            const QVariant &rvItem(*it);
+            const QVariantMap prior(rvItem.value<QVariantMap>());
+            const QString priorUri = prior.value(accountDetailUri).toString().toLower();
+
+            if (priorUri == uri) {
+                // This URI is already present - does the path differ?
+                const QString priorPath = prior.value(accountDetailPath).toString();
+                if (priorPath == path) {
+                    // This is a duplicate
+                    break;
+                } else if (priorPath.isEmpty() && !path.isEmpty()) {
+                    // This is a better option - replace the prior instance
+                    *it = detail;
+                    break;
+                } else if (path.isEmpty()) {
+                    // We don't need to add another without a path
+                    break;
+                }
+            }
+        }
+        if (it == end) {
+            // No match found, or differs on path
             rv.append(detail);
         }
     }

@@ -90,6 +90,7 @@ private slots:
     void syncTarget();
     void constituents();
     void removeDuplicatePhoneNumbers();
+    void removeDuplicateOnlineAccounts();
 
 private:
     QStringList m_nameGroups;
@@ -555,6 +556,27 @@ void tst_SeasidePerson::constituents()
     QCOMPARE(person->constituents(), QList<int>());
 }
 
+template<int N>
+void prepare(int (&indices)[N]) {
+    for (int i = 0; i < N; ++i)
+        indices[i] = i;
+}
+
+template<int N>
+bool permute(int (&indices)[N]) {
+    return std::next_permutation(indices, indices + N);
+}
+
+template<int N, typename T>
+QVariantList reorder(const int (&indices)[N], const T &list)
+{
+    QVariantList rv;
+    for (int i = 0; i < N; ++i) {
+        rv.append(list[indices[i]]);
+    }
+    return rv;
+}
+
 void tst_SeasidePerson::removeDuplicatePhoneNumbers()
 {
     const QString phoneDetailType(QString::fromLatin1("type"));
@@ -592,21 +614,16 @@ void tst_SeasidePerson::removeDuplicatePhoneNumbers()
     }
 
     // Whatever order the numbers are inserted in, the two returned numbers should be the same
-    QStringList expectedList;
-    expectedList << numbers[preferredFormIndex].value(phoneDetailNumber).toString()
-                 << numbers[preferredExtendedFormIndex].value(phoneDetailNumber).toString();
+    QSet<QString> expectedSet;
+    expectedSet.insert(numbers[preferredFormIndex].value(phoneDetailNumber).toString());
+    expectedSet.insert(numbers[preferredExtendedFormIndex].value(phoneDetailNumber).toString());
 
     SeasidePerson person;
-    int indices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
-    const int n = sizeof(indices) / sizeof(indices[0]);
 
     // Test all possible orderings of the input set
-    do {
-        QVariantList numberList;
-        for (int i = 0; i < n; ++i) {
-            numberList << numbers[indices[i]];
-        }
-
+    int indices[9];
+    for (prepare(indices); permute(indices); ) {
+        QVariantList numberList(reorder(indices, numbers));
         QVariantList deduplicated(person.removeDuplicatePhoneNumbers(numberList));
 
         QStringList resultList;
@@ -614,8 +631,56 @@ void tst_SeasidePerson::removeDuplicatePhoneNumbers()
             const QVariantMap detail(item.value<QVariantMap>());
             resultList.append(detail.value(phoneDetailNumber).toString());
         }
-        QCOMPARE(resultList.toSet(), expectedList.toSet());
-    } while (std::next_permutation(indices, indices + n) == true);
+        QCOMPARE(resultList.toSet(), expectedSet);
+    }
+}
+
+void tst_SeasidePerson::removeDuplicateOnlineAccounts()
+{
+    const QString accountDetailUri(QString::fromLatin1("accountUri"));
+    const QString accountDetailPath(QString::fromLatin1("accountPath"));
+
+    QList<QVariantMap> accounts;
+
+    QList<QPair<QString, QString> > accountDetails;
+    accountDetails << qMakePair(QString::fromLatin1("Fred"), QString())
+                   << qMakePair(QString::fromLatin1("Fred"), QString())
+                   << qMakePair(QString::fromLatin1("Fred"), QString::fromLatin1("provider1"))
+                   << qMakePair(QString::fromLatin1("fred"), QString::fromLatin1("provider1"))
+                   << qMakePair(QString::fromLatin1("fred"), QString::fromLatin1("provider2"))
+                   << qMakePair(QString::fromLatin1("barney"), QString());
+
+    QList<QPair<QString, QString> >::const_iterator it = accountDetails.constBegin(), end = accountDetails.constEnd();
+    for ( ; it != end; ++it) {
+        QVariantMap account;
+        account.insert(accountDetailUri, (*it).first);
+        account.insert(accountDetailPath, (*it).second);
+        accounts.append(account);
+    }
+
+    // Whatever order the accounts are inserted in, the returned accounts should be the same (except URI case)
+    QSet<QPair<QString, QString> > expected;
+    expected.insert(qMakePair(QString::fromLatin1("fred"), QString::fromLatin1("provider1")));
+    expected.insert(qMakePair(QString::fromLatin1("fred"), QString::fromLatin1("provider2")));
+    expected.insert(qMakePair(QString::fromLatin1("barney"), QString()));
+
+    SeasidePerson person;
+
+    // Test all possible orderings of the input set
+    int indices[6];
+    for (prepare(indices); permute(indices); ) {
+        QVariantList accountList(reorder(indices, accounts));
+        QVariantList deduplicated(person.removeDuplicateOnlineAccounts(accountList));
+
+        QList<QPair<QString, QString> > resultList;
+        foreach (const QVariant &item, deduplicated) {
+            const QVariantMap detail(item.value<QVariantMap>());
+            const QString uri(detail.value(accountDetailUri).toString().toLower());
+            const QString path(detail.value(accountDetailPath).toString());
+            resultList.append(qMakePair(uri, path));
+        }
+        QCOMPARE(resultList.toSet(), expected);
+    }
 }
 
 // TODO:
