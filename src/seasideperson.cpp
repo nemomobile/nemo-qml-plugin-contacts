@@ -669,17 +669,27 @@ void SeasidePerson::setPhoneDetails(const QVariantList &phoneDetails)
             // Modify the existing detail
             updated = numbers.at(index);
             Q_ASSERT(!validIndices.contains(index));
-            validIndices.insert(index);
         } else if (index != -1) {
             qWarning() << "Invalid index value for phone details:" << index;
+            continue;
+        }
+
+        const QString updatedNumber(numberValue.value<QString>());
+        if (updatedNumber.trimmed().isEmpty()) {
+            // Remove this number from the list
+            continue;
         }
 
         const int type = typeValue.isValid() ? typeValue.value<int>() : -1;
         ::setPhoneNumberType(updated, static_cast<SeasidePerson::DetailType>(type));
 
         // Ignore normalized/minized number variants
-        updated.setValue(QContactPhoneNumber::FieldNumber, numberValue.value<QString>());
+        updated.setValue(QContactPhoneNumber::FieldNumber, updatedNumber);
         updatedNumbers.append(updated);
+
+        if (index != -1) {
+            validIndices.insert(index);
+        }
     }
 
     updateDetails(numbers, updatedNumbers, mContact, validIndices);
@@ -805,16 +815,26 @@ void SeasidePerson::setEmailDetails(const QVariantList &emailDetails)
             // Modify the existing detail
             updated = addresses.at(index);
             Q_ASSERT(!validIndices.contains(index));
-            validIndices.insert(index);
         } else if (index != -1) {
             qWarning() << "Invalid index value for email details:" << index;
+            continue;
+        }
+
+        const QString updatedAddress(addressValue.value<QString>());
+        if (updatedAddress.trimmed().isEmpty()) {
+            // Remove this address from the list
+            continue;
         }
 
         const int type = typeValue.isValid() ? typeValue.value<int>() : -1;
         ::setEmailAddressType(updated, static_cast<SeasidePerson::DetailType>(type));
 
-        updated.setValue(QContactEmailAddress::FieldEmailAddress, addressValue.value<QString>());
+        updated.setValue(QContactEmailAddress::FieldEmailAddress, updatedAddress);
         updatedAddresses.append(updated);
+
+        if (index != -1) {
+            validIndices.insert(index);
+        }
     }
 
     updateDetails(addresses, updatedAddresses, mContact, validIndices);
@@ -1006,23 +1026,32 @@ void SeasidePerson::setAddressDetails(const QVariantList &addressDetails)
             // Modify the existing detail
             updated = addresses.at(index);
             Q_ASSERT(!validIndices.contains(index));
-            validIndices.insert(index);
         } else if (index != -1) {
             qWarning() << "Invalid index value for address details:" << index;
+            continue;
+        }
+
+        const QString updatedAddress(addressValue.value<QString>());
+        if (updatedAddress.trimmed().isEmpty()) {
+            // Remove this address from the list
+            continue;
+        }
+
+        const QStringList split = updatedAddress.split("\n");
+        if (split.count() != 6) {
+            qWarning() << "Warning: Could not save addresses - invalid format for address:" << updatedAddress;
+            continue;
         }
 
         const int type = typeValue.isValid() ? typeValue.value<int>() : -1;
         ::setAddressType(updated, static_cast<SeasidePerson::DetailType>(type));
 
-        const QString addressString(addressValue.value<QString>());
-        QStringList split = addressString.split("\n");
-        if (split.count() != 6) {
-            qWarning() << "Warning: Could not save addresses - invalid format for address:" << addressString;
-            continue;
-        }
-
         ::setAddress(updated, split);
         updatedAddresses.append(updated);
+
+        if (index != -1) {
+            validIndices.insert(index);
+        }
     }
 
     updateDetails(addresses, updatedAddresses, mContact, validIndices);
@@ -1148,16 +1177,26 @@ void SeasidePerson::setWebsiteDetails(const QVariantList &websiteDetails)
             // Modify the existing detail
             updated = urls.at(index);
             Q_ASSERT(!validIndices.contains(index));
-            validIndices.insert(index);
         } else if (index != -1) {
             qWarning() << "Invalid index value for website details:" << index;
+            continue;
+        }
+
+        const QString updatedUrl(urlValue.value<QString>());
+        if (updatedUrl.trimmed().isEmpty()) {
+            // Remove this URL from the list
+            continue;
         }
 
         const int type = typeValue.isValid() ? typeValue.value<int>() : -1;
         ::setWebsiteType(updated, static_cast<SeasidePerson::DetailType>(type));
 
-        updated.setValue(QContactUrl::FieldUrl, QUrl(urlValue.value<QString>()));
+        updated.setValue(QContactUrl::FieldUrl, QUrl(updatedUrl));
         updatedUrls.append(updated);
+
+        if (index != -1) {
+            validIndices.insert(index);
+        }
     }
 
     updateDetails(urls, updatedUrls, mContact, validIndices);
@@ -1389,14 +1428,18 @@ void SeasidePerson::setAccountDetails(const QVariantList &accountDetails)
             // Modify the existing detail
             updated = accounts.at(index);
             Q_ASSERT(!validIndices.contains(index));
-            validIndices.insert(index);
         } else if (index != -1) {
             qWarning() << "Invalid index value for account details:" << index;
-        } else {
-            qWarning() << "Adding new accounts is not supported by setAccountDetails!";
+            continue;
         }
 
-        updated.setAccountUri(accountUriValue.value<QString>());
+        const QString updatedUri(accountUriValue.value<QString>());
+        if (updatedUri.trimmed().isEmpty()) {
+            // Remove this address from the list
+            continue;
+        }
+
+        updated.setAccountUri(updatedUri);
         updated.setValue(QContactOnlineAccount__FieldAccountPath, accountPathValue.value<QString>());
         updated.setValue(QContactOnlineAccount__FieldAccountDisplayName, accountDisplayNameValue.value<QString>());
         updated.setValue(QContactOnlineAccount__FieldAccountIconPath, iconPathValue.value<QString>());
@@ -1404,6 +1447,10 @@ void SeasidePerson::setAccountDetails(const QVariantList &accountDetails)
         updated.setValue(QContactOnlineAccount__FieldServiceProviderDisplayName, serviceProviderDisplayNameValue.value<QString>());
 
         updatedAccounts.append(updated);
+
+        if (index != -1) {
+            validIndices.insert(index);
+        }
     }
 
     updateDetails(accounts, updatedAccounts, mContact, validIndices);
