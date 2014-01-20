@@ -1409,12 +1409,29 @@ const QString accountDetailDisplayName(QString::fromLatin1("accountDisplayName")
 const QString accountDetailIconPath(QString::fromLatin1("iconPath"));
 const QString accountDetailServiceProvider(QString::fromLatin1("serviceProvider"));
 const QString accountDetailServiceProviderDisplayName(QString::fromLatin1("serviceProviderDisplayName"));
+const QString accountDetailPresenceState(QString::fromLatin1("presenceState"));
+const QString accountDetailPresenceMessage(QString::fromLatin1("presenceMessage"));
+
+template<typename ListType>
+typename ListType::value_type linkedDetail(const ListType &details, const QString &uri)
+{
+    typename ListType::const_iterator it = details.constBegin(), end = details.constEnd();
+    for ( ; it != end; ++it) {
+        if ((*it).linkedDetailUris().contains(uri)) {
+            return (*it);
+        }
+    }
+
+    return typename ListType::value_type();
+}
 
 }
 
 QVariantList SeasidePerson::accountDetails(const QContact &contact)
 {
     QVariantList rv;
+
+    const QList<QContactPresence> presenceDetails(contact.details<QContactPresence>());
 
     int index = 0;
     foreach (const QContactOnlineAccount &detail, contact.details<QContactOnlineAccount>()) {
@@ -1425,6 +1442,20 @@ QVariantList SeasidePerson::accountDetails(const QContact &contact)
         item.insert(accountDetailIconPath, detail.value(QContactOnlineAccount__FieldAccountIconPath).toString());
         item.insert(accountDetailServiceProvider, detail.value(QContactOnlineAccount::FieldServiceProvider).toString());
         item.insert(accountDetailServiceProviderDisplayName, detail.value(QContactOnlineAccount__FieldServiceProviderDisplayName).toString());
+
+        QVariant state;
+        QVariant message;
+
+        // Find the presence detail linked to this account
+        const QContactPresence &presence(linkedDetail(presenceDetails, detail.detailUri()));
+        if (!presence.isEmpty()) {
+            state = static_cast<int>(presence.presenceState());
+            message = presence.customMessage();
+        }
+
+        item.insert(accountDetailPresenceState, state);
+        item.insert(accountDetailPresenceMessage, message);
+
         item.insert(detailIndex, index++);
         rv.append(item);
     }
@@ -1599,6 +1630,8 @@ void SeasidePerson::updateContactDetails(const QContact &oldContact)
     if (oldPresence.presenceState() != newPresence.presenceState())
         emitChangeSignal(&SeasidePerson::globalPresenceStateChanged);
 
+    bool presenceInfoChanged = false;
+
     QList<QContactPresence> oldPresences = oldContact.details<QContactPresence>();
     QList<QContactPresence> newPresences = mContact->details<QContactPresence>();
 
@@ -1635,6 +1668,8 @@ void SeasidePerson::updateContactDetails(const QContact &oldContact)
         if (urisChanged) {
             emitChangeSignal(&SeasidePerson::presenceAccountProvidersChanged);
         }
+
+        presenceInfoChanged = (statesChanged || messagesChanged);
     }
 
     if (oldContact.detail<QContactNickname>() != mContact->detail<QContactNickname>()) {
@@ -1654,6 +1689,8 @@ void SeasidePerson::updateContactDetails(const QContact &oldContact)
         emitChangeSignal(&SeasidePerson::accountPathsChanged);
         emitChangeSignal(&SeasidePerson::accountProvidersChanged);
         emitChangeSignal(&SeasidePerson::accountIconPathsChanged);
+        emitChangeSignal(&SeasidePerson::accountDetailsChanged);
+    } else if (presenceInfoChanged) {
         emitChangeSignal(&SeasidePerson::accountDetailsChanged);
     }
     if (oldContact.details<QContactUrl>() != mContact->details<QContactUrl>()) {
