@@ -1535,11 +1535,17 @@ void SeasidePerson::updateContactDetails(const QContact &oldContact)
     if (oldName.lastName() != newName.lastName())
         emitChangeSignal(&SeasidePerson::lastNameChanged);
 
+    if (oldName.middleName() != newName.middleName())
+        emitChangeSignal(&SeasidePerson::middleNameChanged);
+
     QContactOrganization oldCompany = oldContact.detail<QContactOrganization>();
     QContactOrganization newCompany = mContact->detail<QContactOrganization>();
 
     if (oldCompany.name() != newCompany.name())
         emitChangeSignal(&SeasidePerson::companyNameChanged);
+
+    if (oldCompany.role() != newCompany.role())
+        emitChangeSignal(&SeasidePerson::titleChanged);
 
     QContactFavorite oldFavorite = oldContact.detail<QContactFavorite>();
     QContactFavorite newFavorite = mContact->detail<QContactFavorite>();
