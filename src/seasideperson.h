@@ -96,6 +96,8 @@ public:
         FirstNameType,
         LastNameType,
         MiddleNameType,
+        PrefixType,
+        SuffixType,
         CompanyType,
         NickType,
         TitleType,
@@ -171,6 +173,14 @@ public:
     Q_PROPERTY(QString middleName READ middleName WRITE setMiddleName NOTIFY middleNameChanged)
     QString middleName() const;
     void setMiddleName(const QString &name);
+
+    Q_PROPERTY(QString namePrefix READ namePrefix WRITE setNamePrefix NOTIFY namePrefixChanged)
+    QString namePrefix() const;
+    void setNamePrefix(const QString &prefix);
+
+    Q_PROPERTY(QString nameSuffix READ nameSuffix WRITE setNameSuffix NOTIFY nameSuffixChanged)
+    QString nameSuffix() const;
+    void setNameSuffix(const QString &suffix);
 
     Q_PROPERTY(QString sectionBucket READ sectionBucket NOTIFY displayLabelChanged)
     QString sectionBucket() const;
@@ -370,6 +380,8 @@ signals:
     void firstNameChanged();
     void lastNameChanged();
     void middleNameChanged();
+    void namePrefixChanged();
+    void nameSuffixChanged();
     void displayLabelChanged();
     void primaryNameChanged();
     void secondaryNameChanged();

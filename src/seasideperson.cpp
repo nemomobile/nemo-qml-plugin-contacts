@@ -213,6 +213,38 @@ void SeasidePerson::setMiddleName(const QString &name)
     recalculateDisplayLabel();
 }
 
+QString SeasidePerson::namePrefix() const
+{
+    QContactName nameDetail = mContact->detail<QContactName>();
+    return nameDetail.prefix();
+}
+
+void SeasidePerson::setNamePrefix(const QString &prefix)
+{
+    QContactName nameDetail = mContact->detail<QContactName>();
+    nameDetail.setPrefix(prefix);
+    mContact->saveDetail(&nameDetail);
+    emit namePrefixChanged();
+    // Prefix is not currently used in display label
+    //recalculateDisplayLabel();
+}
+
+QString SeasidePerson::nameSuffix() const
+{
+    QContactName nameDetail = mContact->detail<QContactName>();
+    return nameDetail.suffix();
+}
+
+void SeasidePerson::setNameSuffix(const QString &suffix)
+{
+    QContactName nameDetail = mContact->detail<QContactName>();
+    nameDetail.setSuffix(suffix);
+    mContact->saveDetail(&nameDetail);
+    emit nameSuffixChanged();
+    // Suffix is not currently used in display label
+    //recalculateDisplayLabel();
+}
+
 // small helper to avoid inconvenience
 QString SeasidePerson::generateDisplayLabel(const QContact &contact, SeasideCache::DisplayLabelOrder order)
 {
