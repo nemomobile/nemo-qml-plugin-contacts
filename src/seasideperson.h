@@ -280,16 +280,6 @@ public:
     Q_PROPERTY(PresenceState globalPresenceState READ globalPresenceState NOTIFY globalPresenceStateChanged)
     PresenceState globalPresenceState() const;
 
-    // To be removed:
-    Q_PROPERTY(QStringList presenceAccountProviders READ presenceAccountProviders NOTIFY presenceAccountProvidersChanged)
-    QStringList presenceAccountProviders() const;
-
-    Q_PROPERTY(QList<int> presenceStates READ presenceStates NOTIFY presenceStatesChanged)
-    QList<int> presenceStates() const;
-
-    Q_PROPERTY(QStringList presenceMessages READ presenceMessages NOTIFY presenceMessagesChanged)
-    QStringList presenceMessages() const;
-
     Q_PROPERTY(QStringList accountUris READ accountUris NOTIFY accountUrisChanged)
     QStringList accountUris() const;
 
@@ -406,9 +396,6 @@ signals:
     void birthdayChanged();
     void anniversaryChanged();
     void globalPresenceStateChanged();
-    void presenceAccountProvidersChanged();
-    void presenceStatesChanged();
-    void presenceMessagesChanged();
     void accountUrisChanged();
     void accountPathsChanged();
     void accountProvidersChanged();

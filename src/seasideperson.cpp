@@ -1279,90 +1279,6 @@ SeasidePerson::PresenceState SeasidePerson::globalPresenceState() const
     return static_cast<SeasidePerson::PresenceState>(mContact->detail<QContactGlobalPresence>().presenceState());
 }
 
-namespace { // Helper functions
-
-int someElementPresentAtIndex(const QStringList &needleList, const QStringList &haystack)
-{
-    QStringList::const_iterator it = haystack.constBegin(), end = haystack.constEnd();
-    for ( ; it != end; ++it) {
-        if (needleList.contains(*it)) {
-            return (it - haystack.constBegin());
-        }
-    }
-
-    return -1;
-}
-
-template<class ListType, class AccountListType>
-ListType inAccountOrder(ListType list, AccountListType accountList)
-{
-    ListType rv;
-
-    // Find the detailUri for each reportable account in the order they're yielded
-    QStringList uriList;
-    foreach (const typename AccountListType::value_type &account, accountList) {
-        if (account.hasValue(QContactOnlineAccount__FieldAccountPath)) {
-            uriList.append(account.detailUri());
-        }
-    }
-
-    rv.reserve(uriList.count());
-
-    // For each value, insert in the order that the linked account is present
-    foreach (const typename ListType::value_type &item, list) {
-        int index = someElementPresentAtIndex(item.linkedDetailUris(), uriList);
-        if (index != -1) {
-            if (rv.count() > index) {
-                rv[index] = item;
-            } else {
-                while (rv.count() < index) {
-                    rv.append(typename ListType::value_type());
-                }
-                rv.append(item);
-            }
-        }
-    }
-
-    return rv;
-}
-
-}
-
-QStringList SeasidePerson::presenceAccountProviders() const
-{
-    return accountProviders();
-}
-
-QList<int> SeasidePerson::presenceStates() const
-{
-    QList<int> rv;
-
-    foreach (const QContactPresence &presence, inAccountOrder(mContact->details<QContactPresence>(), mContact->details<QContactOnlineAccount>())) {
-        if (!presence.isEmpty()) {
-            rv.append(static_cast<int>(presence.presenceState()));
-        } else {
-            rv.append(QContactPresence::PresenceUnknown);
-        }
-    }
-
-    return rv;
-}
-
-QStringList SeasidePerson::presenceMessages() const
-{
-    QStringList rv;
-
-    foreach (const QContactPresence &presence, inAccountOrder(mContact->details<QContactPresence>(), mContact->details<QContactOnlineAccount>())) {
-        if (!presence.isEmpty()) {
-            rv.append(presence.customMessage());
-        } else {
-            rv.append(QString());
-        }
-    }
-
-    return rv;
-}
-
 QStringList SeasidePerson::accountUris() const
 {
     return listPropertyFromDetailField<QContactOnlineAccount>(*mContact, QContactOnlineAccount::FieldAccountUri);
@@ -1630,46 +1546,22 @@ void SeasidePerson::updateContactDetails(const QContact &oldContact)
     if (oldPresence.presenceState() != newPresence.presenceState())
         emitChangeSignal(&SeasidePerson::globalPresenceStateChanged);
 
-    bool presenceInfoChanged = false;
-
     QList<QContactPresence> oldPresences = oldContact.details<QContactPresence>();
     QList<QContactPresence> newPresences = mContact->details<QContactPresence>();
 
-    {
-        bool statesChanged = false;
-        bool messagesChanged = false;
-        bool urisChanged = false;
+    bool presenceInfoChanged = (oldPresences.count() != newPresences.count());
+    if (!presenceInfoChanged) {
+        QList<QContactPresence>::const_iterator oldIt = oldPresences.constBegin();
+        QList<QContactPresence>::const_iterator newIt = newPresences.constBegin();
 
-        if (oldPresences.count() != newPresences.count()) {
-            statesChanged = messagesChanged = urisChanged = true;
-        } else {
-            QList<QContactPresence>::const_iterator oldIt = oldPresences.constBegin();
-            QList<QContactPresence>::const_iterator newIt = newPresences.constBegin();
-
-            for ( ; oldIt != oldPresences.constEnd(); ++oldIt, ++newIt) {
-                if (oldIt->detailUri() != newIt->detailUri()) {
-                    // Assume the entire account has been changed
-                    statesChanged = messagesChanged = urisChanged = true;
-                    break;
-                } else if (oldIt->presenceState() != newIt->presenceState()) {
-                    statesChanged = true;
-                } else if (oldIt->customMessage() != newIt->customMessage()) {
-                    messagesChanged = true;
-                }
+        for ( ; oldIt != oldPresences.constEnd(); ++oldIt, ++newIt) {
+            if ((*oldIt).detailUri() != (*newIt).detailUri() ||
+                (*oldIt).presenceState() != (*newIt).presenceState() ||
+                (*oldIt).customMessage() != (*newIt).customMessage()) {
+                presenceInfoChanged = true;
+                break;
             }
         }
-
-        if (statesChanged) {
-            emitChangeSignal(&SeasidePerson::presenceStatesChanged);
-        }
-        if (messagesChanged) {
-            emitChangeSignal(&SeasidePerson::presenceMessagesChanged);
-        }
-        if (urisChanged) {
-            emitChangeSignal(&SeasidePerson::presenceAccountProvidersChanged);
-        }
-
-        presenceInfoChanged = (statesChanged || messagesChanged);
     }
 
     if (oldContact.detail<QContactNickname>() != mContact->detail<QContactNickname>()) {
@@ -1723,9 +1615,6 @@ void SeasidePerson::emitChangeSignals()
     emitChangeSignal(&SeasidePerson::avatarUrlChanged);
     emitChangeSignal(&SeasidePerson::avatarPathChanged);
     emitChangeSignal(&SeasidePerson::globalPresenceStateChanged);
-    emitChangeSignal(&SeasidePerson::presenceStatesChanged);
-    emitChangeSignal(&SeasidePerson::presenceMessagesChanged);
-    emitChangeSignal(&SeasidePerson::presenceAccountProvidersChanged);
     emitChangeSignal(&SeasidePerson::nicknameChanged);
     emitChangeSignal(&SeasidePerson::phoneNumbersChanged);
     emitChangeSignal(&SeasidePerson::phoneDetailsChanged);
