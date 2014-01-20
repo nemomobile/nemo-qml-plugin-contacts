@@ -131,10 +131,7 @@ public:
         // Presence information
         GlobalPresenceStateType,
         AccountProvidersType,
-        PresenceAccountProvidersType = AccountProvidersType,  // To be removed
         AccountIconPathsType,
-        PresenceStatesType,
-        PresenceMessagesType,
         // Other
         SyncTarget
     };
@@ -219,49 +216,17 @@ public:
     void setAvatarUrl(QUrl avatarUrl);
     Q_INVOKABLE QUrl filteredAvatarUrl(const QStringList &metadataFragments = QStringList()) const;
 
-    Q_PROPERTY(QStringList phoneNumbers READ phoneNumbers WRITE setPhoneNumbers NOTIFY phoneNumbersChanged)
-    QStringList phoneNumbers() const;
-    void setPhoneNumbers(const QStringList &phoneNumbers);
-
-    Q_PROPERTY(QList<int> phoneNumberTypes READ phoneNumberTypes NOTIFY phoneNumberTypesChanged)
-    QList<int> phoneNumberTypes() const;
-    Q_INVOKABLE void setPhoneNumberType(int which, DetailType type);
-
     Q_PROPERTY(QVariantList phoneDetails READ phoneDetails WRITE setPhoneDetails NOTIFY phoneDetailsChanged)
     QVariantList phoneDetails() const;
     void setPhoneDetails(const QVariantList &phoneDetails);
-
-    Q_PROPERTY(QStringList emailAddresses READ emailAddresses WRITE setEmailAddresses NOTIFY emailAddressesChanged)
-    QStringList emailAddresses() const;
-    void setEmailAddresses(const QStringList &emailAddresses);
-
-    Q_PROPERTY(QList<int> emailAddressTypes READ emailAddressTypes NOTIFY emailAddressTypesChanged)
-    QList<int> emailAddressTypes() const;
-    Q_INVOKABLE void setEmailAddressType(int which, DetailType type);
 
     Q_PROPERTY(QVariantList emailDetails READ emailDetails WRITE setEmailDetails NOTIFY emailDetailsChanged)
     QVariantList emailDetails() const;
     void setEmailDetails(const QVariantList &emailDetails);
 
-    Q_PROPERTY(QStringList addresses READ addresses WRITE setAddresses NOTIFY addressesChanged)
-    QStringList addresses() const;
-    void setAddresses(const QStringList &addresses);
-
-    Q_PROPERTY(QList<int> addressTypes READ addressTypes NOTIFY addressTypesChanged)
-    QList<int> addressTypes() const;
-    Q_INVOKABLE void setAddressType(int which, DetailType type);
-
     Q_PROPERTY(QVariantList addressDetails READ addressDetails WRITE setAddressDetails NOTIFY addressDetailsChanged)
     QVariantList addressDetails() const;
     void setAddressDetails(const QVariantList &addressDetails);
-
-    Q_PROPERTY(QStringList websites READ websites WRITE setWebsites NOTIFY websitesChanged)
-    QStringList websites() const;
-    void setWebsites(const QStringList &sites);
-
-    Q_PROPERTY(QList<int> websiteTypes READ websiteTypes NOTIFY websiteTypesChanged)
-    QList<int> websiteTypes() const;
-    Q_INVOKABLE void setWebsiteType(int which, DetailType type);
 
     Q_PROPERTY(QVariantList websiteDetails READ websiteDetails WRITE setWebsiteDetails NOTIFY websiteDetailsChanged)
     QVariantList websiteDetails() const;
@@ -279,18 +244,6 @@ public:
 
     Q_PROPERTY(PresenceState globalPresenceState READ globalPresenceState NOTIFY globalPresenceStateChanged)
     PresenceState globalPresenceState() const;
-
-    Q_PROPERTY(QStringList accountUris READ accountUris NOTIFY accountUrisChanged)
-    QStringList accountUris() const;
-
-    Q_PROPERTY(QStringList accountPaths READ accountPaths NOTIFY accountPathsChanged)
-    QStringList accountPaths() const;
-
-    Q_PROPERTY(QStringList accountProviders READ accountProviders NOTIFY accountProvidersChanged)
-    QStringList accountProviders() const;
-
-    Q_PROPERTY(QStringList accountIconPaths READ accountIconPaths NOTIFY accountIconPathsChanged)
-    QStringList accountIconPaths() const;
 
     Q_PROPERTY(QVariantList accountDetails READ accountDetails WRITE setAccountDetails NOTIFY accountDetailsChanged)
     QVariantList accountDetails() const;
@@ -381,25 +334,13 @@ signals:
     void favoriteChanged();
     void avatarPathChanged();
     void avatarUrlChanged();
-    void phoneNumbersChanged();
-    void phoneNumberTypesChanged();
     void phoneDetailsChanged();
-    void emailAddressesChanged();
-    void emailAddressTypesChanged();
     void emailDetailsChanged();
-    void addressesChanged();
-    void addressTypesChanged();
     void addressDetailsChanged();
-    void websitesChanged();
-    void websiteTypesChanged();
     void websiteDetailsChanged();
     void birthdayChanged();
     void anniversaryChanged();
     void globalPresenceStateChanged();
-    void accountUrisChanged();
-    void accountPathsChanged();
-    void accountProvidersChanged();
-    void accountIconPathsChanged();
     void accountDetailsChanged();
     void constituentsChanged();
     void mergeCandidatesChanged();
