@@ -1605,17 +1605,34 @@ void SeasidePerson::updateContactDetails(const QContact &oldContact)
         }
     }
 
+    if (oldContact.detail<QContactNickname>() != mContact->detail<QContactNickname>()) {
+        emitChangeSignal(&SeasidePerson::nicknameChanged);
+    }
+
     if (oldContact.details<QContactPhoneNumber>() != mContact->details<QContactPhoneNumber>()) {
         emitChangeSignal(&SeasidePerson::phoneNumbersChanged);
+        emitChangeSignal(&SeasidePerson::phoneDetailsChanged);
     }
     if (oldContact.details<QContactEmailAddress>() != mContact->details<QContactEmailAddress>()) {
         emitChangeSignal(&SeasidePerson::emailAddressesChanged);
+        emitChangeSignal(&SeasidePerson::emailDetailsChanged);
     }
     if (oldContact.details<QContactOnlineAccount>() != mContact->details<QContactOnlineAccount>()) {
         emitChangeSignal(&SeasidePerson::accountUrisChanged);
         emitChangeSignal(&SeasidePerson::accountPathsChanged);
         emitChangeSignal(&SeasidePerson::accountProvidersChanged);
         emitChangeSignal(&SeasidePerson::accountIconPathsChanged);
+        emitChangeSignal(&SeasidePerson::accountDetailsChanged);
+    }
+    if (oldContact.details<QContactUrl>() != mContact->details<QContactUrl>()) {
+        emitChangeSignal(&SeasidePerson::websitesChanged);
+        emitChangeSignal(&SeasidePerson::websiteDetailsChanged);
+    }
+    if (oldContact.detail<QContactBirthday>() != mContact->detail<QContactBirthday>()) {
+        emitChangeSignal(&SeasidePerson::birthdayChanged);
+    }
+    if (oldContact.detail<QContactAnniversary>() != mContact->detail<QContactAnniversary>()) {
+        emitChangeSignal(&SeasidePerson::anniversaryChanged);
     }
 
     if (m_changesReported) {
@@ -1630,7 +1647,9 @@ void SeasidePerson::emitChangeSignals()
     emitChangeSignal(&SeasidePerson::secondaryNameChanged);
     emitChangeSignal(&SeasidePerson::firstNameChanged);
     emitChangeSignal(&SeasidePerson::lastNameChanged);
+    emitChangeSignal(&SeasidePerson::middleNameChanged);
     emitChangeSignal(&SeasidePerson::companyNameChanged);
+    emitChangeSignal(&SeasidePerson::titleChanged);
     emitChangeSignal(&SeasidePerson::favoriteChanged);
     emitChangeSignal(&SeasidePerson::avatarUrlChanged);
     emitChangeSignal(&SeasidePerson::avatarPathChanged);
@@ -1638,12 +1657,20 @@ void SeasidePerson::emitChangeSignals()
     emitChangeSignal(&SeasidePerson::presenceStatesChanged);
     emitChangeSignal(&SeasidePerson::presenceMessagesChanged);
     emitChangeSignal(&SeasidePerson::presenceAccountProvidersChanged);
+    emitChangeSignal(&SeasidePerson::nicknameChanged);
     emitChangeSignal(&SeasidePerson::phoneNumbersChanged);
+    emitChangeSignal(&SeasidePerson::phoneDetailsChanged);
     emitChangeSignal(&SeasidePerson::emailAddressesChanged);
+    emitChangeSignal(&SeasidePerson::emailDetailsChanged);
     emitChangeSignal(&SeasidePerson::accountUrisChanged);
     emitChangeSignal(&SeasidePerson::accountPathsChanged);
     emitChangeSignal(&SeasidePerson::accountProvidersChanged);
     emitChangeSignal(&SeasidePerson::accountIconPathsChanged);
+    emitChangeSignal(&SeasidePerson::accountDetailsChanged);
+    emitChangeSignal(&SeasidePerson::websitesChanged);
+    emitChangeSignal(&SeasidePerson::websiteDetailsChanged);
+    emitChangeSignal(&SeasidePerson::birthdayChanged);
+    emitChangeSignal(&SeasidePerson::anniversaryChanged);
     emit dataChanged();
 }
 
