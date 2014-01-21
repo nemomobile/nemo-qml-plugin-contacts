@@ -227,12 +227,14 @@ void tst_SeasidePerson::avatarPath()
     QCOMPARE(person->property("avatarPath").toUrl(), person->avatarPath());
 }
 
-QVariantMap makePhoneNumber(const QString &number, int type = SeasidePerson::PhoneHomeType)
+QVariantMap makePhoneNumber(const QString &number, int label = SeasidePerson::NoLabel, int subType = SeasidePerson::NoSubType)
 {
     QVariantMap rv;
 
     rv.insert(QString::fromLatin1("number"), number);
-    rv.insert(QString::fromLatin1("type"), type);
+    rv.insert(QString::fromLatin1("type"), static_cast<int>(SeasidePerson::PhoneNumberType));
+    rv.insert(QString::fromLatin1("subTypes"), QVariantList() << subType);
+    rv.insert(QString::fromLatin1("label"), label);
     rv.insert(QString::fromLatin1("index"), -1);
 
     return rv;
@@ -256,12 +258,12 @@ void tst_SeasidePerson::phoneDetails()
     person->setPhoneDetails(phoneDetails);
     QCOMPARE(spy.count(), 1);
 
-    QList<SeasidePerson::DetailType> phoneTypes;
-    phoneTypes.append(SeasidePerson::PhoneHomeType);
-    phoneTypes.append(SeasidePerson::PhoneWorkType);
-    phoneTypes.append(SeasidePerson::PhoneMobileType);
-    phoneTypes.append(SeasidePerson::PhonePagerType);
-    phoneTypes.append(SeasidePerson::PhoneFaxType);
+    QList<SeasidePerson::DetailSubType> phoneSubTypes;
+    phoneSubTypes.append(SeasidePerson::PhoneSubTypeLandline);
+    phoneSubTypes.append(SeasidePerson::PhoneSubTypeMobile);
+    phoneSubTypes.append(SeasidePerson::PhoneSubTypeFax);
+    phoneSubTypes.append(SeasidePerson::PhoneSubTypePager);
+    phoneSubTypes.append(SeasidePerson::PhoneSubTypeVoice);
 
     QVariantList numbers = person->phoneDetails();
     QCOMPARE(numbers.count(), 4);
@@ -270,15 +272,21 @@ void tst_SeasidePerson::phoneDetails()
         QVariant &var(numbers[i]);
         QVariantMap number(var.value<QVariantMap>());
         QCOMPARE(number.value(QString::fromLatin1("number")).toString(), phoneNumbers.at(i));
-        QCOMPARE(number.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::PhoneHomeType));
+        QCOMPARE(number.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::PhoneNumberType));
+        QCOMPARE(number.value(QString::fromLatin1("subTypes")).value<QVariantList>(), QVariantList());
+        QCOMPARE(number.value(QString::fromLatin1("label")), QVariant());
 
-        // Modify the type of this detail
-        number.insert(QString::fromLatin1("type"), phoneTypes.at(i));
+        // Modify the subType of this detail
+        number.insert(QString::fromLatin1("subTypes"), QVariantList() << static_cast<int>(phoneSubTypes.at(i)));
+
+        // Modify the label also
+        number.insert(QString::fromLatin1("label"), static_cast<int>(SeasidePerson::OtherLabel));
+
         var = number;
     }
 
     // Add another to the list
-    numbers.append(makePhoneNumber(phoneNumbers.at(4), phoneTypes.at(4)));
+    numbers.append(makePhoneNumber(phoneNumbers.at(4), SeasidePerson::OtherLabel, phoneSubTypes.at(4)));
 
     person->setPhoneDetails(numbers);
     QCOMPARE(spy.count(), 2);
@@ -290,7 +298,13 @@ void tst_SeasidePerson::phoneDetails()
         QVariant &var(numbers[i]);
         QVariantMap number(var.value<QVariantMap>());
         QCOMPARE(number.value(QString::fromLatin1("number")).toString(), phoneNumbers.at(i));
-        QCOMPARE(number.value(QString::fromLatin1("type")).toInt(), static_cast<int>(phoneTypes.at(i)));
+        QCOMPARE(number.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::PhoneNumberType));
+        QCOMPARE(number.value(QString::fromLatin1("subTypes")).value<QVariantList>(), QVariantList() << static_cast<int>(phoneSubTypes.at(i)));
+        QCOMPARE(number.value(QString::fromLatin1("label")).toInt(), static_cast<int>(SeasidePerson::OtherLabel));
+
+        // Now remove the label
+        number.remove(QString::fromLatin1("label"));
+        var = number;
     }
 
     // Remove all but the middle
@@ -303,16 +317,19 @@ void tst_SeasidePerson::phoneDetails()
         QVariant &var(numbers[0]);
         QVariantMap number(var.value<QVariantMap>());
         QCOMPARE(number.value(QString::fromLatin1("number")).toString(), phoneNumbers.at(2));
-        QCOMPARE(number.value(QString::fromLatin1("type")).toInt(), static_cast<int>(phoneTypes.at(2)));
+        QCOMPARE(number.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::PhoneNumberType));
+        QCOMPARE(number.value(QString::fromLatin1("subTypes")).value<QVariantList>(), QVariantList() << static_cast<int>(phoneSubTypes.at(2)));
+        QCOMPARE(number.value(QString::fromLatin1("label")), QVariant());
     }
 }
 
-QVariantMap makeEmailAddress(const QString &address, int type = SeasidePerson::EmailHomeType)
+QVariantMap makeEmailAddress(const QString &address, int label = SeasidePerson::NoLabel)
 {
     QVariantMap rv;
 
     rv.insert(QString::fromLatin1("address"), address);
-    rv.insert(QString::fromLatin1("type"), type);
+    rv.insert(QString::fromLatin1("type"), static_cast<int>(SeasidePerson::EmailAddressType));
+    rv.insert(QString::fromLatin1("label"), label);
     rv.insert(QString::fromLatin1("index"), -1);
 
     return rv;
@@ -336,10 +353,10 @@ void tst_SeasidePerson::emailDetails()
     person->setEmailDetails(emailDetails);
     QCOMPARE(spy.count(), 1);
 
-    QList<SeasidePerson::DetailType> emailTypes;
-    emailTypes.append(SeasidePerson::EmailHomeType);
-    emailTypes.append(SeasidePerson::EmailWorkType);
-    emailTypes.append(SeasidePerson::EmailOtherType);
+    QList<SeasidePerson::DetailLabel> emailLabels;
+    emailLabels.append(SeasidePerson::HomeLabel);
+    emailLabels.append(SeasidePerson::WorkLabel);
+    emailLabels.append(SeasidePerson::OtherLabel);
 
     QVariantList addresses = person->emailDetails();
     QCOMPARE(addresses.count(), 2);
@@ -348,15 +365,16 @@ void tst_SeasidePerson::emailDetails()
         QVariant &var(addresses[i]);
         QVariantMap address(var.value<QVariantMap>());
         QCOMPARE(address.value(QString::fromLatin1("address")).toString(), emailAddresses.at(i));
-        QCOMPARE(address.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::EmailHomeType));
+        QCOMPARE(address.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::EmailAddressType));
+        QCOMPARE(address.value(QString::fromLatin1("label")), QVariant());
 
-        // Modify the type of this detail
-        address.insert(QString::fromLatin1("type"), emailTypes.at(i));
+        // Modify the label of this detail
+        address.insert(QString::fromLatin1("label"), static_cast<int>(emailLabels.at(i)));
         var = address;
     }
 
     // Add another to the list
-    addresses.append(makeEmailAddress(emailAddresses.at(2), emailTypes.at(2)));
+    addresses.append(makeEmailAddress(emailAddresses.at(2), emailLabels.at(2)));
 
     person->setEmailDetails(addresses);
     QCOMPARE(spy.count(), 2);
@@ -368,7 +386,8 @@ void tst_SeasidePerson::emailDetails()
         QVariant &var(addresses[i]);
         QVariantMap address(var.value<QVariantMap>());
         QCOMPARE(address.value(QString::fromLatin1("address")).toString(), emailAddresses.at(i));
-        QCOMPARE(address.value(QString::fromLatin1("type")).toInt(), static_cast<int>(emailTypes.at(i)));
+        QCOMPARE(address.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::EmailAddressType));
+        QCOMPARE(address.value(QString::fromLatin1("label")).toInt(), static_cast<int>(emailLabels.at(i)));
     }
 
     // Remove all but the middle
@@ -381,16 +400,18 @@ void tst_SeasidePerson::emailDetails()
         QVariant &var(addresses[0]);
         QVariantMap address(var.value<QVariantMap>());
         QCOMPARE(address.value(QString::fromLatin1("address")).toString(), emailAddresses.at(1));
-        QCOMPARE(address.value(QString::fromLatin1("type")).toInt(), static_cast<int>(emailTypes.at(1)));
+        QCOMPARE(address.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::EmailAddressType));
+        QCOMPARE(address.value(QString::fromLatin1("label")).toInt(), static_cast<int>(emailLabels.at(1)));
     }
 }
 
-QVariantMap makeWebsite(const QString &url, int type = SeasidePerson::WebsiteHomeType)
+QVariantMap makeWebsite(const QString &url, int label = SeasidePerson::NoLabel)
 {
     QVariantMap rv;
 
     rv.insert(QString::fromLatin1("url"), url);
-    rv.insert(QString::fromLatin1("type"), type);
+    rv.insert(QString::fromLatin1("type"), static_cast<int>(SeasidePerson::WebsiteType));
+    rv.insert(QString::fromLatin1("label"), label);
     rv.insert(QString::fromLatin1("index"), -1);
 
     return rv;
@@ -414,10 +435,10 @@ void tst_SeasidePerson::websiteDetails()
     person->setWebsiteDetails(websiteDetails);
     QCOMPARE(spy.count(), 1);
 
-    QList<SeasidePerson::DetailType> websiteTypes;
-    websiteTypes.append(SeasidePerson::WebsiteHomeType);
-    websiteTypes.append(SeasidePerson::WebsiteWorkType);
-    websiteTypes.append(SeasidePerson::WebsiteOtherType);
+    QList<SeasidePerson::DetailLabel> websiteLabels;
+    websiteLabels.append(SeasidePerson::HomeLabel);
+    websiteLabels.append(SeasidePerson::WorkLabel);
+    websiteLabels.append(SeasidePerson::OtherLabel);
 
     QVariantList websites = person->websiteDetails();
     QCOMPARE(websites.count(), 2);
@@ -426,15 +447,16 @@ void tst_SeasidePerson::websiteDetails()
         QVariant &var(websites[i]);
         QVariantMap website(var.value<QVariantMap>());
         QCOMPARE(website.value(QString::fromLatin1("url")).toString(), urls.at(i));
-        QCOMPARE(website.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::WebsiteHomeType));
+        QCOMPARE(website.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::WebsiteType));
+        QCOMPARE(website.value(QString::fromLatin1("label")), QVariant());
 
-        // Modify the type of this detail
-        website.insert(QString::fromLatin1("type"), websiteTypes.at(i));
+        // Modify the label of this detail
+        website.insert(QString::fromLatin1("label"), static_cast<int>(websiteLabels.at(i)));
         var = website;
     }
 
     // Add another to the list
-    websites.append(makeWebsite(urls.at(2), websiteTypes.at(2)));
+    websites.append(makeWebsite(urls.at(2), websiteLabels.at(2)));
 
     person->setWebsiteDetails(websites);
     QCOMPARE(spy.count(), 2);
@@ -446,7 +468,8 @@ void tst_SeasidePerson::websiteDetails()
         QVariant &var(websites[i]);
         QVariantMap website(var.value<QVariantMap>());
         QCOMPARE(website.value(QString::fromLatin1("url")).toString(), urls.at(i));
-        QCOMPARE(website.value(QString::fromLatin1("type")).toInt(), static_cast<int>(websiteTypes.at(i)));
+        QCOMPARE(website.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::WebsiteType));
+        QCOMPARE(website.value(QString::fromLatin1("label")).toInt(), static_cast<int>(websiteLabels.at(i)));
     }
 
     // Remove all but the middle
@@ -459,15 +482,18 @@ void tst_SeasidePerson::websiteDetails()
         QVariant &var(websites[0]);
         QVariantMap website(var.value<QVariantMap>());
         QCOMPARE(website.value(QString::fromLatin1("url")).toString(), urls.at(1));
-        QCOMPARE(website.value(QString::fromLatin1("type")).toInt(), static_cast<int>(websiteTypes.at(1)));
+        QCOMPARE(website.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::WebsiteType));
+        QCOMPARE(website.value(QString::fromLatin1("label")).toInt(), static_cast<int>(websiteLabels.at(1)));
     }
 }
 
-QVariantMap makeAccount(const QString &uri)
+QVariantMap makeAccount(const QString &uri, int label = SeasidePerson::NoLabel)
 {
     QVariantMap rv;
 
     rv.insert(QString::fromLatin1("accountUri"), uri);
+    rv.insert(QString::fromLatin1("type"), static_cast<int>(SeasidePerson::OnlineAccountType));
+    rv.insert(QString::fromLatin1("label"), label);
     rv.insert(QString::fromLatin1("index"), -1);
 
     return rv;
@@ -491,6 +517,11 @@ void tst_SeasidePerson::accountDetails()
     person->setAccountDetails(accountDetails);
     QCOMPARE(spy.count(), 1);
 
+    QList<SeasidePerson::DetailLabel> accountLabels;
+    accountLabels.append(SeasidePerson::HomeLabel);
+    accountLabels.append(SeasidePerson::WorkLabel);
+    accountLabels.append(SeasidePerson::OtherLabel);
+
     QVariantList accounts = person->accountDetails();
     QCOMPARE(accounts.count(), 2);
 
@@ -498,10 +529,16 @@ void tst_SeasidePerson::accountDetails()
         QVariant &var(accounts[i]);
         QVariantMap account(var.value<QVariantMap>());
         QCOMPARE(account.value(QString::fromLatin1("accountUri")).toString(), uris.at(i));
+        QCOMPARE(account.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::OnlineAccountType));
+        QCOMPARE(account.value(QString::fromLatin1("label")), QVariant());
+
+        // Modify the label of this detail
+        account.insert(QString::fromLatin1("label"), static_cast<int>(accountLabels.at(i)));
+        var = account;
     }
 
     // Add another to the list
-    accounts.append(makeAccount(uris.at(2)));
+    accounts.append(makeAccount(uris.at(2), accountLabels.at(2)));
 
     person->setAccountDetails(accounts);
     QCOMPARE(spy.count(), 2);
@@ -513,6 +550,8 @@ void tst_SeasidePerson::accountDetails()
         QVariant &var(accounts[i]);
         QVariantMap account(var.value<QVariantMap>());
         QCOMPARE(account.value(QString::fromLatin1("accountUri")).toString(), uris.at(i));
+        QCOMPARE(account.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::OnlineAccountType));
+        QCOMPARE(account.value(QString::fromLatin1("label")).toInt(), static_cast<int>(accountLabels.at(i)));
     }
 
     // Remove all but the middle
@@ -525,6 +564,8 @@ void tst_SeasidePerson::accountDetails()
         QVariant &var(accounts[0]);
         QVariantMap account(var.value<QVariantMap>());
         QCOMPARE(account.value(QString::fromLatin1("accountUri")).toString(), uris.at(1));
+        QCOMPARE(account.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::OnlineAccountType));
+        QCOMPARE(account.value(QString::fromLatin1("label")).toInt(), static_cast<int>(accountLabels.at(1)));
     }
 }
 
@@ -558,12 +599,13 @@ void tst_SeasidePerson::anniversary()
     QCOMPARE(person->property("anniversary").toDateTime(), person->anniversary());
 }
 
-QVariantMap makeAddress(const QString &address, int type = SeasidePerson::AddressHomeType)
+QVariantMap makeAddress(const QString &address, int label = SeasidePerson::NoLabel)
 {
     QVariantMap rv;
 
     rv.insert(QString::fromLatin1("address"), address);
-    rv.insert(QString::fromLatin1("type"), type);
+    rv.insert(QString::fromLatin1("type"), static_cast<int>(SeasidePerson::AddressType));
+    rv.insert(QString::fromLatin1("label"), label);
     rv.insert(QString::fromLatin1("index"), -1);
 
     return rv;
@@ -589,10 +631,11 @@ void tst_SeasidePerson::addressDetails()
     person->setAddressDetails(addressDetails);
     QCOMPARE(spy.count(), 1);
 
-    QList<SeasidePerson::DetailType> addressTypes;
-    addressTypes.append(SeasidePerson::AddressHomeType);
-    addressTypes.append(SeasidePerson::AddressWorkType);
-    addressTypes.append(SeasidePerson::AddressOtherType);
+    QList<SeasidePerson::DetailLabel> addressLabels;
+    addressLabels.append(SeasidePerson::HomeLabel);
+    addressLabels.append(SeasidePerson::WorkLabel);
+    addressLabels.append(SeasidePerson::OtherLabel);
+
 
     QVariantList addresses = person->addressDetails();
     QCOMPARE(addresses.count(), 2);
@@ -601,15 +644,16 @@ void tst_SeasidePerson::addressDetails()
         QVariant &var(addresses[i]);
         QVariantMap address(var.value<QVariantMap>());
         QCOMPARE(address.value(QString::fromLatin1("address")).toString(), addressStrings.at(i));
-        QCOMPARE(address.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::AddressHomeType));
+        QCOMPARE(address.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::AddressType));
+        QCOMPARE(address.value(QString::fromLatin1("label")), QVariant());
 
-        // Modify the type of this detail
-        address.insert(QString::fromLatin1("type"), addressTypes.at(i));
+        // Modify the label of this detail
+        address.insert(QString::fromLatin1("label"), static_cast<int>(addressLabels.at(i)));
         var = address;
     }
 
     // Add another to the list
-    addresses.append(makeAddress(addressStrings.at(2), addressTypes.at(2)));
+    addresses.append(makeAddress(addressStrings.at(2), addressLabels.at(2)));
 
     person->setAddressDetails(addresses);
     QCOMPARE(spy.count(), 2);
@@ -621,7 +665,8 @@ void tst_SeasidePerson::addressDetails()
         QVariant &var(addresses[i]);
         QVariantMap address(var.value<QVariantMap>());
         QCOMPARE(address.value(QString::fromLatin1("address")).toString(), addressStrings.at(i));
-        QCOMPARE(address.value(QString::fromLatin1("type")).toInt(), static_cast<int>(addressTypes.at(i)));
+        QCOMPARE(address.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::AddressType));
+        QCOMPARE(address.value(QString::fromLatin1("label")).toInt(), static_cast<int>(addressLabels.at(i)));
     }
 
     // Remove all but the middle
@@ -634,7 +679,8 @@ void tst_SeasidePerson::addressDetails()
         QVariant &var(addresses[0]);
         QVariantMap address(var.value<QVariantMap>());
         QCOMPARE(address.value(QString::fromLatin1("address")).toString(), addressStrings.at(1));
-        QCOMPARE(address.value(QString::fromLatin1("type")).toInt(), static_cast<int>(addressTypes.at(1)));
+        QCOMPARE(address.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::AddressType));
+        QCOMPARE(address.value(QString::fromLatin1("label")).toInt(), static_cast<int>(addressLabels.at(1)));
     }
 }
 
@@ -744,7 +790,7 @@ void tst_SeasidePerson::vcard()
     QString vcard = person->vCard();
 
     QVERIFY(vcard.indexOf("N:Fish;Star;;;") > 0);
-    QVERIFY(vcard.indexOf("TEL;HOME;ISDN:12345678") > 0);
+    QVERIFY(vcard.indexOf("TEL:12345678") > 0);
 
     // If we were exporting version 3.0, FN would also be expected
     //QVERIFY(vcard.indexOf("FN:Star Fish") > 0);
@@ -816,7 +862,7 @@ void tst_SeasidePerson::removeDuplicatePhoneNumbers()
 
     foreach (const QString &num, numberStrings) {
         QVariantMap number;
-        number.insert(phoneDetailType, SeasidePerson::PhoneHomeType);
+        number.insert(phoneDetailType, SeasidePerson::PhoneNumberType);
         number.insert(phoneDetailNumber, num);
         number.insert(phoneDetailNormalizedNumber, SeasideCache::normalizePhoneNumber(num));
         number.insert(phoneDetailMinimizedNumber, SeasideCache::minimizePhoneNumber(num));

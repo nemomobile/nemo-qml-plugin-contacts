@@ -85,6 +85,9 @@ class SeasidePerson
 {
     Q_OBJECT
     Q_ENUMS(DetailType)
+    Q_ENUMS(DetailSubType)
+    Q_ENUMS(AddressField)
+    Q_ENUMS(DetailLabel)
     Q_ENUMS(PresenceState)
 
 public:
@@ -92,7 +95,7 @@ public:
      * Identifiers of contact details for the UI.
      */
     enum DetailType {
-        // Name
+        NoType,
         FirstNameType,
         LastNameType,
         MiddleNameType,
@@ -101,39 +104,59 @@ public:
         CompanyType,
         NickType,
         TitleType,
-        // Phone
-        PhoneHomeType,
-        PhoneWorkType,
-        PhoneMobileType,
-        PhoneFaxType,
-        PhonePagerType,
-        // Email
-        EmailHomeType,
-        EmailWorkType,
-        EmailOtherType,
-        // Address
-        AddressHomeType,
-        AddressWorkType,
-        AddressOtherType,
-        AddressStreetType,
-        AddressLocalityType,
-        AddressRegionType,
-        AddressPostcodeType,
-        AddressCountryType,
-        AddressPOBoxType,
-        // Website
-        WebsiteHomeType,
-        WebsiteWorkType,
-        WebsiteOtherType,
-        // Dates
+        PhoneNumberType,
+        EmailAddressType,
+        OnlineAccountType,
+        AddressType,
+        WebsiteType,
         BirthdayType,
         AnniversaryType,
-        // Presence information
-        GlobalPresenceStateType,
-        AccountProvidersType,
-        AccountIconPathsType,
-        // Other
-        SyncTarget
+        GlobalPresenceStateType
+    };
+
+    enum DetailSubType {
+        NoSubType,
+        PhoneSubTypeLandline,
+        PhoneSubTypeMobile,
+        PhoneSubTypeFax,
+        PhoneSubTypePager,
+        PhoneSubTypeVoice,
+        PhoneSubTypeModem,
+        PhoneSubTypeVideo,
+        PhoneSubTypeCar,
+        PhoneSubTypeBulletinBoardSystem,
+        PhoneSubTypeMessagingCapable,
+        PhoneSubTypeAssistant,
+        PhoneSubTypeDtmfMenu,
+        AddressSubTypeParcel,
+        AddressSubTypePostal,
+        AddressSubTypeDomestic,
+        AddressSubTypeInternational,
+        OnlineAccountSubTypeSip,
+        OnlineAccountSubTypeSipVoip,
+        OnlineAccountSubTypeImpp,
+        OnlineAccountSubTypeVideoShare,
+        AnniversarySubTypeWedding,
+        AnniversarySubTypeEngagement,
+        AnniversarySubTypeHouse,
+        AnniversarySubTypeEmployment,
+        AnniversarySubTypeMemorial
+    };
+
+    enum AddressField {
+        AddressStreetField,
+        AddressLocalityField,
+        AddressRegionField,
+        AddressPostcodeField,
+        AddressCountryField,
+        AddressPOBoxField,
+    };
+
+    enum DetailLabel {
+        NoLabel,
+        HomeLabel,
+        WorkLabel,
+        OtherLabel
     };
 
     enum PresenceState {

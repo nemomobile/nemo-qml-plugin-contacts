@@ -422,55 +422,77 @@ QUrl SeasidePerson::filteredAvatarUrl(const QStringList &metadataFragments) cons
 
 namespace { // Helper functions
 
-int phoneNumberType(const QContactPhoneNumber &number)
-{
-    int type = SeasidePerson::PhoneHomeType;
-
-    if (number.subTypes().contains(QContactPhoneNumber::SubTypeMobile)) {
-        type = SeasidePerson::PhoneMobileType;
-    } else if (number.subTypes().contains(QContactPhoneNumber::SubTypeFax)) {
-        type = SeasidePerson::PhoneFaxType;
-    } else if (number.subTypes().contains(QContactPhoneNumber::SubTypePager)) {
-        type = SeasidePerson::PhonePagerType;
-    } else if (number.contexts().contains(QContactDetail::ContextWork)) {
-        type = SeasidePerson::PhoneWorkType;
-    }
-
-    return type;
-}
-
 #ifdef USING_QTPIM
-void setPhoneNumberType(QContactPhoneNumber &phoneNumber, QContactPhoneNumber::SubType type) { phoneNumber.setSubTypes(QList<int>() << static_cast<int>(type)); }
-#else
-void setPhoneNumberType(QContactPhoneNumber &phoneNumber, const QString &type) { phoneNumber.setSubTypes(type); }
-#endif
-
-void setPhoneNumberType(QContactPhoneNumber &number, SeasidePerson::DetailType type)
+QVariant detailLabelType(const QContactDetail &detail)
 {
-    if (type == SeasidePerson::PhoneHomeType) {
-        ::setPhoneNumberType(number, QContactPhoneNumber::SubTypeLandline);
-        number.setContexts(QContactDetail::ContextHome);
-    }  else if (type == SeasidePerson::PhoneWorkType) {
-        ::setPhoneNumberType(number, QContactPhoneNumber::SubTypeLandline);
-        number.setContexts(QContactDetail::ContextWork);
-    } else if (type == SeasidePerson::PhoneMobileType) {
-        ::setPhoneNumberType(number, QContactPhoneNumber::SubTypeMobile);
-        number.setContexts(QContactDetail::ContextHome);
-    } else if (type == SeasidePerson::PhoneFaxType) {
-        ::setPhoneNumberType(number, QContactPhoneNumber::SubTypeFax);
-        number.setContexts(QContactDetail::ContextHome);
-    } else if (type == SeasidePerson::PhonePagerType) {
-        ::setPhoneNumberType(number, QContactPhoneNumber::SubTypePager);
-        number.setContexts(QContactDetail::ContextHome);
-    } else {
-        qWarning() << "Warning: Could not save phone type '" << type << "'";
+    const QList<int> &contexts(detail.contexts());
+
+    // We do not support multiple conflicting labels
+    if (contexts.contains(QContactDetail::ContextHome)) {
+        return QVariant(static_cast<int>(SeasidePerson::HomeLabel));
+    } else if (contexts.contains(QContactDetail::ContextWork)) {
+        return QVariant(static_cast<int>(SeasidePerson::WorkLabel));
+    } else if (contexts.contains(QContactDetail::ContextOther)) {
+        return QVariant(static_cast<int>(SeasidePerson::OtherLabel));
+    }
+
+    return QVariant();
+}
+
+QContactDetail::DetailContext contextType(int label)
+{
+    if (label == SeasidePerson::HomeLabel) {
+        return QContactDetail::ContextHome;
+    } else if (label == SeasidePerson::WorkLabel) {
+        return QContactDetail::ContextWork;
+    }
+
+    return QContactDetail::ContextOther;
+}
+
+void setDetailLabelType(QContactDetail &detail, int label)
+{
+    QList<int> contexts(detail.contexts());
+
+    // Replace any of the supported types with the new type
+    bool modified = false;
+    bool replace = (label != SeasidePerson::NoLabel);
+    for (QList<int>::iterator it = contexts.begin(); it != contexts.end(); ) {
+        if (*it == QContactDetail::ContextHome ||
+            *it == QContactDetail::ContextWork ||
+            *it == QContactDetail::ContextOther) {
+            if (replace) {
+                replace = false;
+                (*it) = contextType(label);
+                ++it;
+            } else {
+                it = contexts.erase(it);
+            }
+            modified = true;
+        } else {
+            ++it;
+        }
+    }
+
+    if (replace && !modified) {
+        contexts.append(contextType(label));
+        modified = true;
+    }
+
+    if (modified) {
+        detail.setContexts(contexts);
     }
 }
+#else
+#error "Unsupported"
+#endif
 
 const QString detailReadOnly(QString::fromLatin1("readOnly"));
 const QString detailOriginId(QString::fromLatin1("originId"));
 const QString detailSyncTarget(QString::fromLatin1("syncTarget"));
 const QString detailType(QString::fromLatin1("type"));
+const QString detailSubTypes(QString::fromLatin1("subTypes"));
+const QString detailLabel(QString::fromLatin1("label"));
 const QString detailIndex(QString::fromLatin1("index"));
 
 QVariantMap detailProperties(const QContactDetail &detail)
@@ -525,9 +547,94 @@ void updateDetails(QList<T> &existing, QList<T> &modified, QContact *contact, co
     }
 }
 
+#ifdef USING_QTPIM
+QList<QPair<QContactPhoneNumber::SubType, SeasidePerson::DetailSubType> > getPhoneSubTypeMapping()
+{
+    QList<QPair<QContactPhoneNumber::SubType, SeasidePerson::DetailSubType> > rv;
+
+    rv.append(qMakePair(QContactPhoneNumber::SubTypeLandline, SeasidePerson::PhoneSubTypeLandline));
+    rv.append(qMakePair(QContactPhoneNumber::SubTypeMobile, SeasidePerson::PhoneSubTypeMobile));
+    rv.append(qMakePair(QContactPhoneNumber::SubTypeFax, SeasidePerson::PhoneSubTypeFax));
+    rv.append(qMakePair(QContactPhoneNumber::SubTypePager, SeasidePerson::PhoneSubTypePager));
+    rv.append(qMakePair(QContactPhoneNumber::SubTypeVoice, SeasidePerson::PhoneSubTypeVoice));
+    rv.append(qMakePair(QContactPhoneNumber::SubTypeModem, SeasidePerson::PhoneSubTypeModem));
+    rv.append(qMakePair(QContactPhoneNumber::SubTypeVideo, SeasidePerson::PhoneSubTypeVideo));
+    rv.append(qMakePair(QContactPhoneNumber::SubTypeCar, SeasidePerson::PhoneSubTypeCar));
+    rv.append(qMakePair(QContactPhoneNumber::SubTypeBulletinBoardSystem, SeasidePerson::PhoneSubTypeBulletinBoardSystem));
+    rv.append(qMakePair(QContactPhoneNumber::SubTypeMessagingCapable, SeasidePerson::PhoneSubTypeMessagingCapable));
+    rv.append(qMakePair(QContactPhoneNumber::SubTypeAssistant, SeasidePerson::PhoneSubTypeAssistant));
+    rv.append(qMakePair(QContactPhoneNumber::SubTypeDtmfMenu, SeasidePerson::PhoneSubTypeDtmfMenu));
+
+    return rv;
+}
+
+const QList<QPair<QContactPhoneNumber::SubType, SeasidePerson::DetailSubType> > &phoneSubTypeMapping()
+{
+    static const QList<QPair<QContactPhoneNumber::SubType, SeasidePerson::DetailSubType> > mapping(getPhoneSubTypeMapping());
+    return mapping;
+}
+
+int phoneNumberSubType(QContactPhoneNumber::SubType subType)
+{
+    typedef QList<QPair<QContactPhoneNumber::SubType, SeasidePerson::DetailSubType> > List;
+    for (List::const_iterator it = phoneSubTypeMapping().constBegin(), end = phoneSubTypeMapping().constEnd(); it != end; ++it) {
+        if ((*it).first == subType)
+            return static_cast<int>((*it).second);
+    }
+
+    qWarning() << "Invalid phone number sub-type:" << subType;
+    return -1;
+}
+
+int phoneNumberSubType(SeasidePerson::DetailSubType subType)
+{
+    typedef QList<QPair<QContactPhoneNumber::SubType, SeasidePerson::DetailSubType> > List;
+    for (List::const_iterator it = phoneSubTypeMapping().constBegin(), end = phoneSubTypeMapping().constEnd(); it != end; ++it) {
+        if ((*it).second == subType)
+            return static_cast<int>((*it).first);
+    }
+
+    qWarning() << "Invalid phone number detail sub-type:" << subType;
+    return -1;
+}
+
+QVariantList phoneNumberSubTypes(const QContactPhoneNumber &number)
+{
+    QVariantList rv;
+
+    foreach (int type, number.subTypes()) {
+        int result = phoneNumberSubType(static_cast<QContactPhoneNumber::SubType>(type));
+        if (result != -1) {
+            rv.append(QVariant(result));
+        }
+    }
+
+    return rv;
+}
+
+void setPhoneNumberSubTypes(QContactPhoneNumber &number, const QVariantList &types)
+{
+    QList<int> subTypes;
+
+    if (types.count() != 1 || types.at(0).toInt() != SeasidePerson::NoSubType) {
+        foreach (const QVariant &type, types) {
+            int result = phoneNumberSubType(static_cast<SeasidePerson::DetailSubType>(type.toInt()));
+            if (result != -1) {
+                subTypes.append(result);
+            }
+        }
+    }
+
+    number.setSubTypes(subTypes);
+}
+#else
+#error "Unsupported"
+#endif
+
 const QString phoneDetailNumber(QString::fromLatin1("number"));
 const QString phoneDetailNormalizedNumber(QString::fromLatin1("normalizedNumber"));
 const QString phoneDetailMinimizedNumber(QString::fromLatin1("minimizedNumber"));
+const QString phoneDetailSubTypes(QString::fromLatin1("subTypes"));
 
 }
 
@@ -545,7 +652,9 @@ QVariantList SeasidePerson::phoneDetails(const QContact &contact)
         item.insert(phoneDetailNumber, number);
         item.insert(phoneDetailNormalizedNumber, normalized);
         item.insert(phoneDetailMinimizedNumber, minimized);
-        item.insert(detailType, ::phoneNumberType(detail));
+        item.insert(detailType, PhoneNumberType);
+        item.insert(detailSubTypes, ::phoneNumberSubTypes(detail));
+        item.insert(detailLabel, ::detailLabelType(detail));
         item.insert(detailIndex, index++);
         rv.append(item);
     }
@@ -567,11 +676,16 @@ void SeasidePerson::setPhoneDetails(const QVariantList &phoneDetails)
 
     foreach (const QVariant &item, phoneDetails) {
         const QVariantMap detail(item.value<QVariantMap>());
-        const QVariant indexValue = detail[detailIndex];
+
         const QVariant typeValue = detail[detailType];
-        const QVariant numberValue = detail[phoneDetailNumber];
+        if (typeValue.toInt() != PhoneNumberType) {
+            qWarning() << "Invalid type value for phone number:" << typeValue;
+            continue;
+        }
 
         QContactPhoneNumber updated;
+
+        const QVariant indexValue = detail[detailIndex];
         const int index = indexValue.isValid() ? indexValue.value<int>() : -1;
         if (index >= 0 && index < numbers.count()) {
             // Modify the existing detail
@@ -582,19 +696,23 @@ void SeasidePerson::setPhoneDetails(const QVariantList &phoneDetails)
             continue;
         }
 
+        const QVariant numberValue = detail[phoneDetailNumber];
         const QString updatedNumber(numberValue.value<QString>());
         if (updatedNumber.trimmed().isEmpty()) {
             // Remove this number from the list
             continue;
         }
 
-        const int type = typeValue.isValid() ? typeValue.value<int>() : -1;
-        ::setPhoneNumberType(updated, static_cast<SeasidePerson::DetailType>(type));
-
-        // Ignore normalized/minized number variants
+        // Ignore normalized/minimized number variants
         updated.setValue(QContactPhoneNumber::FieldNumber, updatedNumber);
-        updatedNumbers.append(updated);
 
+        const QVariant subTypesValue = detail[detailSubTypes];
+        ::setPhoneNumberSubTypes(updated, subTypesValue.value<QVariantList>());
+
+        const QVariant labelValue = detail[detailLabel];
+        ::setDetailLabelType(updated, labelValue.isValid() ? labelValue.toInt() : NoLabel);
+
+        updatedNumbers.append(updated);
         if (index != -1) {
             validIndices.insert(index);
         }
@@ -608,32 +726,6 @@ void SeasidePerson::setPhoneDetails(const QVariantList &phoneDetails)
 
 namespace {
 
-int emailAddressType(const QContactEmailAddress &email)
-{
-    int type = SeasidePerson::EmailHomeType;
-
-    if (email.contexts().contains(QContactDetail::ContextWork)) {
-        type = SeasidePerson::EmailWorkType;
-    } else if (email.contexts().contains(QContactDetail::ContextOther)) {
-        type = SeasidePerson::EmailOtherType;
-    }
-
-    return type;
-}
-
-void setEmailAddressType(QContactEmailAddress &email, SeasidePerson::DetailType type)
-{
-    if (type == SeasidePerson::EmailHomeType) {
-        email.setContexts(QContactDetail::ContextHome);
-    }  else if (type == SeasidePerson::EmailWorkType) {
-        email.setContexts(QContactDetail::ContextWork);
-    } else if (type == SeasidePerson::EmailOtherType) {
-        email.setContexts(QContactDetail::ContextOther);
-    } else {
-        qWarning() << "Warning: Could not save email type '" << type << "'";
-    }
-}
-
 const QString emailDetailAddress(QString::fromLatin1("address"));
 
 }
@@ -646,7 +738,8 @@ QVariantList SeasidePerson::emailDetails(const QContact &contact)
     foreach (const QContactEmailAddress &detail, contact.details<QContactEmailAddress>()) {
         QVariantMap item(detailProperties(detail));
         item.insert(emailDetailAddress, detail.value(QContactEmailAddress::FieldEmailAddress).toString());
-        item.insert(detailType, ::emailAddressType(detail));
+        item.insert(detailType, EmailAddressType);
+        item.insert(detailLabel, ::detailLabelType(detail));
         item.insert(detailIndex, index++);
         rv.append(item);
     }
@@ -668,11 +761,16 @@ void SeasidePerson::setEmailDetails(const QVariantList &emailDetails)
 
     foreach (const QVariant &item, emailDetails) {
         const QVariantMap detail(item.value<QVariantMap>());
-        const QVariant indexValue = detail[detailIndex];
+
         const QVariant typeValue = detail[detailType];
-        const QVariant addressValue = detail[emailDetailAddress];
+        if (typeValue.toInt() != EmailAddressType) {
+            qWarning() << "Invalid type value for email address:" << typeValue;
+            continue;
+        }
 
         QContactEmailAddress updated;
+
+        const QVariant indexValue = detail[detailIndex];
         const int index = indexValue.isValid() ? indexValue.value<int>() : -1;
         if (index >= 0 && index < addresses.count()) {
             // Modify the existing detail
@@ -683,18 +781,19 @@ void SeasidePerson::setEmailDetails(const QVariantList &emailDetails)
             continue;
         }
 
+        const QVariant addressValue = detail[emailDetailAddress];
         const QString updatedAddress(addressValue.value<QString>());
         if (updatedAddress.trimmed().isEmpty()) {
             // Remove this address from the list
             continue;
         }
 
-        const int type = typeValue.isValid() ? typeValue.value<int>() : -1;
-        ::setEmailAddressType(updated, static_cast<SeasidePerson::DetailType>(type));
-
         updated.setValue(QContactEmailAddress::FieldEmailAddress, updatedAddress);
-        updatedAddresses.append(updated);
 
+        const QVariant labelValue = detail[detailLabel];
+        ::setDetailLabelType(updated, labelValue.isValid() ? labelValue.toInt() : NoLabel);
+
+        updatedAddresses.append(updated);
         if (index != -1) {
             validIndices.insert(index);
         }
@@ -739,31 +838,81 @@ void setAddress(QContactAddress &address, const QStringList &addressStrings)
     }
 }
 
-int addressType(const QContactAddress &address)
+#ifdef USING_QTPIM
+QList<QPair<QContactAddress::SubType, SeasidePerson::DetailSubType> > getAddressSubTypeMapping()
 {
-    int type = SeasidePerson::AddressHomeType;
+    QList<QPair<QContactAddress::SubType, SeasidePerson::DetailSubType> > rv;
 
-    if (address.contexts().contains(QContactDetail::ContextWork)) {
-        type = SeasidePerson::AddressWorkType;
-    } else if (address.contexts().contains(QContactDetail::ContextOther)) {
-        type = SeasidePerson::AddressOtherType;
-    }
+    rv.append(qMakePair(QContactAddress::SubTypeParcel, SeasidePerson::AddressSubTypeParcel));
+    rv.append(qMakePair(QContactAddress::SubTypePostal, SeasidePerson::AddressSubTypePostal));
+    rv.append(qMakePair(QContactAddress::SubTypeDomestic, SeasidePerson::AddressSubTypeDomestic));
+    rv.append(qMakePair(QContactAddress::SubTypeInternational, SeasidePerson::AddressSubTypeInternational));
 
-    return type;
+    return rv;
 }
 
-void setAddressType(QContactAddress &address, SeasidePerson::DetailType type)
+const QList<QPair<QContactAddress::SubType, SeasidePerson::DetailSubType> > &addressSubTypeMapping()
 {
-    if (type == SeasidePerson::AddressHomeType) {
-        address.setContexts(QContactDetail::ContextHome);
-    }  else if (type == SeasidePerson::AddressWorkType) {
-        address.setContexts(QContactDetail::ContextWork);
-    } else if (type == SeasidePerson::AddressOtherType) {
-        address.setContexts(QContactDetail::ContextOther);
-    } else {
-        qWarning() << "Warning: Could not save address type '" << type << "'";
-    }
+    static const QList<QPair<QContactAddress::SubType, SeasidePerson::DetailSubType> > mapping(getAddressSubTypeMapping());
+    return mapping;
 }
+
+int addressSubType(QContactAddress::SubType subType)
+{
+    typedef QList<QPair<QContactAddress::SubType, SeasidePerson::DetailSubType> > List;
+    for (List::const_iterator it = addressSubTypeMapping().constBegin(), end = addressSubTypeMapping().constEnd(); it != end; ++it) {
+        if ((*it).first == subType)
+            return static_cast<int>((*it).second);
+    }
+
+    qWarning() << "Invalid address sub-type:" << subType;
+    return -1;
+}
+
+int addressSubType(SeasidePerson::DetailSubType subType)
+{
+    typedef QList<QPair<QContactAddress::SubType, SeasidePerson::DetailSubType> > List;
+    for (List::const_iterator it = addressSubTypeMapping().constBegin(), end = addressSubTypeMapping().constEnd(); it != end; ++it) {
+        if ((*it).second == subType)
+            return static_cast<int>((*it).first);
+    }
+
+    qWarning() << "Invalid address detail sub-type:" << subType;
+    return -1;
+}
+
+QVariantList addressSubTypes(const QContactAddress &address)
+{
+    QVariantList rv;
+
+    foreach (int type, address.subTypes()) {
+        int result = addressSubType(static_cast<QContactAddress::SubType>(type));
+        if (result != -1) {
+            rv.append(QVariant(result));
+        }
+    }
+
+    return rv;
+}
+
+void setAddressSubTypes(QContactAddress &address, const QVariantList &types)
+{
+    QList<int> subTypes;
+
+    if (types.count() != 1 || types.at(0) != SeasidePerson::NoSubType) {
+        foreach (const QVariant &type, types) {
+            int result = addressSubType(static_cast<SeasidePerson::DetailSubType>(type.toInt()));
+            if (result != -1) {
+                subTypes.append(result);
+            }
+        }
+    }
+
+    address.setSubTypes(subTypes);
+}
+#else
+#error "Unsupported"
+#endif
 
 const QString addressDetailAddress(QString::fromLatin1("address"));
 
@@ -777,7 +926,9 @@ QVariantList SeasidePerson::addressDetails(const QContact &contact)
     foreach (const QContactAddress &detail, contact.details<QContactAddress>()) {
         QVariantMap item(detailProperties(detail));
         item.insert(addressDetailAddress, ::addressString(detail));
-        item.insert(detailType, ::addressType(detail));
+        item.insert(detailType, AddressType);
+        item.insert(detailSubTypes, ::addressSubTypes(detail));
+        item.insert(detailLabel, ::detailLabelType(detail));
         item.insert(detailIndex, index++);
         rv.append(item);
     }
@@ -799,11 +950,16 @@ void SeasidePerson::setAddressDetails(const QVariantList &addressDetails)
 
     foreach (const QVariant &item, addressDetails) {
         const QVariantMap detail(item.value<QVariantMap>());
-        const QVariant indexValue = detail[detailIndex];
+
         const QVariant typeValue = detail[detailType];
-        const QVariant addressValue = detail[addressDetailAddress];
+        if (typeValue.toInt() != AddressType) {
+            qWarning() << "Invalid type value for address:" << typeValue;
+            continue;
+        }
 
         QContactAddress updated;
+
+        const QVariant indexValue = detail[detailIndex];
         const int index = indexValue.isValid() ? indexValue.value<int>() : -1;
         if (index >= 0 && index < addresses.count()) {
             // Modify the existing detail
@@ -814,6 +970,7 @@ void SeasidePerson::setAddressDetails(const QVariantList &addressDetails)
             continue;
         }
 
+        const QVariant addressValue = detail[addressDetailAddress];
         const QString updatedAddress(addressValue.value<QString>());
         if (updatedAddress.trimmed().isEmpty()) {
             // Remove this address from the list
@@ -826,12 +983,15 @@ void SeasidePerson::setAddressDetails(const QVariantList &addressDetails)
             continue;
         }
 
-        const int type = typeValue.isValid() ? typeValue.value<int>() : -1;
-        ::setAddressType(updated, static_cast<SeasidePerson::DetailType>(type));
-
         ::setAddress(updated, split);
-        updatedAddresses.append(updated);
 
+        const QVariant subTypesValue = detail[detailSubTypes];
+        ::setAddressSubTypes(updated, subTypesValue.value<QVariantList>());
+
+        const QVariant labelValue = detail[detailLabel];
+        ::setDetailLabelType(updated, labelValue.isValid() ? labelValue.toInt() : NoLabel);
+
+        updatedAddresses.append(updated);
         if (index != -1) {
             validIndices.insert(index);
         }
@@ -842,32 +1002,6 @@ void SeasidePerson::setAddressDetails(const QVariantList &addressDetails)
 }
 
 namespace {
-
-int websiteType(const QContactUrl &url)
-{
-    int type = SeasidePerson::WebsiteHomeType;
-
-    if (url.contexts().contains(QContactDetail::ContextWork)) {
-        type = SeasidePerson::WebsiteWorkType;
-    } else if (url.contexts().contains(QContactDetail::ContextOther)) {
-        type = SeasidePerson::WebsiteOtherType;
-    }
-
-    return type;
-}
-
-void setWebsiteType(QContactUrl &url, SeasidePerson::DetailType type)
-{
-    if (type == SeasidePerson::WebsiteHomeType) {
-        url.setContexts(QContactDetail::ContextHome);
-    }  else if (type == SeasidePerson::WebsiteWorkType) {
-        url.setContexts(QContactDetail::ContextWork);
-    } else if (type == SeasidePerson::WebsiteOtherType) {
-        url.setContexts(QContactDetail::ContextOther);
-    } else {
-        qWarning() << "Warning: Could not save website type '" << type << "'";
-    }
-}
 
 const QString websiteDetailUrl(QString::fromLatin1("url"));
 
@@ -881,7 +1015,8 @@ QVariantList SeasidePerson::websiteDetails(const QContact &contact)
     foreach (const QContactUrl &detail, contact.details<QContactUrl>()) {
         QVariantMap item(detailProperties(detail));
         item.insert(websiteDetailUrl, detail.value(QContactUrl::FieldUrl).toUrl().toString());
-        item.insert(detailType, ::websiteType(detail));
+        item.insert(detailType, WebsiteType);
+        item.insert(detailLabel, ::detailLabelType(detail));
         item.insert(detailIndex, index++);
         rv.append(item);
     }
@@ -903,11 +1038,16 @@ void SeasidePerson::setWebsiteDetails(const QVariantList &websiteDetails)
 
     foreach (const QVariant &item, websiteDetails) {
         const QVariantMap detail(item.value<QVariantMap>());
-        const QVariant indexValue = detail[detailIndex];
+
         const QVariant typeValue = detail[detailType];
-        const QVariant urlValue = detail[websiteDetailUrl];
+        if (typeValue.toInt() != WebsiteType) {
+            qWarning() << "Invalid type value for website:" << typeValue;
+            continue;
+        }
 
         QContactUrl updated;
+
+        const QVariant indexValue = detail[detailIndex];
         const int index = indexValue.isValid() ? indexValue.value<int>() : -1;
         if (index >= 0 && index < urls.count()) {
             // Modify the existing detail
@@ -918,18 +1058,19 @@ void SeasidePerson::setWebsiteDetails(const QVariantList &websiteDetails)
             continue;
         }
 
+        const QVariant urlValue = detail[websiteDetailUrl];
         const QString updatedUrl(urlValue.value<QString>());
         if (updatedUrl.trimmed().isEmpty()) {
             // Remove this URL from the list
             continue;
         }
 
-        const int type = typeValue.isValid() ? typeValue.value<int>() : -1;
-        ::setWebsiteType(updated, static_cast<SeasidePerson::DetailType>(type));
-
         updated.setValue(QContactUrl::FieldUrl, QUrl(updatedUrl));
-        updatedUrls.append(updated);
 
+        const QVariant labelValue = detail[detailLabel];
+        ::setDetailLabelType(updated, labelValue.isValid() ? labelValue.toInt() : NoLabel);
+
+        updatedUrls.append(updated);
         if (index != -1) {
             validIndices.insert(index);
         }
@@ -981,6 +1122,82 @@ SeasidePerson::PresenceState SeasidePerson::globalPresenceState() const
 }
 
 namespace {
+
+#ifdef USING_QTPIM
+QList<QPair<QContactOnlineAccount::SubType, SeasidePerson::DetailSubType> > getOnlineAccountSubTypeMapping()
+{
+    QList<QPair<QContactOnlineAccount::SubType, SeasidePerson::DetailSubType> > rv;
+
+    rv.append(qMakePair(QContactOnlineAccount::SubTypeSip, SeasidePerson::OnlineAccountSubTypeSip));
+    rv.append(qMakePair(QContactOnlineAccount::SubTypeSipVoip, SeasidePerson::OnlineAccountSubTypeSipVoip));
+    rv.append(qMakePair(QContactOnlineAccount::SubTypeImpp, SeasidePerson::OnlineAccountSubTypeImpp));
+    rv.append(qMakePair(QContactOnlineAccount::SubTypeVideoShare, SeasidePerson::OnlineAccountSubTypeVideoShare));
+
+    return rv;
+}
+
+const QList<QPair<QContactOnlineAccount::SubType, SeasidePerson::DetailSubType> > &onlineAccountSubTypeMapping()
+{
+    static const QList<QPair<QContactOnlineAccount::SubType, SeasidePerson::DetailSubType> > mapping(getOnlineAccountSubTypeMapping());
+    return mapping;
+}
+
+int onlineAccountSubType(QContactOnlineAccount::SubType subType)
+{
+    typedef QList<QPair<QContactOnlineAccount::SubType, SeasidePerson::DetailSubType> > List;
+    for (List::const_iterator it = onlineAccountSubTypeMapping().constBegin(), end = onlineAccountSubTypeMapping().constEnd(); it != end; ++it) {
+        if ((*it).first == subType)
+            return static_cast<int>((*it).second);
+    }
+
+    qWarning() << "Invalid online account sub-type:" << subType;
+    return -1;
+}
+
+int onlineAccountSubType(SeasidePerson::DetailSubType subType)
+{
+    typedef QList<QPair<QContactOnlineAccount::SubType, SeasidePerson::DetailSubType> > List;
+    for (List::const_iterator it = onlineAccountSubTypeMapping().constBegin(), end = onlineAccountSubTypeMapping().constEnd(); it != end; ++it) {
+        if ((*it).second == subType)
+            return static_cast<int>((*it).first);
+    }
+
+    qWarning() << "Invalid online account detail sub-type:" << subType;
+    return -1;
+}
+
+QVariantList onlineAccountSubTypes(const QContactOnlineAccount &account)
+{
+    QVariantList rv;
+
+    foreach (int type, account.subTypes()) {
+        int result = onlineAccountSubType(static_cast<QContactOnlineAccount::SubType>(type));
+        if (result != -1) {
+            rv.append(QVariant(result));
+        }
+    }
+
+    return rv;
+}
+
+void setOnlineAccountSubTypes(QContactOnlineAccount &account, const QVariantList &types)
+{
+    QList<int> subTypes;
+
+    if (types.count() != 1 || types.at(0) != SeasidePerson::NoSubType) {
+        foreach (const QVariant &type, types) {
+            int result = onlineAccountSubType(static_cast<SeasidePerson::DetailSubType>(type.toInt()));
+            if (result != -1) {
+                subTypes.append(result);
+            }
+        }
+    }
+
+    account.setSubTypes(subTypes);
+}
+#else
+#error "Unsupported"
+#endif
 
 const QString accountDetailUri(QString::fromLatin1("accountUri"));
 const QString accountDetailPath(QString::fromLatin1("accountPath"));
@@ -1035,7 +1252,11 @@ QVariantList SeasidePerson::accountDetails(const QContact &contact)
         item.insert(accountDetailPresenceState, state);
         item.insert(accountDetailPresenceMessage, message);
 
+        item.insert(detailType, OnlineAccountType);
+        item.insert(detailSubTypes, ::onlineAccountSubTypes(detail));
+        item.insert(detailLabel, ::detailLabelType(detail));
         item.insert(detailIndex, index++);
+
         rv.append(item);
     }
 
@@ -1056,15 +1277,16 @@ void SeasidePerson::setAccountDetails(const QVariantList &accountDetails)
 
     foreach (const QVariant &item, accountDetails) {
         const QVariantMap detail(item.value<QVariantMap>());
-        const QVariant indexValue = detail[detailIndex];
-        const QVariant accountUriValue = detail[accountDetailUri];
-        const QVariant accountPathValue = detail[accountDetailPath];
-        const QVariant accountDisplayNameValue = detail[accountDetailDisplayName];
-        const QVariant iconPathValue = detail[accountDetailIconPath];
-        const QVariant serviceProviderValue = detail[accountDetailServiceProvider];
-        const QVariant serviceProviderDisplayNameValue = detail[accountDetailServiceProviderDisplayName];
+
+        const QVariant typeValue = detail[detailType];
+        if (typeValue.toInt() != OnlineAccountType) {
+            qWarning() << "Invalid type value for online account:" << typeValue;
+            continue;
+        }
 
         QContactOnlineAccount updated;
+
+        const QVariant indexValue = detail[detailIndex];
         const int index = indexValue.isValid() ? indexValue.value<int>() : -1;
         if (index >= 0 && index < accounts.count()) {
             // Modify the existing detail
@@ -1075,6 +1297,7 @@ void SeasidePerson::setAccountDetails(const QVariantList &accountDetails)
             continue;
         }
 
+        const QVariant accountUriValue = detail[accountDetailUri];
         const QString updatedUri(accountUriValue.value<QString>());
         if (updatedUri.trimmed().isEmpty()) {
             // Remove this address from the list
@@ -1082,14 +1305,29 @@ void SeasidePerson::setAccountDetails(const QVariantList &accountDetails)
         }
 
         updated.setAccountUri(updatedUri);
+
+        const QVariant accountPathValue = detail[accountDetailPath];
         updated.setValue(QContactOnlineAccount__FieldAccountPath, accountPathValue.value<QString>());
+
+        const QVariant accountDisplayNameValue = detail[accountDetailDisplayName];
         updated.setValue(QContactOnlineAccount__FieldAccountDisplayName, accountDisplayNameValue.value<QString>());
+
+        const QVariant iconPathValue = detail[accountDetailIconPath];
         updated.setValue(QContactOnlineAccount__FieldAccountIconPath, iconPathValue.value<QString>());
+
+        const QVariant serviceProviderValue = detail[accountDetailServiceProvider];
         updated.setServiceProvider(serviceProviderValue.value<QString>());
+
+        const QVariant serviceProviderDisplayNameValue = detail[accountDetailServiceProviderDisplayName];
         updated.setValue(QContactOnlineAccount__FieldServiceProviderDisplayName, serviceProviderDisplayNameValue.value<QString>());
 
-        updatedAccounts.append(updated);
+        const QVariant subTypesValue = detail[detailSubTypes];
+        ::setOnlineAccountSubTypes(updated, subTypesValue.value<QVariantList>());
 
+        const QVariant labelValue = detail[detailLabel];
+        ::setDetailLabelType(updated, labelValue.isValid() ? labelValue.toInt() : NoLabel);
+
+        updatedAccounts.append(updated);
         if (index != -1) {
             validIndices.insert(index);
         }
