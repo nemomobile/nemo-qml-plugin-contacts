@@ -129,15 +129,26 @@ int main(int argc, char **argv)
         QString existingDesc(updatedCount ? QString::fromLatin1(" (updating %1 existing)").arg(updatedCount) : QString());
         qDebug("Importing %d new contacts%s", newCount, qPrintable(existingDesc));
 
-        QMap<int, QContactManager::Error> errors;
-        mgr.saveContacts(&importedContacts, &errors);
+        int importedCount = 0;
 
-        int importedCount = importedContacts.count();
-        QMap<int, QContactManager::Error>::const_iterator eit = errors.constBegin(), eend = errors.constEnd();
-        for ( ; eit != eend; ++eit) {
-            const QContact &failed(importedContacts.at(eit.key()));
-            qDebug() << "  Unable to import contact" << failed.detail<QContactDisplayLabel>().label() << "error:" << eit.value();
-            --importedCount;
+        while (!importedContacts.isEmpty()) {
+            QMap<int, QContactManager::Error> errors;
+            mgr.saveContacts(&importedContacts, &errors);
+            importedCount += (importedContacts.count() - errors.count());
+
+            QList<QContact> retryContacts;
+            QMap<int, QContactManager::Error>::const_iterator eit = errors.constBegin(), eend = errors.constEnd();
+            for ( ; eit != eend; ++eit) {
+                const QContact &failed(importedContacts.at(eit.key()));
+                if (eit.value() == QContactManager::LockedError) {
+                    // This contact was part of a failed batch - we should retry
+                    retryContacts.append(failed);
+                } else {
+                    qDebug() << "  Unable to import contact" << failed.detail<QContactDisplayLabel>().label() << "error:" << eit.value();
+                }
+            }
+
+            importedContacts = retryContacts;
         }
         qDebug("Wrote %d contacts", importedCount);
     } else {
