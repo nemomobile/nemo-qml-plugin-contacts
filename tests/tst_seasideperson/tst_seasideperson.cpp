@@ -476,12 +476,13 @@ void tst_SeasidePerson::emailDetails()
     }
 }
 
-QVariantMap makeWebsite(const QString &url, int label = SeasidePerson::NoLabel)
+QVariantMap makeWebsite(const QString &url, int label = SeasidePerson::NoLabel, int subType = SeasidePerson::NoSubType)
 {
     QVariantMap rv;
 
     rv.insert(QString::fromLatin1("url"), url);
     rv.insert(QString::fromLatin1("type"), static_cast<int>(SeasidePerson::WebsiteType));
+    rv.insert(QString::fromLatin1("subType"), subType);
     rv.insert(QString::fromLatin1("label"), label);
     rv.insert(QString::fromLatin1("index"), -1);
 
@@ -511,6 +512,11 @@ void tst_SeasidePerson::websiteDetails()
     websiteLabels.append(SeasidePerson::WorkLabel);
     websiteLabels.append(SeasidePerson::OtherLabel);
 
+    QList<SeasidePerson::DetailSubType> websiteSubTypes;
+    websiteSubTypes.append(SeasidePerson::WebsiteSubTypeHomePage);
+    websiteSubTypes.append(SeasidePerson::WebsiteSubTypeBlog);
+    websiteSubTypes.append(SeasidePerson::WebsiteSubTypeFavorite);
+
     QVariantList websites = person->websiteDetails();
     QCOMPARE(websites.count(), 2);
 
@@ -519,7 +525,11 @@ void tst_SeasidePerson::websiteDetails()
         QVariantMap website(var.value<QVariantMap>());
         QCOMPARE(website.value(QString::fromLatin1("url")).toString(), urls.at(i));
         QCOMPARE(website.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::WebsiteType));
+        QCOMPARE(website.value(QString::fromLatin1("subType")).toInt(), static_cast<int>(SeasidePerson::WebsiteSubTypeHomePage));
         QCOMPARE(website.value(QString::fromLatin1("label")), QVariant());
+
+        // Modify the subType of this detail
+        website.insert(QString::fromLatin1("subType"), static_cast<int>(websiteSubTypes.at(i)));
 
         // Modify the label of this detail
         website.insert(QString::fromLatin1("label"), static_cast<int>(websiteLabels.at(i)));
@@ -527,7 +537,7 @@ void tst_SeasidePerson::websiteDetails()
     }
 
     // Add another to the list
-    websites.append(makeWebsite(urls.at(2), websiteLabels.at(2)));
+    websites.append(makeWebsite(urls.at(2), websiteLabels.at(2), websiteSubTypes.at(2)));
 
     person->setWebsiteDetails(websites);
     QCOMPARE(spy.count(), 2);
@@ -540,6 +550,7 @@ void tst_SeasidePerson::websiteDetails()
         QVariantMap website(var.value<QVariantMap>());
         QCOMPARE(website.value(QString::fromLatin1("url")).toString(), urls.at(i));
         QCOMPARE(website.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::WebsiteType));
+        QCOMPARE(website.value(QString::fromLatin1("subType")).toInt(), static_cast<int>(websiteSubTypes.at(i)));
         QCOMPARE(website.value(QString::fromLatin1("label")).toInt(), static_cast<int>(websiteLabels.at(i)));
     }
 
@@ -554,6 +565,7 @@ void tst_SeasidePerson::websiteDetails()
         QVariantMap website(var.value<QVariantMap>());
         QCOMPARE(website.value(QString::fromLatin1("url")).toString(), urls.at(1));
         QCOMPARE(website.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::WebsiteType));
+        QCOMPARE(website.value(QString::fromLatin1("subType")).toInt(), static_cast<int>(websiteSubTypes.at(1)));
         QCOMPARE(website.value(QString::fromLatin1("label")).toInt(), static_cast<int>(websiteLabels.at(1)));
     }
 }
@@ -787,7 +799,6 @@ void tst_SeasidePerson::addressDetails()
     addressLabels.append(SeasidePerson::HomeLabel);
     addressLabels.append(SeasidePerson::WorkLabel);
     addressLabels.append(SeasidePerson::OtherLabel);
-
 
     QVariantList addresses = person->addressDetails();
     QCOMPARE(addresses.count(), 2);

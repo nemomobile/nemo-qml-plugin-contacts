@@ -1072,6 +1072,68 @@ void SeasidePerson::setAddressDetails(const QVariantList &addressDetails)
 
 namespace {
 
+#ifdef USING_QTPIM
+QList<QPair<QContactUrl::SubType, SeasidePerson::DetailSubType> > getWebsiteSubTypeMapping()
+{
+    QList<QPair<QContactUrl::SubType, SeasidePerson::DetailSubType> > rv;
+
+    rv.append(qMakePair(QContactUrl::SubTypeHomePage, SeasidePerson::WebsiteSubTypeHomePage));
+    rv.append(qMakePair(QContactUrl::SubTypeBlog, SeasidePerson::WebsiteSubTypeBlog));
+    rv.append(qMakePair(QContactUrl::SubTypeFavourite, SeasidePerson::WebsiteSubTypeFavorite));
+
+    return rv;
+}
+
+const QList<QPair<QContactUrl::SubType, SeasidePerson::DetailSubType> > &websiteSubTypeMapping()
+{
+    static const QList<QPair<QContactUrl::SubType, SeasidePerson::DetailSubType> > mapping(getWebsiteSubTypeMapping());
+    return mapping;
+}
+
+int websiteSubType(QContactUrl::SubType subType)
+{
+    typedef QList<QPair<QContactUrl::SubType, SeasidePerson::DetailSubType> > List;
+    for (List::const_iterator it = websiteSubTypeMapping().constBegin(), end = websiteSubTypeMapping().constEnd(); it != end; ++it) {
+        if ((*it).first == subType)
+            return static_cast<int>((*it).second);
+    }
+
+    qWarning() << "Invalid website sub-type:" << subType;
+    return -1;
+}
+
+int websiteSubType(SeasidePerson::DetailSubType subType)
+{
+    typedef QList<QPair<QContactUrl::SubType, SeasidePerson::DetailSubType> > List;
+    for (List::const_iterator it = websiteSubTypeMapping().constBegin(), end = websiteSubTypeMapping().constEnd(); it != end; ++it) {
+        if ((*it).second == subType)
+            return static_cast<int>((*it).first);
+    }
+
+    qWarning() << "Invalid website detail sub-type:" << subType;
+    return -1;
+}
+
+QVariant websiteSubType(const QContactUrl &url)
+{
+    return websiteSubType(static_cast<QContactUrl::SubType>(url.subType()));
+}
+
+void setWebsiteSubType(QContactUrl &website, const QVariant &type)
+{
+    // There is no possibility of NoSubType here
+    int st = type.toInt();
+    if (!type.isValid() || st == SeasidePerson::NoSubType) {
+        st = SeasidePerson::WebsiteSubTypeHomePage;
+        website.setSubType(QContactUrl::SubTypeHomePage);
+    } else {
+        website.setSubType(static_cast<QContactUrl::SubType>(websiteSubType(static_cast<SeasidePerson::DetailSubType>(st))));
+    }
+}
+#else
+#error "Unsupported"
+#endif
+
 const QString websiteDetailUrl(QString::fromLatin1("url"));
 
 }
@@ -1085,6 +1147,7 @@ QVariantList SeasidePerson::websiteDetails(const QContact &contact)
         QVariantMap item(detailProperties(detail));
         item.insert(websiteDetailUrl, detail.value(QContactUrl::FieldUrl).toUrl().toString());
         item.insert(detailType, WebsiteType);
+        item.insert(detailSubType, ::websiteSubType(detail));
         item.insert(detailLabel, ::detailLabelType(detail));
         item.insert(detailIndex, index++);
         rv.append(item);
@@ -1135,6 +1198,9 @@ void SeasidePerson::setWebsiteDetails(const QVariantList &websiteDetails)
         }
 
         updated.setValue(QContactUrl::FieldUrl, QUrl(updatedUrl));
+
+        const QVariant subTypeValue = detail[detailSubType];
+        ::setWebsiteSubType(updated, subTypeValue.value<int>());
 
         const QVariant labelValue = detail[detailLabel];
         ::setDetailLabelType(updated, labelValue.isValid() ? labelValue.toInt() : NoLabel);
