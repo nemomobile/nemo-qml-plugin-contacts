@@ -327,21 +327,6 @@ void SeasidePerson::setCompanyName(const QString &name)
     emit companyNameChanged();
 }
 
-QString SeasidePerson::nickname() const
-{
-    QContactNickname nameDetail = mContact->detail<QContactNickname>();
-    return nameDetail.nickname();
-}
-
-void SeasidePerson::setNickname(const QString &name)
-{
-    QContactNickname nameDetail = mContact->detail<QContactNickname>();
-    nameDetail.setNickname(name);
-    mContact->saveDetail(&nameDetail);
-    emit nicknameChanged();
-    recalculateDisplayLabel();
-}
-
 QString SeasidePerson::title() const
 {
     QContactOrganization company = mContact->detail<QContactOrganization>();
@@ -546,6 +531,89 @@ void updateDetails(QList<T> &existing, QList<T> &modified, QContact *contact, co
         }
     }
 }
+
+const QString nicknameDetailNickname(QString::fromLatin1("nickname"));
+
+}
+
+QVariantList SeasidePerson::nicknameDetails(const QContact &contact)
+{
+    QVariantList rv;
+
+    int index = 0;
+    foreach (const QContactNickname &detail, contact.details<QContactNickname>()) {
+        const QString nickname(detail.value(QContactNickname::FieldNickname).toString());
+
+        QVariantMap item(detailProperties(detail));
+        item.insert(nicknameDetailNickname, nickname);
+        item.insert(detailType, NicknameType);
+        item.insert(detailLabel, ::detailLabelType(detail));
+        item.insert(detailIndex, index++);
+        rv.append(item);
+    }
+
+    return rv;
+}
+
+QVariantList SeasidePerson::nicknameDetails() const
+{
+    return nicknameDetails(*mContact);
+}
+
+void SeasidePerson::setNicknameDetails(const QVariantList &nicknameDetails)
+{
+    QList<QContactNickname> nicknames(mContact->details<QContactNickname>());
+
+    QList<QContactNickname> updatedNicknames;
+    QSet<int> validIndices;
+
+    foreach (const QVariant &item, nicknameDetails) {
+        const QVariantMap detail(item.value<QVariantMap>());
+
+        const QVariant typeValue = detail[detailType];
+        if (typeValue.toInt() != NicknameType) {
+            qWarning() << "Invalid type value for nickname:" << typeValue;
+            continue;
+        }
+
+        QContactNickname updated;
+
+        const QVariant indexValue = detail[detailIndex];
+        const int index = indexValue.isValid() ? indexValue.value<int>() : -1;
+        if (index >= 0 && index < nicknames.count()) {
+            // Modify the existing detail
+            updated = nicknames.at(index);
+            Q_ASSERT(!validIndices.contains(index));
+        } else if (index != -1) {
+            qWarning() << "Invalid index value for nickname details:" << index;
+            continue;
+        }
+
+        const QVariant nicknameValue = detail[nicknameDetailNickname];
+        const QString updatedNickname(nicknameValue.value<QString>());
+        if (updatedNickname.trimmed().isEmpty()) {
+            // Remove this nickname from the list
+            continue;
+        }
+
+        updated.setValue(QContactNickname::FieldNickname, updatedNickname);
+
+        const QVariant labelValue = detail[detailLabel];
+        ::setDetailLabelType(updated, labelValue.isValid() ? labelValue.toInt() : NoLabel);
+
+        updatedNicknames.append(updated);
+        if (index != -1) {
+            validIndices.insert(index);
+        }
+    }
+
+    updateDetails(nicknames, updatedNicknames, mContact, validIndices);
+    emit nicknameDetailsChanged();
+
+    recalculateDisplayLabel();
+}
+
+namespace {
 
 #ifdef USING_QTPIM
 QList<QPair<QContactPhoneNumber::SubType, SeasidePerson::DetailSubType> > getPhoneSubTypeMapping()
@@ -1466,10 +1534,9 @@ void SeasidePerson::updateContactDetails(const QContact &oldContact)
         }
     }
 
-    if (oldContact.detail<QContactNickname>() != mContact->detail<QContactNickname>()) {
-        emitChangeSignal(&SeasidePerson::nicknameChanged);
+    if (oldContact.details<QContactNickname>() != mContact->details<QContactNickname>()) {
+        emitChangeSignal(&SeasidePerson::nicknameDetailsChanged);
     }
-
     if (oldContact.details<QContactPhoneNumber>() != mContact->details<QContactPhoneNumber>()) {
         emitChangeSignal(&SeasidePerson::phoneDetailsChanged);
     }
@@ -1509,7 +1576,7 @@ void SeasidePerson::emitChangeSignals()
     emitChangeSignal(&SeasidePerson::avatarUrlChanged);
     emitChangeSignal(&SeasidePerson::avatarPathChanged);
     emitChangeSignal(&SeasidePerson::globalPresenceStateChanged);
-    emitChangeSignal(&SeasidePerson::nicknameChanged);
+    emitChangeSignal(&SeasidePerson::nicknameDetailsChanged);
     emitChangeSignal(&SeasidePerson::phoneDetailsChanged);
     emitChangeSignal(&SeasidePerson::emailDetailsChanged);
     emitChangeSignal(&SeasidePerson::accountDetailsChanged);

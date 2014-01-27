@@ -102,8 +102,8 @@ public:
         PrefixType,
         SuffixType,
         CompanyType,
-        NickType,
         TitleType,
+        NicknameType,
         PhoneNumberType,
         EmailAddressType,
         OnlineAccountType,
@@ -218,10 +218,6 @@ public:
     QString companyName() const;
     void setCompanyName(const QString &name);
 
-    Q_PROPERTY(QString nickname READ nickname WRITE setNickname NOTIFY nicknameChanged)
-    QString nickname() const;
-    void setNickname(const QString &name);
-
     Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY titleChanged)
     QString title() const;
     void setTitle(const QString &name);
@@ -238,6 +234,10 @@ public:
     QUrl avatarUrl() const;
     void setAvatarUrl(QUrl avatarUrl);
     Q_INVOKABLE QUrl filteredAvatarUrl(const QStringList &metadataFragments = QStringList()) const;
+
+    Q_PROPERTY(QVariantList nicknameDetails READ nicknameDetails WRITE setNicknameDetails NOTIFY nicknameDetailsChanged)
+    QVariantList nicknameDetails() const;
+    void setNicknameDetails(const QVariantList &nicknameDetails);
 
     Q_PROPERTY(QVariantList phoneDetails READ phoneDetails WRITE setPhoneDetails NOTIFY phoneDetailsChanged)
     QVariantList phoneDetails() const;
@@ -326,6 +326,7 @@ public:
     void mergeCandidatesFetched(const QList<int> &ids);
     void aggregationOperationCompleted();
 
+    static QVariantList nicknameDetails(const QContact &contact);
     static QVariantList phoneDetails(const QContact &contact);
     static QVariantList emailDetails(const QContact &contact);
     static QVariantList addressDetails(const QContact &contact);
@@ -352,11 +353,11 @@ signals:
     void primaryNameChanged();
     void secondaryNameChanged();
     void companyNameChanged();
-    void nicknameChanged();
     void titleChanged();
     void favoriteChanged();
     void avatarPathChanged();
     void avatarUrlChanged();
+    void nicknameDetailsChanged();
     void phoneDetailsChanged();
     void emailDetailsChanged();
     void addressDetailsChanged();

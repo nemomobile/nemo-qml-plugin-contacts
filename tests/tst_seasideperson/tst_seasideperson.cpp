@@ -69,10 +69,10 @@ private slots:
     void displayLabel();
     void sectionBucket();
     void companyName();
-    void nickname();
     void title();
     void favorite();
     void avatarPath();
+    void nicknameDetails();
     void phoneDetails();
     void emailDetails();
     void websiteDetails();
@@ -183,17 +183,6 @@ void tst_SeasidePerson::companyName()
     QCOMPARE(person->property("companyName").toString(), person->companyName());
 }
 
-void tst_SeasidePerson::nickname()
-{
-    QScopedPointer<SeasidePerson> person(new SeasidePerson);
-    QCOMPARE(person->nickname(), QString());
-    QSignalSpy spy(person.data(), SIGNAL(nicknameChanged()));
-    person->setNickname("Test");
-    QCOMPARE(spy.count(), 1);
-    QCOMPARE(person->nickname(), QString::fromLatin1("Test"));
-    QCOMPARE(person->property("nickname").toString(), person->nickname());
-}
-
 void tst_SeasidePerson::title()
 {
     QScopedPointer<SeasidePerson> person(new SeasidePerson);
@@ -225,6 +214,88 @@ void tst_SeasidePerson::avatarPath()
     QCOMPARE(spy.count(), 1);
     QCOMPARE(person->avatarPath(), QUrl("http://test.com"));
     QCOMPARE(person->property("avatarPath").toUrl(), person->avatarPath());
+}
+
+QVariantMap makeNickname(const QString &nick, int label = SeasidePerson::NoLabel)
+{
+    QVariantMap rv;
+
+    rv.insert(QString::fromLatin1("nickname"), nick);
+    rv.insert(QString::fromLatin1("type"), static_cast<int>(SeasidePerson::NicknameType));
+    rv.insert(QString::fromLatin1("label"), label);
+    rv.insert(QString::fromLatin1("index"), -1);
+
+    return rv;
+}
+
+void tst_SeasidePerson::nicknameDetails()
+{
+    QScopedPointer<SeasidePerson> person(new SeasidePerson);
+
+    QCOMPARE(person->nicknameDetails(), QVariantList());
+
+    QStringList nicks(QStringList() << "Ace" << "Blocker" << "Chopper");
+
+    QSignalSpy spy(person.data(), SIGNAL(nicknameDetailsChanged()));
+
+    QVariantList nicknameDetails;
+    for (int i = 0; i < 2; ++i) {
+        nicknameDetails.append(makeNickname(nicks.at(i)));
+    }
+
+    person->setNicknameDetails(nicknameDetails);
+    QCOMPARE(spy.count(), 1);
+
+    QList<SeasidePerson::DetailLabel> nicknameLabels;
+    nicknameLabels.append(SeasidePerson::HomeLabel);
+    nicknameLabels.append(SeasidePerson::WorkLabel);
+    nicknameLabels.append(SeasidePerson::OtherLabel);
+
+    QVariantList nicknames = person->nicknameDetails();
+    QCOMPARE(nicknames.count(), 2);
+
+    for (int i=0; i<nicknames.count(); i++) {
+        QVariant &var(nicknames[i]);
+        QVariantMap nickname(var.value<QVariantMap>());
+        QCOMPARE(nickname.value(QString::fromLatin1("nickname")).toString(), nicks.at(i));
+        QCOMPARE(nickname.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::NicknameType));
+        QCOMPARE(nickname.value(QString::fromLatin1("label")), QVariant());
+
+        // Modify the label of this detail
+        nickname.insert(QString::fromLatin1("label"), static_cast<int>(nicknameLabels.at(i)));
+        var = nickname;
+    }
+
+    // Add another to the list
+    nicknames.append(makeNickname(nicks.at(2), nicknameLabels.at(2)));
+
+    person->setNicknameDetails(nicknames);
+    QCOMPARE(spy.count(), 2);
+
+    nicknames = person->nicknameDetails();
+    QCOMPARE(nicknames.count(), 3);
+
+    for (int i=0; i<nicknames.count(); i++) {
+        QVariant &var(nicknames[i]);
+        QVariantMap nickname(var.value<QVariantMap>());
+        QCOMPARE(nickname.value(QString::fromLatin1("nickname")).toString(), nicks.at(i));
+        QCOMPARE(nickname.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::NicknameType));
+        QCOMPARE(nickname.value(QString::fromLatin1("label")).toInt(), static_cast<int>(nicknameLabels.at(i)));
+    }
+
+    // Remove all but the middle
+    person->setNicknameDetails(nicknames.mid(1, 1));
+    QCOMPARE(spy.count(), 3);
+
+    nicknames = person->nicknameDetails();
+    QCOMPARE(nicknames.count(), 1);
+    {
+        QVariant &var(nicknames[0]);
+        QVariantMap nickname(var.value<QVariantMap>());
+        QCOMPARE(nickname.value(QString::fromLatin1("nickname")).toString(), nicks.at(1));
+        QCOMPARE(nickname.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::NicknameType));
+        QCOMPARE(nickname.value(QString::fromLatin1("label")).toInt(), static_cast<int>(nicknameLabels.at(1)));
+    }
 }
 
 QVariantMap makePhoneNumber(const QString &number, int label = SeasidePerson::NoLabel, int subType = SeasidePerson::NoSubType)
