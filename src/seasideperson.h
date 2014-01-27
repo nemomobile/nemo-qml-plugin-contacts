@@ -260,10 +260,9 @@ public:
     void setBirthday(const QDateTime &bd);
     void resetBirthday();
 
-    Q_PROPERTY(QDateTime anniversary READ anniversary WRITE setAnniversary NOTIFY anniversaryChanged RESET resetAnniversary)
-    QDateTime anniversary() const;
-    void setAnniversary(const QDateTime &av);
-    void resetAnniversary();
+    Q_PROPERTY(QVariantList anniversaryDetails READ anniversaryDetails WRITE setAnniversaryDetails NOTIFY anniversaryDetailsChanged)
+    QVariantList anniversaryDetails() const;
+    void setAnniversaryDetails(const QVariantList &anniversaryDetails);
 
     Q_PROPERTY(PresenceState globalPresenceState READ globalPresenceState NOTIFY globalPresenceStateChanged)
     PresenceState globalPresenceState() const;
@@ -331,6 +330,7 @@ public:
     static QVariantList emailDetails(const QContact &contact);
     static QVariantList addressDetails(const QContact &contact);
     static QVariantList websiteDetails(const QContact &contact);
+    static QVariantList anniversaryDetails(const QContact &contact);
     static QVariantList accountDetails(const QContact &contact);
 
     static QString generateDisplayLabel(
@@ -363,7 +363,7 @@ signals:
     void addressDetailsChanged();
     void websiteDetailsChanged();
     void birthdayChanged();
-    void anniversaryChanged();
+    void anniversaryDetailsChanged();
     void globalPresenceStateChanged();
     void accountDetailsChanged();
     void constituentsChanged();

@@ -78,7 +78,7 @@ private slots:
     void websiteDetails();
     void accountDetails();
     void birthday();
-    void anniversary();
+    void anniversaryDetails();
     void addressDetails();
     void globalPresenceState();
     void complete();
@@ -655,19 +655,100 @@ void tst_SeasidePerson::birthday()
     QCOMPARE(person->property("birthday").toDateTime(), person->birthday());
 }
 
-void tst_SeasidePerson::anniversary()
+QVariantMap makeAnniversary(const QDateTime &timestamp, int label = SeasidePerson::NoLabel, int subType = SeasidePerson::NoSubType)
+{
+    QVariantMap rv;
+
+    rv.insert(QString::fromLatin1("originalDate"), timestamp);
+    rv.insert(QString::fromLatin1("type"), static_cast<int>(SeasidePerson::AnniversaryType));
+    rv.insert(QString::fromLatin1("subType"), subType);
+    rv.insert(QString::fromLatin1("label"), label);
+    rv.insert(QString::fromLatin1("index"), -1);
+
+    return rv;
+}
+
+void tst_SeasidePerson::anniversaryDetails()
 {
     QScopedPointer<SeasidePerson> person(new SeasidePerson);
-    QCOMPARE(person->anniversary(), QDateTime());
-    QSignalSpy spy(person.data(), SIGNAL(anniversaryChanged()));
-    person->setAnniversary(QDateTime::fromString("05/01/1980 15:00:00.000", "dd/MM/yyyy hh:mm:ss.zzz"));
+
+    QCOMPARE(person->anniversaryDetails(), QVariantList());
+
+    QList<QDateTime> dates(QList<QDateTime>() << QDateTime::fromString("05/01/1980 15:00:00.000", "dd/MM/yyyy hh:mm:ss.zzz")
+                                              << QDateTime::fromString("05/01/1980 23:59:59.999", "dd/MM/yyyy hh:mm:ss.zzz")
+                                              << QDateTime::fromString("06/01/1980 00:00:00.000", "dd/MM/yyyy hh:mm:ss.zzz"));
+
+    QSignalSpy spy(person.data(), SIGNAL(anniversaryDetailsChanged()));
+
+    QVariantList anniversaryDetails;
+    for (int i = 0; i < 2; ++i) {
+        anniversaryDetails.append(makeAnniversary(dates.at(i)));
+    }
+
+    person->setAnniversaryDetails(anniversaryDetails);
     QCOMPARE(spy.count(), 1);
-    QCOMPARE(person->anniversary(), QDateTime::fromString("05/01/1980 15:00:00.000", "dd/MM/yyyy hh:mm:ss.zzz"));
-    QCOMPARE(person->property("anniversary").toDateTime(), person->anniversary());
-    person->resetAnniversary();
+
+    QList<SeasidePerson::DetailLabel> anniversaryLabels;
+    anniversaryLabels.append(SeasidePerson::HomeLabel);
+    anniversaryLabels.append(SeasidePerson::WorkLabel);
+    anniversaryLabels.append(SeasidePerson::OtherLabel);
+
+    QList<SeasidePerson::DetailSubType> anniversarySubTypes;
+    anniversarySubTypes.append(SeasidePerson::AnniversarySubTypeEngagement);
+    anniversarySubTypes.append(SeasidePerson::AnniversarySubTypeHouse);
+    anniversarySubTypes.append(SeasidePerson::AnniversarySubTypeEmployment);
+
+    QVariantList anniversaries = person->anniversaryDetails();
+    QCOMPARE(anniversaries.count(), 2);
+
+    for (int i=0; i<anniversaries.count(); i++) {
+        QVariant &var(anniversaries[i]);
+        QVariantMap anniversary(var.value<QVariantMap>());
+        QCOMPARE(anniversary.value(QString::fromLatin1("originalDate")).value<QDateTime>(), dates.at(i));
+        QCOMPARE(anniversary.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::AnniversaryType));
+        QCOMPARE(anniversary.value(QString::fromLatin1("subType")).toInt(), static_cast<int>(SeasidePerson::AnniversarySubTypeWedding));
+        QCOMPARE(anniversary.value(QString::fromLatin1("label")), QVariant());
+
+        // Modify the subType of this detail
+        anniversary.insert(QString::fromLatin1("subType"), static_cast<int>(anniversarySubTypes.at(i)));
+
+        // Modify the label of this detail
+        anniversary.insert(QString::fromLatin1("label"), static_cast<int>(anniversaryLabels.at(i)));
+        var = anniversary;
+    }
+
+    // Add another to the list
+    anniversaries.append(makeAnniversary(dates.at(2), anniversaryLabels.at(2), anniversarySubTypes.at(2)));
+
+    person->setAnniversaryDetails(anniversaries);
     QCOMPARE(spy.count(), 2);
-    QCOMPARE(person->anniversary(), QDateTime());
-    QCOMPARE(person->property("anniversary").toDateTime(), person->anniversary());
+
+    anniversaries = person->anniversaryDetails();
+    QCOMPARE(anniversaries.count(), 3);
+
+    for (int i=0; i<anniversaries.count(); i++) {
+        QVariant &var(anniversaries[i]);
+        QVariantMap anniversary(var.value<QVariantMap>());
+        QCOMPARE(anniversary.value(QString::fromLatin1("originalDate")).value<QDateTime>(), dates.at(i));
+        QCOMPARE(anniversary.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::AnniversaryType));
+        QCOMPARE(anniversary.value(QString::fromLatin1("subType")).toInt(), static_cast<int>(anniversarySubTypes.at(i)));
+        QCOMPARE(anniversary.value(QString::fromLatin1("label")).toInt(), static_cast<int>(anniversaryLabels.at(i)));
+    }
+
+    // Remove all but the middle
+    person->setAnniversaryDetails(anniversaries.mid(1, 1));
+    QCOMPARE(spy.count(), 3);
+
+    anniversaries = person->anniversaryDetails();
+    QCOMPARE(anniversaries.count(), 1);
+    {
+        QVariant &var(anniversaries[0]);
+        QVariantMap anniversary(var.value<QVariantMap>());
+        QCOMPARE(anniversary.value(QString::fromLatin1("originalDate")).value<QDateTime>(), dates.at(1));
+        QCOMPARE(anniversary.value(QString::fromLatin1("type")).toInt(), static_cast<int>(SeasidePerson::AnniversaryType));
+        QCOMPARE(anniversary.value(QString::fromLatin1("subType")).toInt(), static_cast<int>(anniversarySubTypes.at(1)));
+        QCOMPARE(anniversary.value(QString::fromLatin1("label")).toInt(), static_cast<int>(anniversaryLabels.at(1)));
+    }
 }
 
 QVariantMap makeAddress(const QString &address, int label = SeasidePerson::NoLabel)

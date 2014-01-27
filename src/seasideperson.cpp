@@ -476,6 +476,7 @@ const QString detailReadOnly(QString::fromLatin1("readOnly"));
 const QString detailOriginId(QString::fromLatin1("originId"));
 const QString detailSyncTarget(QString::fromLatin1("syncTarget"));
 const QString detailType(QString::fromLatin1("type"));
+const QString detailSubType(QString::fromLatin1("subType"));
 const QString detailSubTypes(QString::fromLatin1("subTypes"));
 const QString detailLabel(QString::fromLatin1("label"));
 const QString detailIndex(QString::fromLatin1("index"));
@@ -1166,22 +1167,151 @@ void SeasidePerson::resetBirthday()
     setBirthday(QDateTime());
 }
 
-QDateTime SeasidePerson::anniversary() const
+namespace {
+
+#ifdef USING_QTPIM
+QList<QPair<QContactAnniversary::SubType, SeasidePerson::DetailSubType> > getAnniversarySubTypeMapping()
 {
-    return mContact->detail<QContactAnniversary>().originalDateTime();
+    QList<QPair<QContactAnniversary::SubType, SeasidePerson::DetailSubType> > rv;
+
+    rv.append(qMakePair(QContactAnniversary::SubTypeWedding, SeasidePerson::AnniversarySubTypeWedding));
+    rv.append(qMakePair(QContactAnniversary::SubTypeEngagement, SeasidePerson::AnniversarySubTypeEngagement));
+    rv.append(qMakePair(QContactAnniversary::SubTypeHouse, SeasidePerson::AnniversarySubTypeHouse));
+    rv.append(qMakePair(QContactAnniversary::SubTypeEmployment, SeasidePerson::AnniversarySubTypeEmployment));
+    rv.append(qMakePair(QContactAnniversary::SubTypeMemorial, SeasidePerson::AnniversarySubTypeMemorial));
+
+    return rv;
 }
 
-void SeasidePerson::setAnniversary(const QDateTime &av)
+const QList<QPair<QContactAnniversary::SubType, SeasidePerson::DetailSubType> > &anniversarySubTypeMapping()
 {
-    QContactAnniversary anniv = mContact->detail<QContactAnniversary>();
-    anniv.setOriginalDateTime(av);
-    mContact->saveDetail(&anniv);
-    emit anniversaryChanged();
+    static const QList<QPair<QContactAnniversary::SubType, SeasidePerson::DetailSubType> > mapping(getAnniversarySubTypeMapping());
+    return mapping;
 }
 
-void SeasidePerson::resetAnniversary()
+int anniversarySubType(QContactAnniversary::SubType subType)
 {
-    setAnniversary(QDateTime());
+    typedef QList<QPair<QContactAnniversary::SubType, SeasidePerson::DetailSubType> > List;
+    for (List::const_iterator it = anniversarySubTypeMapping().constBegin(), end = anniversarySubTypeMapping().constEnd(); it != end; ++it) {
+        if ((*it).first == subType)
+            return static_cast<int>((*it).second);
+    }
+
+    qWarning() << "Invalid anniversary sub-type:" << subType;
+    return -1;
+}
+
+int anniversarySubType(SeasidePerson::DetailSubType subType)
+{
+    typedef QList<QPair<QContactAnniversary::SubType, SeasidePerson::DetailSubType> > List;
+    for (List::const_iterator it = anniversarySubTypeMapping().constBegin(), end = anniversarySubTypeMapping().constEnd(); it != end; ++it) {
+        if ((*it).second == subType)
+            return static_cast<int>((*it).first);
+    }
+
+    qWarning() << "Invalid anniversary detail sub-type:" << subType;
+    return -1;
+}
+
+QVariant anniversarySubType(const QContactAnniversary &anniversary)
+{
+    return anniversarySubType(static_cast<QContactAnniversary::SubType>(anniversary.subType()));
+}
+
+void setAnniversarySubType(QContactAnniversary &anniversary, const QVariant &type)
+{
+    // There is no possibility of NoSubType here
+    int st = type.toInt();
+    if (!type.isValid() || st == SeasidePerson::NoSubType) {
+        st = SeasidePerson::AnniversarySubTypeWedding;
+        anniversary.setSubType(QContactAnniversary::SubTypeWedding);
+    } else {
+        anniversary.setSubType(static_cast<QContactAnniversary::SubType>(anniversarySubType(static_cast<SeasidePerson::DetailSubType>(st))));
+    }
+}
+#else
+#error "Unsupported"
+#endif
+
+const QString anniversaryDetailOriginalDate(QString::fromLatin1("originalDate"));
+
+}
+
+QVariantList SeasidePerson::anniversaryDetails(const QContact &contact)
+{
+    QVariantList rv;
+
+    int index = 0;
+    foreach (const QContactAnniversary &detail, contact.details<QContactAnniversary>()) {
+        QVariantMap item(detailProperties(detail));
+        item.insert(anniversaryDetailOriginalDate, detail.value(QContactAnniversary::FieldOriginalDate).toDateTime());
+        item.insert(detailType, AnniversaryType);
+        item.insert(detailSubType, anniversarySubType(detail));
+        item.insert(detailLabel, ::detailLabelType(detail));
+        item.insert(detailIndex, index++);
+        rv.append(item);
+    }
+
+    return rv;
+}
+
+QVariantList SeasidePerson::anniversaryDetails() const
+{
+    return anniversaryDetails(*mContact);
+}
+
+void SeasidePerson::setAnniversaryDetails(const QVariantList &anniversaryDetails)
+{
+    QList<QContactAnniversary> anniversaries(mContact->details<QContactAnniversary>());
+
+    QList<QContactAnniversary> updatedAnniversaries;
+    QSet<int> validIndices;
+
+    foreach (const QVariant &item, anniversaryDetails) {
+        const QVariantMap detail(item.value<QVariantMap>());
+
+        const QVariant typeValue = detail[detailType];
+        if (typeValue.toInt() != AnniversaryType) {
+            qWarning() << "Invalid type value for anniversary:" << typeValue;
+            continue;
+        }
+
+        QContactAnniversary updated;
+
+        const QVariant indexValue = detail[detailIndex];
+        const int index = indexValue.isValid() ? indexValue.value<int>() : -1;
+        if (index >= 0 && index < anniversaries.count()) {
+            // Modify the existing detail
+            updated = anniversaries.at(index);
+            Q_ASSERT(!validIndices.contains(index));
+        } else if (index != -1) {
+            qWarning() << "Invalid index value for anniversary details:" << index;
+            continue;
+        }
+
+        const QVariant originalDateValue = detail[anniversaryDetailOriginalDate];
+        const QDateTime updatedOriginalDate(originalDateValue.value<QDateTime>());
+        if (!updatedOriginalDate.isValid()) {
+            // Remove this anniversary from the list
+            continue;
+        }
+
+        updated.setValue(QContactAnniversary::FieldOriginalDate, updatedOriginalDate);
+
+        const QVariant subTypeValue = detail[detailSubType];
+        ::setAnniversarySubType(updated, subTypeValue.value<int>());
+
+        const QVariant labelValue = detail[detailLabel];
+        ::setDetailLabelType(updated, labelValue.isValid() ? labelValue.toInt() : NoLabel);
+
+        updatedAnniversaries.append(updated);
+        if (index != -1) {
+            validIndices.insert(index);
+        }
+    }
+
+    updateDetails(anniversaries, updatedAnniversaries, mContact, validIndices);
+    emit anniversaryDetailsChanged();
 }
 
 SeasidePerson::PresenceState SeasidePerson::globalPresenceState() const
@@ -1553,8 +1683,8 @@ void SeasidePerson::updateContactDetails(const QContact &oldContact)
     if (oldContact.detail<QContactBirthday>() != mContact->detail<QContactBirthday>()) {
         emitChangeSignal(&SeasidePerson::birthdayChanged);
     }
-    if (oldContact.detail<QContactAnniversary>() != mContact->detail<QContactAnniversary>()) {
-        emitChangeSignal(&SeasidePerson::anniversaryChanged);
+    if (oldContact.details<QContactAnniversary>() != mContact->details<QContactAnniversary>()) {
+        emitChangeSignal(&SeasidePerson::anniversaryDetailsChanged);
     }
 
     if (m_changesReported) {
@@ -1582,7 +1712,7 @@ void SeasidePerson::emitChangeSignals()
     emitChangeSignal(&SeasidePerson::accountDetailsChanged);
     emitChangeSignal(&SeasidePerson::websiteDetailsChanged);
     emitChangeSignal(&SeasidePerson::birthdayChanged);
-    emitChangeSignal(&SeasidePerson::anniversaryChanged);
+    emitChangeSignal(&SeasidePerson::anniversaryDetailsChanged);
     emit dataChanged();
 }
 
