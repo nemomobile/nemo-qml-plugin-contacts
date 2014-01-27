@@ -285,9 +285,6 @@ public:
     QList<int> mergeCandidates() const;
     void setMergeCandidates(const QList<int> &candidates);
 
-    Q_INVOKABLE void addAccount(const QString &path, const QString &uri, const QString &provider,
-                                const QString &iconPath = QString());
-
     QContact contact() const;
     void setContact(const QContact &contact);
 

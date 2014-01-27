@@ -510,9 +510,48 @@ QVariantMap detailProperties(const QContactDetail &detail)
     return rv;
 }
 
-template<typename T>
-void updateDetails(QList<T> &existing, QList<T> &modified, QContact *contact, const QSet<int> &validIndices)
+void detailRemoved(QContact *, const QContactDetail &) {}
+void detailChanged(QContact *, const QContactDetail &) {}
+void detailAdded(QContact *, const QContactDetail &) {}
+
+void detailRemoved(QContact *contact, const QContactOnlineAccount &detail)
 {
+    const QString detailUri(detail.detailUri());
+    if (!detailUri.isEmpty()) {
+        // If there are any presence details linked to this account, remove them
+        foreach (QContactPresence presence, contact->details<QContactPresence>()) {
+            if (presence.linkedDetailUris().contains(detailUri)) {
+                // Remove this obsolete presence
+                contact->removeDetail(&presence);
+            }
+        }
+    }
+}
+
+void detailAdded(QContact *contact, const QContactOnlineAccount &detail)
+{
+    const QString detailUri(detail.detailUri());
+    if (!detailUri.isEmpty()) {
+        // If there are no presence details linked to this account, add one
+        foreach (const QContactPresence &presence, contact->details<QContactPresence>()) {
+            if (presence.linkedDetailUris().contains(detailUri)) {
+                return;
+            }
+        }
+
+        QContactPresence presence;
+        presence.setLinkedDetailUris(QStringList() << detailUri);
+        contact->saveDetail(&presence);
+    }
+}
+
+template<typename T>
+void updateDetails(QList<T> &existing, QList<T> &modified, QList<T> &appended, QContact *contact, const QSet<int> &validIndices)
+{
+    QList<T> removed;
+    QList<T *> changed;
+    QList<T *> added;
+
     // Remove any modifiable details that are not present in the modified list
     typename QList<T>::iterator it = existing.begin(), end = existing.end();
     for (int index = 0; it != end; ++it, ++index) {
@@ -520,6 +559,8 @@ void updateDetails(QList<T> &existing, QList<T> &modified, QContact *contact, co
         if (!validIndices.contains(index) && (item.accessConstraints() & QContactDetail::ReadOnly) == 0) {
             if (!contact->removeDetail(&item)) {
                 qWarning() << "Unable to remove detail at:" << index << item;
+            } else {
+                removed.append(item);
             }
         }
     }
@@ -529,7 +570,29 @@ void updateDetails(QList<T> &existing, QList<T> &modified, QContact *contact, co
         T &item(*it);
         if (!contact->saveDetail(&item)) {
             qWarning() << "Unable to save modified detail:" << item;
+        } else {
+            changed.append(&item);
         }
+    }
+
+    // Store any appended details to the contact
+    for (it = appended.begin(), end = appended.end(); it != end; ++it) {
+        T &item(*it);
+        if (!contact->saveDetail(&item)) {
+            qWarning() << "Unable to save appended detail:" << item;
+        } else {
+            added.append(&item);
+        }
+    }
+
+    foreach (const T &item, removed) {
+        detailRemoved(contact, item);
+    }
+    foreach (const T *item, changed) {
+        detailChanged(contact, *item);
+    }
+    foreach (const T *item, added) {
+        detailAdded(contact, *item);
     }
 }
 
@@ -565,7 +628,7 @@ void SeasidePerson::setNicknameDetails(const QVariantList &nicknameDetails)
 {
     QList<QContactNickname> nicknames(mContact->details<QContactNickname>());
 
-    QList<QContactNickname> updatedNicknames;
+    QList<QContactNickname> updatedNicknames, appendedNicknames;
     QSet<int> validIndices;
 
     foreach (const QVariant &item, nicknameDetails) {
@@ -602,13 +665,15 @@ void SeasidePerson::setNicknameDetails(const QVariantList &nicknameDetails)
         const QVariant labelValue = detail[detailLabel];
         ::setDetailLabelType(updated, labelValue.isValid() ? labelValue.toInt() : NoLabel);
 
-        updatedNicknames.append(updated);
         if (index != -1) {
             validIndices.insert(index);
+            updatedNicknames.append(updated);
+        } else {
+            appendedNicknames.append(updated);
         }
     }
 
-    updateDetails(nicknames, updatedNicknames, mContact, validIndices);
+    updateDetails(nicknames, updatedNicknames, appendedNicknames, mContact, validIndices);
     emit nicknameDetailsChanged();
 
     recalculateDisplayLabel();
@@ -740,7 +805,7 @@ void SeasidePerson::setPhoneDetails(const QVariantList &phoneDetails)
 {
     QList<QContactPhoneNumber> numbers(mContact->details<QContactPhoneNumber>());
 
-    QList<QContactPhoneNumber> updatedNumbers;
+    QList<QContactPhoneNumber> updatedNumbers, appendedNumbers;
     QSet<int> validIndices;
 
     foreach (const QVariant &item, phoneDetails) {
@@ -781,13 +846,15 @@ void SeasidePerson::setPhoneDetails(const QVariantList &phoneDetails)
         const QVariant labelValue = detail[detailLabel];
         ::setDetailLabelType(updated, labelValue.isValid() ? labelValue.toInt() : NoLabel);
 
-        updatedNumbers.append(updated);
         if (index != -1) {
             validIndices.insert(index);
+            updatedNumbers.append(updated);
+        } else {
+            appendedNumbers.append(updated);
         }
     }
 
-    updateDetails(numbers, updatedNumbers, mContact, validIndices);
+    updateDetails(numbers, updatedNumbers, appendedNumbers, mContact, validIndices);
     emit phoneDetailsChanged();
 
     recalculateDisplayLabel();
@@ -825,7 +892,7 @@ void SeasidePerson::setEmailDetails(const QVariantList &emailDetails)
 {
     QList<QContactEmailAddress> addresses(mContact->details<QContactEmailAddress>());
 
-    QList<QContactEmailAddress> updatedAddresses;
+    QList<QContactEmailAddress> updatedAddresses, appendedAddresses;
     QSet<int> validIndices;
 
     foreach (const QVariant &item, emailDetails) {
@@ -862,13 +929,15 @@ void SeasidePerson::setEmailDetails(const QVariantList &emailDetails)
         const QVariant labelValue = detail[detailLabel];
         ::setDetailLabelType(updated, labelValue.isValid() ? labelValue.toInt() : NoLabel);
 
-        updatedAddresses.append(updated);
         if (index != -1) {
             validIndices.insert(index);
+            updatedAddresses.append(updated);
+        } else {
+            appendedAddresses.append(updated);
         }
     }
 
-    updateDetails(addresses, updatedAddresses, mContact, validIndices);
+    updateDetails(addresses, updatedAddresses, appendedAddresses, mContact, validIndices);
     emit emailDetailsChanged();
 
     recalculateDisplayLabel();
@@ -1014,7 +1083,7 @@ void SeasidePerson::setAddressDetails(const QVariantList &addressDetails)
 {
     QList<QContactAddress> addresses(mContact->details<QContactAddress>());
 
-    QList<QContactAddress> updatedAddresses;
+    QList<QContactAddress> updatedAddresses, appendedAddresses;
     QSet<int> validIndices;
 
     foreach (const QVariant &item, addressDetails) {
@@ -1060,13 +1129,15 @@ void SeasidePerson::setAddressDetails(const QVariantList &addressDetails)
         const QVariant labelValue = detail[detailLabel];
         ::setDetailLabelType(updated, labelValue.isValid() ? labelValue.toInt() : NoLabel);
 
-        updatedAddresses.append(updated);
         if (index != -1) {
             validIndices.insert(index);
+            updatedAddresses.append(updated);
+        } else {
+            appendedAddresses.append(updated);
         }
     }
 
-    updateDetails(addresses, updatedAddresses, mContact, validIndices);
+    updateDetails(addresses, updatedAddresses, appendedAddresses, mContact, validIndices);
     emit addressDetailsChanged();
 }
 
@@ -1165,7 +1236,7 @@ void SeasidePerson::setWebsiteDetails(const QVariantList &websiteDetails)
 {
     QList<QContactUrl> urls(mContact->details<QContactUrl>());
 
-    QList<QContactUrl> updatedUrls;
+    QList<QContactUrl> updatedUrls, appendedUrls;
     QSet<int> validIndices;
 
     foreach (const QVariant &item, websiteDetails) {
@@ -1205,13 +1276,15 @@ void SeasidePerson::setWebsiteDetails(const QVariantList &websiteDetails)
         const QVariant labelValue = detail[detailLabel];
         ::setDetailLabelType(updated, labelValue.isValid() ? labelValue.toInt() : NoLabel);
 
-        updatedUrls.append(updated);
         if (index != -1) {
             validIndices.insert(index);
+            updatedUrls.append(updated);
+        } else {
+            appendedUrls.append(updated);
         }
     }
 
-    updateDetails(urls, updatedUrls, mContact, validIndices);
+    updateDetails(urls, updatedUrls, appendedUrls, mContact, validIndices);
     emit websiteDetailsChanged();
 }
 
@@ -1330,7 +1403,7 @@ void SeasidePerson::setAnniversaryDetails(const QVariantList &anniversaryDetails
 {
     QList<QContactAnniversary> anniversaries(mContact->details<QContactAnniversary>());
 
-    QList<QContactAnniversary> updatedAnniversaries;
+    QList<QContactAnniversary> updatedAnniversaries, appendedAnniversaries;
     QSet<int> validIndices;
 
     foreach (const QVariant &item, anniversaryDetails) {
@@ -1370,13 +1443,15 @@ void SeasidePerson::setAnniversaryDetails(const QVariantList &anniversaryDetails
         const QVariant labelValue = detail[detailLabel];
         ::setDetailLabelType(updated, labelValue.isValid() ? labelValue.toInt() : NoLabel);
 
-        updatedAnniversaries.append(updated);
         if (index != -1) {
             validIndices.insert(index);
+            updatedAnniversaries.append(updated);
+        } else {
+            appendedAnniversaries.append(updated);
         }
     }
 
-    updateDetails(anniversaries, updatedAnniversaries, mContact, validIndices);
+    updateDetails(anniversaries, updatedAnniversaries, appendedAnniversaries, mContact, validIndices);
     emit anniversaryDetailsChanged();
 }
 
@@ -1536,7 +1611,7 @@ void SeasidePerson::setAccountDetails(const QVariantList &accountDetails)
 {
     QList<QContactOnlineAccount> accounts(mContact->details<QContactOnlineAccount>());
 
-    QList<QContactOnlineAccount> updatedAccounts;
+    QList<QContactOnlineAccount> updatedAccounts, appendedAccounts;
     QSet<int> validIndices;
 
     foreach (const QVariant &item, accountDetails) {
@@ -1591,13 +1666,17 @@ void SeasidePerson::setAccountDetails(const QVariantList &accountDetails)
         const QVariant labelValue = detail[detailLabel];
         ::setDetailLabelType(updated, labelValue.isValid() ? labelValue.toInt() : NoLabel);
 
-        updatedAccounts.append(updated);
         if (index != -1) {
             validIndices.insert(index);
+            updatedAccounts.append(updated);
+        } else {
+            // We need a detailUri to link with presence
+            updated.setDetailUri(accountPathValue.toString() + accountUriValue.toString());
+            appendedAccounts.append(updated);
         }
     }
 
-    updateDetails(accounts, updatedAccounts, mContact, validIndices);
+    updateDetails(accounts, updatedAccounts, appendedAccounts, mContact, validIndices);
     emit accountDetailsChanged();
 
     recalculateDisplayLabel();
@@ -1626,22 +1705,6 @@ QList<int> SeasidePerson::mergeCandidates() const
 void SeasidePerson::setMergeCandidates(const QList<int> &candidates)
 {
     mCandidates = candidates;
-}
-
-void SeasidePerson::addAccount(const QString &path, const QString &uri, const QString &provider, const QString &iconPath)
-{
-    QContactOnlineAccount detail;
-    detail.setValue(QContactOnlineAccount__FieldAccountPath, path);
-    detail.setAccountUri(uri);
-    detail.setServiceProvider(provider);
-    detail.setValue(QContactOnlineAccount__FieldAccountIconPath, iconPath);
-
-    mContact->saveDetail(&detail);
-
-    QContactPresence presence;
-    presence.setLinkedDetailUris(QStringList() << detail.detailUri());
-    
-    mContact->saveDetail(&presence);
 }
 
 QContact SeasidePerson::contact() const
