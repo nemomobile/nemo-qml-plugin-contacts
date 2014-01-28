@@ -11,7 +11,7 @@
 
 // Provide enough of SeasideCache's interface to support SeasideFilteredModel
 
-USE_CONTACTS_NAMESPACE
+QTCONTACTS_USE_NAMESPACE
 
 class SeasidePerson;
 
@@ -19,8 +19,6 @@ class SeasideCache : public QObject
 {
     Q_OBJECT
 public:
-    typedef QtContactsSqliteExtensions::ApiContactIdType ContactIdType;
-
     enum FilterType {
         FilterNone,
         FilterAll,
@@ -141,16 +139,13 @@ public:
 
     static SeasideCache *instance();
 
-    static ContactIdType apiId(const QContact &contact);
-    static ContactIdType apiId(quint32 iid);
+    static QContactId apiId(const QContact &contact);
+    static QContactId apiId(quint32 iid);
 
-    static bool validId(const ContactIdType &id);
+    static bool validId(const QContactId &id);
 
     static quint32 internalId(const QContact &contact);
     static quint32 internalId(const QContactId &id);
-#ifndef USING_QTPIM
-    static quint32 internalId(QContactLocalId id);
-#endif
 
     SeasideCache();
     ~SeasideCache();
@@ -172,16 +167,12 @@ public:
 
     static int contactId(const QContact &contact);
 
-    static CacheItem *existingItem(const ContactIdType &id);
-#ifdef USING_QTPIM
+    static CacheItem *existingItem(const QContactId &id);
     static CacheItem *existingItem(quint32 iid);
-#endif
-    static CacheItem *itemById(const ContactIdType &id, bool requireComplete = true);
-#ifdef USING_QTPIM
+    static CacheItem *itemById(const QContactId &id, bool requireComplete = true);
     static CacheItem *itemById(int id, bool requireComplete = true);
-#endif
-    static ContactIdType selfContactId();
-    static QContact contactById(const ContactIdType &id);
+    static QContactId selfContactId();
+    static QContact contactById(const QContactId &id);
     static QString nameGroup(const CacheItem *cacheItem);
     static QString determineNameGroup(const CacheItem *cacheItem);
     static QStringList allNameGroups();
@@ -235,9 +226,7 @@ public:
     bool m_populated[FilterTypesCount];
 
     QList<CacheItem> m_cache;
-#ifdef USING_QTPIM
     QHash<quint32, int> m_cacheIndices;
-#endif
 
     static SeasideCache *instancePtr;
     static QStringList allContactNameGroups;

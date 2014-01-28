@@ -81,27 +81,19 @@ SeasideCache *SeasideCache::instance()
     return instancePtr;
 }
 
-SeasideCache::ContactIdType SeasideCache::apiId(const QContact &contact)
+QContactId SeasideCache::apiId(const QContact &contact)
 {
-#ifdef USING_QTPIM
     return contact.id();
-#else
-    return contact.id().localId();
-#endif
 }
 
-SeasideCache::ContactIdType SeasideCache::apiId(quint32 iid)
+QContactId SeasideCache::apiId(quint32 iid)
 {
     return QtContactsSqliteExtensions::apiContactId(iid);
 }
 
-bool SeasideCache::validId(const ContactIdType &id)
+bool SeasideCache::validId(const QContactId &id)
 {
-#ifdef USING_QTPIM
     return !id.isNull();
-#else
-    return (id != 0);
-#endif
 }
 
 quint32 SeasideCache::internalId(const QContact &contact)
@@ -113,13 +105,6 @@ quint32 SeasideCache::internalId(const QContactId &id)
 {
     return QtContactsSqliteExtensions::internalContactId(id);
 }
-
-#ifndef USING_QTPIM
-quint32 SeasideCache::internalId(QContactLocalId id)
-{
-    return QtContactsSqliteExtensions::internalContactId(id);
-}
-#endif
 
 SeasideCache::SeasideCache()
 {
@@ -139,22 +124,14 @@ void SeasideCache::reset()
     }
 
     m_cache.clear();
-#ifdef USING_QTPIM
     m_cacheIndices.clear();
-#endif
 
     for (uint i = 0; i < sizeof(contactsData) / sizeof(Contact); ++i) {
         QContact contact;
 
-#ifdef USING_QTPIM
         // This is specific to the qtcontacts-sqlite backend:
         const QString idStr(QString::fromLatin1("qtcontacts:org.nemomobile.contacts.sqlite::sql-%1"));
         contact.setId(QContactId::fromString(idStr.arg(i + 1)));
-#else
-        QContactId contactId;
-        contactId.setLocalId(i + 1);
-        contact.setId(contactId);
-#endif
 
         QContactName name;
         name.setFirstName(QString::fromLatin1(contactsData[i].firstName));
@@ -186,9 +163,7 @@ void SeasideCache::reset()
 
         contact.saveDetail(&statusFlags);
 
-#ifdef USING_QTPIM
         m_cacheIndices.insert(internalId(contact), m_cache.count());
-#endif
         m_cache.append(CacheItem(contact));
 
         QString fullName = name.firstName() + QChar::fromLatin1(' ') + name.lastName();
@@ -211,11 +186,7 @@ QList<quint32> SeasideCache::getContactsForFilterType(FilterType filterType)
         if ((filterType == FilterAll) ||
             (filterType == FilterFavorites && contactsData[i].isFavorite) ||
             (filterType == FilterOnline && contactsData[i].isOnline)) {
-#ifdef USING_QTPIM
             ids.append(internalId(instancePtr->m_cache[i].contact.id()));
-#else
-            ids.append(i + 1);
-#endif
         }
     }
 
@@ -266,22 +237,15 @@ int SeasideCache::contactId(const QContact &contact)
     return static_cast<int>(internal);
 }
 
-SeasideCache::CacheItem *SeasideCache::existingItem(const ContactIdType &id)
+SeasideCache::CacheItem *SeasideCache::existingItem(const QContactId &id)
 {
-#ifdef USING_QTPIM
     quint32 iid(internalId(id));
     if (instancePtr->m_cacheIndices.contains(iid)) {
         return &instancePtr->m_cache[instancePtr->m_cacheIndices[iid]];
     }
-#else
-    if (id != 0 && id <= instancePtr->m_cache.count()) {
-        return &instancePtr->m_cache[id - 1];
-    }
-#endif
     return 0;
 }
 
-#ifdef USING_QTPIM
 SeasideCache::CacheItem *SeasideCache::existingItem(quint32 iid)
 {
     if (instancePtr->m_cacheIndices.contains(iid)) {
@@ -289,24 +253,16 @@ SeasideCache::CacheItem *SeasideCache::existingItem(quint32 iid)
     }
     return 0;
 }
-#endif
 
-SeasideCache::CacheItem *SeasideCache::itemById(const ContactIdType &id, bool)
+SeasideCache::CacheItem *SeasideCache::itemById(const QContactId &id, bool)
 {
-#ifdef USING_QTPIM
     quint32 iid(internalId(id));
     if (instancePtr->m_cacheIndices.contains(iid)) {
         return &instancePtr->m_cache[instancePtr->m_cacheIndices[iid]];
     }
-#else
-    if (id != 0 && id <= instancePtr->m_cache.count()) {
-        return &instancePtr->m_cache[id - 1];
-    }
-#endif
     return 0;
 }
 
-#ifdef USING_QTPIM
 SeasideCache::CacheItem *SeasideCache::itemById(int id, bool)
 {
     if (id == 0)
@@ -322,16 +278,11 @@ SeasideCache::CacheItem *SeasideCache::itemById(int id, bool)
 
     return itemById(contactId);
 }
-#endif
 
-QContact SeasideCache::contactById(const ContactIdType &id)
+QContact SeasideCache::contactById(const QContactId &id)
 {
-#ifdef USING_QTPIM
     quint32 iid(internalId(id));
     return instancePtr->m_cache[instancePtr->m_cacheIndices[iid]].contact;
-#else
-    return instancePtr->m_cache[id - 1].contact;
-#endif
 }
 
 QString SeasideCache::nameGroup(const CacheItem *cacheItem)
@@ -407,9 +358,9 @@ SeasideCache::CacheItem *SeasideCache::resolveOnlineAccount(ResolveListener *, c
     return 0;
 }
 
-SeasideCache::ContactIdType SeasideCache::selfContactId()
+QContactId SeasideCache::selfContactId()
 {
-    return SeasideCache::ContactIdType();
+    return QContactId();
 }
 
 bool SeasideCache::saveContact(const QContact &)
@@ -548,11 +499,7 @@ QString SeasideCache::exportContacts()
 
 void SeasideCache::setFirstName(FilterType filterType, int index, const QString &firstName)
 {
-#ifdef USING_QTPIM
     CacheItem &cacheItem = m_cache[m_cacheIndices[m_contacts[filterType].at(index)]];
-#else
-    CacheItem &cacheItem = m_cache[m_contacts[filterType].at(index) - 1];
-#endif
 
     QContactName name = cacheItem.contact.detail<QContactName>();
     name.setFirstName(firstName);
@@ -574,10 +521,6 @@ void SeasideCache::setFirstName(FilterType filterType, int index, const QString 
 
 quint32 SeasideCache::idAt(int index) const
 {
-#ifdef USING_QTPIM
     return internalId(m_cache[index].contact.id());
-#else
-    return index + 1;
-#endif
 }
 

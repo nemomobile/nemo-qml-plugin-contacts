@@ -62,7 +62,7 @@
 #include <QContactTimestamp>
 #include <QContactUrl>
 
-USE_CONTACTS_NAMESPACE
+QTCONTACTS_USE_NAMESPACE
 
 namespace {
 
@@ -132,11 +132,7 @@ template<typename T, typename F>
 QContactDetailFilter detailFilter(F field, const QString &searchText, bool partialMatch = false)
 {
     QContactDetailFilter filter;
-#ifdef USING_QTPIM
     filter.setDetailType(T::Type, field);
-#else
-    filter.setDetailDefinitionName(T::DefinitionName, field);
-#endif
     filter.setValue(searchText);
     if (partialMatch) {
         filter.setMatchFlags(QContactFilter::MatchContains | QContactFilter::MatchFixedString);
@@ -162,7 +158,6 @@ QContactFilter aggregateContactFilter()
 
 QContactFilter contactIdsFilter(const QSet<quint32> &ids)
 {
-#ifdef USING_QTPIM
     QList<QContactId> filterIds;
     foreach (quint32 id, ids) {
         filterIds.append(SeasideCache::apiId(id));
@@ -171,16 +166,6 @@ QContactFilter contactIdsFilter(const QSet<quint32> &ids)
     QContactIdFilter filter;
     filter.setIds(filterIds);
     return filter;
-#else
-    QList<QContactLocalId> filterIds;
-    foreach (quint32 id, ids) {
-        filterIds.append(SeasideCache::apiId(id));
-    }
-
-    QContactLocalIdFilter idFilter;
-    filter.setLocalIds(filterIds);
-    return filter;
-#endif
 }
 
 quint32 numericId(const QContact &contact)

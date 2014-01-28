@@ -46,8 +46,8 @@
 #include <QVersitReader>
 #include <QVersitWriter>
 
-USE_CONTACTS_NAMESPACE
-USE_VERSIT_NAMESPACE
+QTCONTACTS_USE_NAMESPACE
+QTVERSIT_USE_NAMESPACE
 
 namespace {
 
@@ -61,13 +61,8 @@ QContactFilter localContactFilter()
 {
     // Contacts that are local to the device have sync target 'local' or 'was_local'
     QContactDetailFilter filterLocal, filterWasLocal;
-#ifdef USING_QTPIM
     filterLocal.setDetailType(QContactSyncTarget::Type, QContactSyncTarget::FieldSyncTarget);
     filterWasLocal.setDetailType(QContactSyncTarget::Type, QContactSyncTarget::FieldSyncTarget);
-#else
-    filterLocal.setDetailDefinitionName(QContactSyncTarget::DefinitionName, QContactSyncTarget::FieldSyncTarget);
-    filterWasLocal.setDetailDefinitionName(QContactSyncTarget::DefinitionName, QContactSyncTarget::FieldSyncTarget);
-#endif
     filterLocal.setValue(QString::fromLatin1("local"));
     filterWasLocal.setValue(QString::fromLatin1("was_local"));
 

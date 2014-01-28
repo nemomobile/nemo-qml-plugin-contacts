@@ -36,11 +36,7 @@
 #include <QObject>
 #include <QUrl>
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #include <qqml.h>
-#else
-#include <qdeclarative.h>
-#endif
 
 // Mobility
 #include <QContact>
@@ -49,7 +45,7 @@
 // Seaside
 #include <seasidecache.h>
 
-USE_CONTACTS_NAMESPACE
+QTCONTACTS_USE_NAMESPACE
 
 Q_DECLARE_METATYPE(QContact)
 

@@ -33,9 +33,7 @@
 #include <QtTest>
 
 #include <QContactName>
-#ifdef USING_QTPIM
 #include <QContactManager>
-#endif
 
 #include "seasidefilteredmodel.h"
 #include "seasidecache.h"
@@ -49,8 +47,6 @@ class tst_SeasideFilteredModel : public QObject
 {
     Q_OBJECT
 public:
-    typedef SeasideFilteredModel::ContactIdType ContactIdType;
-
     tst_SeasideFilteredModel();
 
 private slots:
@@ -83,10 +79,8 @@ tst_SeasideFilteredModel::tst_SeasideFilteredModel()
 
 void tst_SeasideFilteredModel::init()
 {
-#ifdef USING_QTPIM
     // The backend must be loaded for cache reset to work correctly
     QContactManager cm("org.nemomobile.contacts.sqlite");
-#endif
 
     cache.reset();
 }
@@ -495,11 +489,7 @@ void tst_SeasideFilteredModel::filterCharacters()
     QCOMPARE(model.rowCount(), 7);
 
     if (!langVar.startsWith("en")) {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
         QSKIP("Character matching is not testable with unknown locale");
-#else
-        QSKIP("Character matching is not testable with unknown locale", SkipAll);
-#endif
     }
 
     // 0 1 2 3

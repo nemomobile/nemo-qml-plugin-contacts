@@ -44,15 +44,13 @@
 #include <QContactOnlineAccount>
 #include <QContactOrganization>
 #include <QContactUrl>
-#ifdef USING_QTPIM
 #include <QContactManager>
-#endif
 
 #include "seasideperson.h"
 
 #include <algorithm>
 
-USE_CONTACTS_NAMESPACE
+QTCONTACTS_USE_NAMESPACE
 
 class tst_SeasidePerson : public QObject
 {
@@ -895,24 +893,16 @@ void tst_SeasidePerson::marshalling()
 
 void tst_SeasidePerson::setContact()
 {
-#ifdef USING_QTPIM
     // The contact manager must have previously been loaded for this test to succeed
     QContactManager cm("org.nemomobile.contacts.sqlite");
-#endif
 
     QScopedPointer<SeasidePerson> person(new SeasidePerson);
 
     QContact contact;
 
     {   // ### contactChanged is only emitted if the id differs, not any of the members.
-#ifdef USING_QTPIM
         QString idStr(QString::fromLatin1("qtcontacts:org.nemomobile.contacts.sqlite::sql-5"));
         contact.setId(QContactId::fromString(idStr));
-#else
-        QContactId contactId;
-        contactId.setLocalId(5);
-        contact.setId(contactId);
-#endif
     }
 
     {

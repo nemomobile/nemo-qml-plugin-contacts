@@ -1,11 +1,6 @@
 include(../common.pri)
 
-equals(QT_MAJOR_VERSION, 4) {
-    PKGCONFIG += mlocale
-}
-equals(QT_MAJOR_VERSION, 5) {
-    PKGCONFIG += mlocale5
-}
+PKGCONFIG += mlocale5
 
 CONFIG += c++11
 
