@@ -45,10 +45,6 @@ SeasideNameGroupModel::SeasideNameGroupModel(QObject *parent)
 {
     SeasideCache::registerNameGroupChangeListener(this);
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-    setRoleNames(roleNames());
-#endif
-
     const QStringList &allGroups = SeasideCache::allNameGroups();
     QHash<QString, QSet<quint32> > existingGroups = SeasideCache::nameGroupMembers();
     if (!existingGroups.isEmpty()) {

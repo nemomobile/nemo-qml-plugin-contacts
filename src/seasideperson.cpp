@@ -54,7 +54,7 @@
 
 #include "seasideperson.h"
 
-USE_VERSIT_NAMESPACE
+QTVERSIT_USE_NAMESPACE
 
 SeasidePersonAttached::SeasidePersonAttached(QObject *parent)
     : QObject(parent)
@@ -407,7 +407,6 @@ QUrl SeasidePerson::filteredAvatarUrl(const QStringList &metadataFragments) cons
 
 namespace { // Helper functions
 
-#ifdef USING_QTPIM
 QVariant detailLabelType(const QContactDetail &detail)
 {
     const QList<int> &contexts(detail.contexts());
@@ -468,9 +467,6 @@ void setDetailLabelType(QContactDetail &detail, int label)
         detail.setContexts(contexts);
     }
 }
-#else
-#error "Unsupported"
-#endif
 
 const QString detailReadOnly(QString::fromLatin1("readOnly"));
 const QString detailOriginId(QString::fromLatin1("originId"));
@@ -681,7 +677,6 @@ void SeasidePerson::setNicknameDetails(const QVariantList &nicknameDetails)
 
 namespace {
 
-#ifdef USING_QTPIM
 QList<QPair<QContactPhoneNumber::SubType, SeasidePerson::DetailSubType> > getPhoneSubTypeMapping()
 {
     QList<QPair<QContactPhoneNumber::SubType, SeasidePerson::DetailSubType> > rv;
@@ -761,9 +756,6 @@ void setPhoneNumberSubTypes(QContactPhoneNumber &number, const QVariantList &typ
 
     number.setSubTypes(subTypes);
 }
-#else
-#error "Unsupported"
-#endif
 
 const QString phoneDetailNumber(QString::fromLatin1("number"));
 const QString phoneDetailNormalizedNumber(QString::fromLatin1("normalizedNumber"));
@@ -976,7 +968,6 @@ void setAddress(QContactAddress &address, const QStringList &addressStrings)
     }
 }
 
-#ifdef USING_QTPIM
 QList<QPair<QContactAddress::SubType, SeasidePerson::DetailSubType> > getAddressSubTypeMapping()
 {
     QList<QPair<QContactAddress::SubType, SeasidePerson::DetailSubType> > rv;
@@ -1048,9 +1039,6 @@ void setAddressSubTypes(QContactAddress &address, const QVariantList &types)
 
     address.setSubTypes(subTypes);
 }
-#else
-#error "Unsupported"
-#endif
 
 const QString addressDetailAddress(QString::fromLatin1("address"));
 
@@ -1143,7 +1131,6 @@ void SeasidePerson::setAddressDetails(const QVariantList &addressDetails)
 
 namespace {
 
-#ifdef USING_QTPIM
 QList<QPair<QContactUrl::SubType, SeasidePerson::DetailSubType> > getWebsiteSubTypeMapping()
 {
     QList<QPair<QContactUrl::SubType, SeasidePerson::DetailSubType> > rv;
@@ -1201,9 +1188,6 @@ void setWebsiteSubType(QContactUrl &website, const QVariant &type)
         website.setSubType(static_cast<QContactUrl::SubType>(websiteSubType(static_cast<SeasidePerson::DetailSubType>(st))));
     }
 }
-#else
-#error "Unsupported"
-#endif
 
 const QString websiteDetailUrl(QString::fromLatin1("url"));
 
@@ -1308,7 +1292,6 @@ void SeasidePerson::resetBirthday()
 
 namespace {
 
-#ifdef USING_QTPIM
 QList<QPair<QContactAnniversary::SubType, SeasidePerson::DetailSubType> > getAnniversarySubTypeMapping()
 {
     QList<QPair<QContactAnniversary::SubType, SeasidePerson::DetailSubType> > rv;
@@ -1368,9 +1351,6 @@ void setAnniversarySubType(QContactAnniversary &anniversary, const QVariant &typ
         anniversary.setSubType(static_cast<QContactAnniversary::SubType>(anniversarySubType(static_cast<SeasidePerson::DetailSubType>(st))));
     }
 }
-#else
-#error "Unsupported"
-#endif
 
 const QString anniversaryDetailOriginalDate(QString::fromLatin1("originalDate"));
 
@@ -1462,7 +1442,6 @@ SeasidePerson::PresenceState SeasidePerson::globalPresenceState() const
 
 namespace {
 
-#ifdef USING_QTPIM
 QList<QPair<QContactOnlineAccount::SubType, SeasidePerson::DetailSubType> > getOnlineAccountSubTypeMapping()
 {
     QList<QPair<QContactOnlineAccount::SubType, SeasidePerson::DetailSubType> > rv;
@@ -1534,9 +1513,6 @@ void setOnlineAccountSubTypes(QContactOnlineAccount &account, const QVariantList
 
     account.setSubTypes(subTypes);
 }
-#else
-#error "Unsupported"
-#endif
 
 const QString accountDetailUri(QString::fromLatin1("accountUri"));
 const QString accountDetailPath(QString::fromLatin1("accountPath"));

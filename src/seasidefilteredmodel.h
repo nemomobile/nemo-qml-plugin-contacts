@@ -40,7 +40,7 @@
 
 class SeasidePerson;
 
-USE_CONTACTS_NAMESPACE
+QTCONTACTS_USE_NAMESPACE
 
 class SeasideFilteredModel : public SeasideCache::ListModel
 {
@@ -108,8 +108,6 @@ public:
         AccountDetailsRole
     };
 
-    typedef SeasideCache::ContactIdType ContactIdType;
-
     SeasideFilteredModel(QObject *parent = 0);
     ~SeasideFilteredModel();
 
@@ -169,10 +167,7 @@ public:
     void insertRange(int index, int count, const QList<quint32> &source, int sourceIndex);
     void removeRange(int index, int count);
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-    virtual
-#endif
-    QHash<int, QByteArray> roleNames() const;
+    virtual QHash<int, QByteArray> roleNames() const;
 
     // Implementations for SeasideCache::ListModel:
     void sourceAboutToRemoveItems(int begin, int end);

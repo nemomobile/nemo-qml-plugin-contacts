@@ -31,31 +31,22 @@
 
 #include <QtGlobal>
 
-#ifdef QT_VERSION_5
 #include <QQmlEngine>
 #include <QQmlExtensionPlugin>
-#define QDeclarativeEngine QQmlEngine
-#define QDeclarativeExtensionPlugin QQmlExtensionPlugin
-#else
-#include <QDeclarativeEngine>
-#include <QDeclarativeExtensionPlugin>
-#endif
 
 #include "seasideperson.h"
 #include "seasidefilteredmodel.h"
 #include "seasidenamegroupmodel.h"
 
-class Q_DECL_EXPORT NemoContactsPlugin : public QDeclarativeExtensionPlugin
+class Q_DECL_EXPORT NemoContactsPlugin : public QQmlExtensionPlugin
 {
     Q_OBJECT
-#ifdef QT_VERSION_5
     Q_PLUGIN_METADATA(IID "org.nemomobile.contacts")
-#endif
 
 public:
     virtual ~NemoContactsPlugin() { }
 
-    void initializeEngine(QDeclarativeEngine *, const char *uri)
+    void initializeEngine(QQmlEngine *, const char *uri)
     {
         Q_ASSERT(uri == QLatin1String("org.nemomobile.contacts"));
     }
@@ -70,9 +61,5 @@ public:
         qmlRegisterType<SeasidePerson>(uri, 1, 0, "Person");
     }
 };
-
-#ifndef QT_VERSION_5
-Q_EXPORT_PLUGIN2(nemocontacts, NemoContactsPlugin);
-#endif
 
 #include "plugin.moc"

@@ -290,11 +290,7 @@ struct FilterData : public SeasideCache::ItemListener
             insert(matchTokens, splitWords(name.suffix()));
 
             // Include the custom label - it may contain the user's customized name for the contact
-#ifdef USING_QTPIM
             insert(matchTokens, splitWords(name.value<QString>(QContactName__FieldCustomLabel)));
-#else
-            insert(matchTokens, splitWords(name.customLabel()));
-#endif
 
             QContactNickname nickname = item->contact.detail<QContactNickname>();
             insert(matchTokens, splitWords(nickname.nickname()));
@@ -390,10 +386,6 @@ SeasideFilteredModel::SeasideFilteredModel(QObject *parent)
     , m_searchByFirstNameCharacter(false)
     , m_lastItem(0)
 {
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-    setRoleNames(roleNames());
-#endif
-
     updateRegistration();
 
     m_allContactIds = SeasideCache::contacts(SeasideCache::FilterAll);
@@ -1013,12 +1005,10 @@ void SeasideFilteredModel::updateFilters(const QString &pattern, int property)
     if (m_filterPattern != pattern) {
         m_filterPattern = pattern;
         m_filterParts = extractSearchTerms(m_filterPattern);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
         // Qt5 does not recognize '#' as a word
         if (m_filterParts.isEmpty() && !pattern.isEmpty()) {
             m_filterParts.append(QStringList() << pattern);
         }
-#endif
         changedPattern = true;
     }
     if (m_requiredProperty != property) {

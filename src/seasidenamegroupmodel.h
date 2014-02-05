@@ -40,7 +40,7 @@
 
 #include <QContactId>
 
-USE_CONTACTS_NAMESPACE
+QTCONTACTS_USE_NAMESPACE
 
 class SeasideNameGroup
 {
@@ -91,10 +91,7 @@ public:
 
     void nameGroupsUpdated(const QHash<QString, QSet<quint32> > &groups);
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-    virtual
-#endif
-    QHash<int, QByteArray> roleNames() const;
+    virtual QHash<int, QByteArray> roleNames() const;
 
 signals:
     void countChanged();

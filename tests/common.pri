@@ -4,9 +4,7 @@ include(basename.pri)
 TEMPLATE = app
 CONFIG -= app_bundle
 
-QT += testlib
-equals(QT_MAJOR_VERSION, 4): QT += declarative
-equals(QT_MAJOR_VERSION, 5): QT += qml
+QT += testlib qml
 
 SRCDIR = $$PWD/../src/
 INCLUDEPATH += $$SRCDIR
