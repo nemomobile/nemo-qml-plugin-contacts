@@ -102,6 +102,7 @@ public:
         PersonRole,
         PrimaryNameRole,
         SecondaryNameRole,
+        NicknameDetailsRole,
         PhoneDetailsRole,
         EmailDetailsRole,
         AccountDetailsRole

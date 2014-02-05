@@ -85,6 +85,9 @@ class SeasidePerson
 {
     Q_OBJECT
     Q_ENUMS(DetailType)
+    Q_ENUMS(DetailSubType)
+    Q_ENUMS(AddressField)
+    Q_ENUMS(DetailLabel)
     Q_ENUMS(PresenceState)
 
 public:
@@ -92,49 +95,71 @@ public:
      * Identifiers of contact details for the UI.
      */
     enum DetailType {
-        // Name
+        NoType,
         FirstNameType,
         LastNameType,
         MiddleNameType,
+        PrefixType,
+        SuffixType,
         CompanyType,
-        NickType,
         TitleType,
-        // Phone
-        PhoneHomeType,
-        PhoneWorkType,
-        PhoneMobileType,
-        PhoneFaxType,
-        PhonePagerType,
-        // Email
-        EmailHomeType,
-        EmailWorkType,
-        EmailOtherType,
-        // Address
-        AddressHomeType,
-        AddressWorkType,
-        AddressOtherType,
-        AddressStreetType,
-        AddressLocalityType,
-        AddressRegionType,
-        AddressPostcodeType,
-        AddressCountryType,
-        AddressPOBoxType,
-        // Website
-        WebsiteHomeType,
-        WebsiteWorkType,
-        WebsiteOtherType,
-        // Dates
+        NicknameType,
+        PhoneNumberType,
+        EmailAddressType,
+        OnlineAccountType,
+        AddressType,
+        WebsiteType,
         BirthdayType,
         AnniversaryType,
-        // Presence information
-        GlobalPresenceStateType,
-        AccountProvidersType,
-        PresenceAccountProvidersType = AccountProvidersType,  // To be removed
-        AccountIconPathsType,
-        PresenceStatesType,
-        PresenceMessagesType,
-        // Other
-        SyncTarget
+        GlobalPresenceStateType
+    };
+
+    enum DetailSubType {
+        NoSubType,
+        PhoneSubTypeLandline,
+        PhoneSubTypeMobile,
+        PhoneSubTypeFax,
+        PhoneSubTypePager,
+        PhoneSubTypeVoice,
+        PhoneSubTypeModem,
+        PhoneSubTypeVideo,
+        PhoneSubTypeCar,
+        PhoneSubTypeBulletinBoardSystem,
+        PhoneSubTypeMessagingCapable,
+        PhoneSubTypeAssistant,
+        PhoneSubTypeDtmfMenu,
+        AddressSubTypeParcel,
+        AddressSubTypePostal,
+        AddressSubTypeDomestic,
+        AddressSubTypeInternational,
+        OnlineAccountSubTypeSip,
+        OnlineAccountSubTypeSipVoip,
+        OnlineAccountSubTypeImpp,
+        OnlineAccountSubTypeVideoShare,
+        WebsiteSubTypeHomePage,
+        WebsiteSubTypeBlog,
+        WebsiteSubTypeFavorite,
+        AnniversarySubTypeWedding,
+        AnniversarySubTypeEngagement,
+        AnniversarySubTypeHouse,
+        AnniversarySubTypeEmployment,
+        AnniversarySubTypeMemorial
+    };
+
+    enum AddressField {
+        AddressStreetField,
+        AddressLocalityField,
+        AddressRegionField,
+        AddressPostcodeField,
+        AddressCountryField,
+        AddressPOBoxField,
+    };
+
+    enum DetailLabel {
+        NoLabel,
+        HomeLabel,
+        WorkLabel,
+        OtherLabel
     };
 
     enum PresenceState {
@@ -172,6 +197,14 @@ public:
     QString middleName() const;
     void setMiddleName(const QString &name);
 
+    Q_PROPERTY(QString namePrefix READ namePrefix WRITE setNamePrefix NOTIFY namePrefixChanged)
+    QString namePrefix() const;
+    void setNamePrefix(const QString &prefix);
+
+    Q_PROPERTY(QString nameSuffix READ nameSuffix WRITE setNameSuffix NOTIFY nameSuffixChanged)
+    QString nameSuffix() const;
+    void setNameSuffix(const QString &suffix);
+
     Q_PROPERTY(QString sectionBucket READ sectionBucket NOTIFY displayLabelChanged)
     QString sectionBucket() const;
 
@@ -187,10 +220,6 @@ public:
     Q_PROPERTY(QString companyName READ companyName WRITE setCompanyName NOTIFY companyNameChanged)
     QString companyName() const;
     void setCompanyName(const QString &name);
-
-    Q_PROPERTY(QString nickname READ nickname WRITE setNickname NOTIFY nicknameChanged)
-    QString nickname() const;
-    void setNickname(const QString &name);
 
     Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY titleChanged)
     QString title() const;
@@ -209,49 +238,21 @@ public:
     void setAvatarUrl(QUrl avatarUrl);
     Q_INVOKABLE QUrl filteredAvatarUrl(const QStringList &metadataFragments = QStringList()) const;
 
-    Q_PROPERTY(QStringList phoneNumbers READ phoneNumbers WRITE setPhoneNumbers NOTIFY phoneNumbersChanged)
-    QStringList phoneNumbers() const;
-    void setPhoneNumbers(const QStringList &phoneNumbers);
-
-    Q_PROPERTY(QList<int> phoneNumberTypes READ phoneNumberTypes NOTIFY phoneNumberTypesChanged)
-    QList<int> phoneNumberTypes() const;
-    Q_INVOKABLE void setPhoneNumberType(int which, DetailType type);
+    Q_PROPERTY(QVariantList nicknameDetails READ nicknameDetails WRITE setNicknameDetails NOTIFY nicknameDetailsChanged)
+    QVariantList nicknameDetails() const;
+    void setNicknameDetails(const QVariantList &nicknameDetails);
 
     Q_PROPERTY(QVariantList phoneDetails READ phoneDetails WRITE setPhoneDetails NOTIFY phoneDetailsChanged)
     QVariantList phoneDetails() const;
     void setPhoneDetails(const QVariantList &phoneDetails);
 
-    Q_PROPERTY(QStringList emailAddresses READ emailAddresses WRITE setEmailAddresses NOTIFY emailAddressesChanged)
-    QStringList emailAddresses() const;
-    void setEmailAddresses(const QStringList &emailAddresses);
-
-    Q_PROPERTY(QList<int> emailAddressTypes READ emailAddressTypes NOTIFY emailAddressTypesChanged)
-    QList<int> emailAddressTypes() const;
-    Q_INVOKABLE void setEmailAddressType(int which, DetailType type);
-
     Q_PROPERTY(QVariantList emailDetails READ emailDetails WRITE setEmailDetails NOTIFY emailDetailsChanged)
     QVariantList emailDetails() const;
     void setEmailDetails(const QVariantList &emailDetails);
 
-    Q_PROPERTY(QStringList addresses READ addresses WRITE setAddresses NOTIFY addressesChanged)
-    QStringList addresses() const;
-    void setAddresses(const QStringList &addresses);
-
-    Q_PROPERTY(QList<int> addressTypes READ addressTypes NOTIFY addressTypesChanged)
-    QList<int> addressTypes() const;
-    Q_INVOKABLE void setAddressType(int which, DetailType type);
-
     Q_PROPERTY(QVariantList addressDetails READ addressDetails WRITE setAddressDetails NOTIFY addressDetailsChanged)
     QVariantList addressDetails() const;
     void setAddressDetails(const QVariantList &addressDetails);
-
-    Q_PROPERTY(QStringList websites READ websites WRITE setWebsites NOTIFY websitesChanged)
-    QStringList websites() const;
-    void setWebsites(const QStringList &sites);
-
-    Q_PROPERTY(QList<int> websiteTypes READ websiteTypes NOTIFY websiteTypesChanged)
-    QList<int> websiteTypes() const;
-    Q_INVOKABLE void setWebsiteType(int which, DetailType type);
 
     Q_PROPERTY(QVariantList websiteDetails READ websiteDetails WRITE setWebsiteDetails NOTIFY websiteDetailsChanged)
     QVariantList websiteDetails() const;
@@ -262,35 +263,12 @@ public:
     void setBirthday(const QDateTime &bd);
     void resetBirthday();
 
-    Q_PROPERTY(QDateTime anniversary READ anniversary WRITE setAnniversary NOTIFY anniversaryChanged RESET resetAnniversary)
-    QDateTime anniversary() const;
-    void setAnniversary(const QDateTime &av);
-    void resetAnniversary();
+    Q_PROPERTY(QVariantList anniversaryDetails READ anniversaryDetails WRITE setAnniversaryDetails NOTIFY anniversaryDetailsChanged)
+    QVariantList anniversaryDetails() const;
+    void setAnniversaryDetails(const QVariantList &anniversaryDetails);
 
     Q_PROPERTY(PresenceState globalPresenceState READ globalPresenceState NOTIFY globalPresenceStateChanged)
     PresenceState globalPresenceState() const;
-
-    // To be removed:
-    Q_PROPERTY(QStringList presenceAccountProviders READ presenceAccountProviders NOTIFY presenceAccountProvidersChanged)
-    QStringList presenceAccountProviders() const;
-
-    Q_PROPERTY(QList<int> presenceStates READ presenceStates NOTIFY presenceStatesChanged)
-    QList<int> presenceStates() const;
-
-    Q_PROPERTY(QStringList presenceMessages READ presenceMessages NOTIFY presenceMessagesChanged)
-    QStringList presenceMessages() const;
-
-    Q_PROPERTY(QStringList accountUris READ accountUris NOTIFY accountUrisChanged)
-    QStringList accountUris() const;
-
-    Q_PROPERTY(QStringList accountPaths READ accountPaths NOTIFY accountPathsChanged)
-    QStringList accountPaths() const;
-
-    Q_PROPERTY(QStringList accountProviders READ accountProviders NOTIFY accountProvidersChanged)
-    QStringList accountProviders() const;
-
-    Q_PROPERTY(QStringList accountIconPaths READ accountIconPaths NOTIFY accountIconPathsChanged)
-    QStringList accountIconPaths() const;
 
     Q_PROPERTY(QVariantList accountDetails READ accountDetails WRITE setAccountDetails NOTIFY accountDetailsChanged)
     QVariantList accountDetails() const;
@@ -306,9 +284,6 @@ public:
     Q_PROPERTY(QList<int> mergeCandidates READ mergeCandidates NOTIFY mergeCandidatesChanged)
     QList<int> mergeCandidates() const;
     void setMergeCandidates(const QList<int> &candidates);
-
-    Q_INVOKABLE void addAccount(const QString &path, const QString &uri, const QString &provider,
-                                const QString &iconPath = QString());
 
     QContact contact() const;
     void setContact(const QContact &contact);
@@ -350,10 +325,12 @@ public:
     void mergeCandidatesFetched(const QList<int> &ids);
     void aggregationOperationCompleted();
 
+    static QVariantList nicknameDetails(const QContact &contact);
     static QVariantList phoneDetails(const QContact &contact);
     static QVariantList emailDetails(const QContact &contact);
     static QVariantList addressDetails(const QContact &contact);
     static QVariantList websiteDetails(const QContact &contact);
+    static QVariantList anniversaryDetails(const QContact &contact);
     static QVariantList accountDetails(const QContact &contact);
 
     static QString generateDisplayLabel(
@@ -370,37 +347,24 @@ signals:
     void firstNameChanged();
     void lastNameChanged();
     void middleNameChanged();
+    void namePrefixChanged();
+    void nameSuffixChanged();
     void displayLabelChanged();
     void primaryNameChanged();
     void secondaryNameChanged();
     void companyNameChanged();
-    void nicknameChanged();
     void titleChanged();
     void favoriteChanged();
     void avatarPathChanged();
     void avatarUrlChanged();
-    void phoneNumbersChanged();
-    void phoneNumberTypesChanged();
+    void nicknameDetailsChanged();
     void phoneDetailsChanged();
-    void emailAddressesChanged();
-    void emailAddressTypesChanged();
     void emailDetailsChanged();
-    void addressesChanged();
-    void addressTypesChanged();
     void addressDetailsChanged();
-    void websitesChanged();
-    void websiteTypesChanged();
     void websiteDetailsChanged();
     void birthdayChanged();
-    void anniversaryChanged();
+    void anniversaryDetailsChanged();
     void globalPresenceStateChanged();
-    void presenceAccountProvidersChanged();
-    void presenceStatesChanged();
-    void presenceMessagesChanged();
-    void accountUrisChanged();
-    void accountPathsChanged();
-    void accountProvidersChanged();
-    void accountIconPathsChanged();
     void accountDetailsChanged();
     void constituentsChanged();
     void mergeCandidatesChanged();
