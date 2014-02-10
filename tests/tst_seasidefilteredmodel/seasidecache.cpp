@@ -426,12 +426,12 @@ QUrl SeasideCache::filteredAvatarUrl(const QContact &contact, const QStringList 
     return QUrl();
 }
 
-QString SeasideCache::normalizePhoneNumber(const QString &input)
+QString SeasideCache::normalizePhoneNumber(const QString &input, bool)
 {
     return input;
 }
 
-QString SeasideCache::minimizePhoneNumber(const QString &input)
+QString SeasideCache::minimizePhoneNumber(const QString &input, bool)
 {
     return input;
 }

@@ -1993,8 +1993,8 @@ QVariantList SeasidePerson::removeDuplicatePhoneNumbers(const QVariantList &phon
                 bool append(false);
 
                 const QChar plus(QChar::fromLatin1('+'));
-                if (normalized[0] == plus) {
-                    if (priorNormalized[0] == plus) {
+                if (normalized.length() && normalized[0] == plus) {
+                    if (priorNormalized.length() && priorNormalized[0] == plus) {
                         // Prefer the longer normalized form, or the longer unnormalized form
                         // if the normalized forms are equal
                         replace = (normalized.length() > priorNormalized.length() ||
@@ -2011,7 +2011,7 @@ QVariantList SeasidePerson::removeDuplicatePhoneNumbers(const QVariantList &phon
                     if (normalized.length() > priorNormalized.length() ||
                         (normalized.length() == priorNormalized.length() &&
                          number.length() > priorNumber.length())) {
-                        if (priorNormalized[0] == plus) {
+                        if (priorNormalized.length() && priorNormalized[0] == plus) {
                             append = true;
                         } else {
                             replace = true;
