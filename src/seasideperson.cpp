@@ -87,6 +87,11 @@ QString SeasidePersonAttached::minimizePhoneNumber(const QString &input)
     return SeasideCache::minimizePhoneNumber(input);
 }
 
+QString SeasidePersonAttached::validatePhoneNumber(const QString &input)
+{
+    return SeasideCache::normalizePhoneNumber(input, true);
+}
+
 QVariantList SeasidePersonAttached::removeDuplicatePhoneNumbers(const QVariantList &phoneNumbers)
 {
     return SeasidePerson::removeDuplicatePhoneNumbers(phoneNumbers);

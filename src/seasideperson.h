@@ -64,6 +64,7 @@ public:
 
     Q_INVOKABLE QString normalizePhoneNumber(const QString &input);
     Q_INVOKABLE QString minimizePhoneNumber(const QString &input);
+    Q_INVOKABLE QString validatePhoneNumber(const QString &input);
 
     Q_INVOKABLE QVariantList removeDuplicatePhoneNumbers(const QVariantList &phoneNumbers);
     Q_INVOKABLE QVariantList removeDuplicateOnlineAccounts(const QVariantList &onlineAccounts);
