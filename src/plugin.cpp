@@ -37,6 +37,7 @@
 #include "seasideperson.h"
 #include "seasidefilteredmodel.h"
 #include "seasidenamegroupmodel.h"
+#include "seasidevcardmodel.h"
 
 class Q_DECL_EXPORT NemoContactsPlugin : public QQmlExtensionPlugin
 {
@@ -59,6 +60,7 @@ public:
         qmlRegisterType<SeasideNameGroupModel>(uri, 1, 0, "PeopleNameGroupModel");
         qmlRegisterType<SeasidePersonAttached>();
         qmlRegisterType<SeasidePerson>(uri, 1, 0, "Person");
+        qmlRegisterType<SeasideVCardModel>(uri, 1, 0, "PeopleVCardModel");
     }
 };
 
