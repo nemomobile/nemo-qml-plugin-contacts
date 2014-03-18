@@ -69,12 +69,15 @@ SeasidePersonAttached::~SeasidePersonAttached()
 
 SeasidePerson *SeasidePersonAttached::selfPerson() const
 {
-    SeasideCache::CacheItem *item = SeasideCache::itemById(SeasideCache::selfContactId());
-    if (!item->itemData) {
-        item->itemData = new SeasidePerson(&item->contact, (item->contactState == SeasideCache::ContactComplete), SeasideCache::instance());
+    if (SeasideCache::CacheItem *item = SeasideCache::itemById(SeasideCache::selfContactId())) {
+        if (!item->itemData) {
+            item->itemData = new SeasidePerson(&item->contact, (item->contactState == SeasideCache::ContactComplete), SeasideCache::instance());
+        }
+
+        return static_cast<SeasidePerson *>(item->itemData);
     }
 
-    return static_cast<SeasidePerson *>(item->itemData);
+    return 0;
 }
 
 QString SeasidePersonAttached::normalizePhoneNumber(const QString &input)
@@ -1527,6 +1530,7 @@ const QString accountDetailServiceProvider(QString::fromLatin1("serviceProvider"
 const QString accountDetailServiceProviderDisplayName(QString::fromLatin1("serviceProviderDisplayName"));
 const QString accountDetailPresenceState(QString::fromLatin1("presenceState"));
 const QString accountDetailPresenceMessage(QString::fromLatin1("presenceMessage"));
+const QString accountDetailEnabled(QString::fromLatin1("enabled"));
 
 template<typename ListType>
 typename ListType::value_type linkedDetail(const ListType &details, const QString &uri)
@@ -1558,6 +1562,7 @@ QVariantList SeasidePerson::accountDetails(const QContact &contact)
         item.insert(accountDetailIconPath, detail.value(QContactOnlineAccount__FieldAccountIconPath).toString());
         item.insert(accountDetailServiceProvider, detail.value(QContactOnlineAccount::FieldServiceProvider).toString());
         item.insert(accountDetailServiceProviderDisplayName, detail.value(QContactOnlineAccount__FieldServiceProviderDisplayName).toString());
+        item.insert(accountDetailEnabled, detail.value(QContactOnlineAccount__FieldEnabled).toBool());
 
         QVariant state;
         QVariant message;
@@ -1640,6 +1645,8 @@ void SeasidePerson::setAccountDetails(const QVariantList &accountDetails)
 
         const QVariant serviceProviderDisplayNameValue = detail[accountDetailServiceProviderDisplayName];
         updated.setValue(QContactOnlineAccount__FieldServiceProviderDisplayName, serviceProviderDisplayNameValue.value<QString>());
+
+        // Enabled is read-only; ignore update value
 
         const QVariant subTypesValue = detail[detailSubTypes];
         ::setOnlineAccountSubTypes(updated, subTypesValue.value<QVariantList>());
