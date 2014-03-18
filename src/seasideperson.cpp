@@ -69,12 +69,15 @@ SeasidePersonAttached::~SeasidePersonAttached()
 
 SeasidePerson *SeasidePersonAttached::selfPerson() const
 {
-    SeasideCache::CacheItem *item = SeasideCache::itemById(SeasideCache::selfContactId());
-    if (!item->itemData) {
-        item->itemData = new SeasidePerson(&item->contact, (item->contactState == SeasideCache::ContactComplete), SeasideCache::instance());
+    if (SeasideCache::CacheItem *item = SeasideCache::itemById(SeasideCache::selfContactId())) {
+        if (!item->itemData) {
+            item->itemData = new SeasidePerson(&item->contact, (item->contactState == SeasideCache::ContactComplete), SeasideCache::instance());
+        }
+
+        return static_cast<SeasidePerson *>(item->itemData);
     }
 
-    return static_cast<SeasidePerson *>(item->itemData);
+    return 0;
 }
 
 QString SeasidePersonAttached::normalizePhoneNumber(const QString &input)
