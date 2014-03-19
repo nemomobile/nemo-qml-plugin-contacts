@@ -100,6 +100,8 @@ public:
         SuffixType,
         CompanyType,
         TitleType,
+        RoleType,
+        DepartmentType,
         NicknameType,
         PhoneNumberType,
         EmailAddressType,
@@ -220,7 +222,15 @@ public:
 
     Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY titleChanged)
     QString title() const;
-    void setTitle(const QString &name);
+    void setTitle(const QString &title);
+
+    Q_PROPERTY(QString role READ role WRITE setRole NOTIFY roleChanged)
+    QString role() const;
+    void setRole(const QString &role);
+
+    Q_PROPERTY(QString department READ department WRITE setDepartment NOTIFY departmentChanged)
+    QString department() const;
+    void setDepartment(const QString &department);
 
     Q_PROPERTY(bool favorite READ favorite WRITE setFavorite NOTIFY favoriteChanged)
     bool favorite() const;
@@ -351,6 +361,8 @@ signals:
     void secondaryNameChanged();
     void companyNameChanged();
     void titleChanged();
+    void roleChanged();
+    void departmentChanged();
     void favoriteChanged();
     void avatarPathChanged();
     void avatarUrlChanged();

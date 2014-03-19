@@ -338,15 +338,48 @@ void SeasidePerson::setCompanyName(const QString &name)
 QString SeasidePerson::title() const
 {
     QContactOrganization company = mContact->detail<QContactOrganization>();
+    return company.title();
+}
+
+void SeasidePerson::setTitle(const QString &title)
+{
+    QContactOrganization companyDetail = mContact->detail<QContactOrganization>();
+    companyDetail.setTitle(title);
+    mContact->saveDetail(&companyDetail);
+    emit titleChanged();
+}
+
+QString SeasidePerson::role() const
+{
+    QContactOrganization company = mContact->detail<QContactOrganization>();
     return company.role();
 }
 
-void SeasidePerson::setTitle(const QString &role)
+void SeasidePerson::setRole(const QString &role)
 {
     QContactOrganization companyDetail = mContact->detail<QContactOrganization>();
     companyDetail.setRole(role);
     mContact->saveDetail(&companyDetail);
-    emit titleChanged();
+    emit roleChanged();
+}
+
+QString SeasidePerson::department() const
+{
+    QContactOrganization company = mContact->detail<QContactOrganization>();
+    return company.department().join(QString::fromLatin1("; "));
+}
+
+void SeasidePerson::setDepartment(const QString &department)
+{
+    QStringList dept;
+    foreach (const QString &field, department.split(QChar::fromLatin1(';'), QString::SkipEmptyParts)) {
+        dept.append(field.trimmed());
+    }
+
+    QContactOrganization companyDetail = mContact->detail<QContactOrganization>();
+    companyDetail.setDepartment(dept);
+    mContact->saveDetail(&companyDetail);
+    emit departmentChanged();
 }
 
 bool SeasidePerson::favorite() const
@@ -1740,8 +1773,14 @@ void SeasidePerson::updateContactDetails(const QContact &oldContact)
     if (oldCompany.name() != newCompany.name())
         emitChangeSignal(&SeasidePerson::companyNameChanged);
 
-    if (oldCompany.role() != newCompany.role())
+    if (oldCompany.title() != newCompany.title())
         emitChangeSignal(&SeasidePerson::titleChanged);
+
+    if (oldCompany.role() != newCompany.role())
+        emitChangeSignal(&SeasidePerson::roleChanged);
+
+    if (oldCompany.department() != newCompany.department())
+        emitChangeSignal(&SeasidePerson::departmentChanged);
 
     QContactFavorite oldFavorite = oldContact.detail<QContactFavorite>();
     QContactFavorite newFavorite = mContact->detail<QContactFavorite>();
@@ -1819,6 +1858,8 @@ void SeasidePerson::emitChangeSignals()
     emitChangeSignal(&SeasidePerson::middleNameChanged);
     emitChangeSignal(&SeasidePerson::companyNameChanged);
     emitChangeSignal(&SeasidePerson::titleChanged);
+    emitChangeSignal(&SeasidePerson::roleChanged);
+    emitChangeSignal(&SeasidePerson::departmentChanged);
     emitChangeSignal(&SeasidePerson::favoriteChanged);
     emitChangeSignal(&SeasidePerson::avatarUrlChanged);
     emitChangeSignal(&SeasidePerson::avatarPathChanged);
