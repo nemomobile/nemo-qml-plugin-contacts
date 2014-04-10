@@ -29,7 +29,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#include <QDebug>
+#include "seasideperson.h"
 
 #include <qtcontacts-extensions.h>
 
@@ -51,8 +51,6 @@
 
 #include <QVersitWriter>
 #include <QVersitContactExporter>
-
-#include "seasideperson.h"
 
 QTVERSIT_USE_NAMESPACE
 
@@ -644,6 +642,8 @@ QVariantList SeasidePerson::nicknameDetails(const QContact &contact)
     int index = 0;
     foreach (const QContactNickname &detail, contact.details<QContactNickname>()) {
         const QString nickname(detail.value(QContactNickname::FieldNickname).toString());
+        if (nickname.trimmed().isEmpty())
+            continue;
 
         QVariantMap item(detailProperties(detail));
         item.insert(nicknameDetailNickname, nickname);
@@ -812,6 +812,9 @@ QVariantList SeasidePerson::phoneDetails(const QContact &contact)
     int index = 0;
     foreach (const QContactPhoneNumber &detail, contact.details<QContactPhoneNumber>()) {
         const QString number(detail.value(QContactPhoneNumber::FieldNumber).toString());
+        if (number.trimmed().isEmpty())
+            continue;
+
         const QString normalized(SeasideCache::normalizePhoneNumber(number));
         const QString minimized(SeasideCache::minimizePhoneNumber(normalized));
 
@@ -905,8 +908,12 @@ QVariantList SeasidePerson::emailDetails(const QContact &contact)
 
     int index = 0;
     foreach (const QContactEmailAddress &detail, contact.details<QContactEmailAddress>()) {
+        const QString address(detail.value(QContactEmailAddress::FieldEmailAddress).toString());
+        if (address.trimmed().isEmpty())
+            continue;
+
         QVariantMap item(detailProperties(detail));
-        item.insert(emailDetailAddress, detail.value(QContactEmailAddress::FieldEmailAddress).toString());
+        item.insert(emailDetailAddress, address);
         item.insert(detailType, EmailAddressType);
         item.insert(detailLabel, ::detailLabelType(detail));
         item.insert(detailIndex, index++);
@@ -977,25 +984,6 @@ void SeasidePerson::setEmailDetails(const QVariantList &emailDetails)
 }
 
 namespace {
-
-QString addressString(const QContactAddress &address)
-{
-    QString rv;
-
-    rv.append(address.street());
-    rv.append("\n");
-    rv.append(address.locality());
-    rv.append("\n");
-    rv.append(address.region());
-    rv.append("\n");
-    rv.append(address.postcode());
-    rv.append("\n");
-    rv.append(address.country());
-    rv.append("\n");
-    rv.append(address.postOfficeBox());
-
-    return rv;
-}
 
 void setAddress(QContactAddress &address, const QStringList &addressStrings)
 {
@@ -1091,8 +1079,22 @@ QVariantList SeasidePerson::addressDetails(const QContact &contact)
 
     int index = 0;
     foreach (const QContactAddress &detail, contact.details<QContactAddress>()) {
+        const QStringList elements(QStringList() << detail.street().trimmed()
+                                                 << detail.locality().trimmed()
+                                                 << detail.region().trimmed()
+                                                 << detail.postcode().trimmed()
+                                                 << detail.country().trimmed()
+                                                 << detail.postOfficeBox().trimmed());
+
+        bool nonEmpty = false;
+        foreach (const QString &element, elements) {
+            nonEmpty |= !element.isEmpty();
+        }
+        if (!nonEmpty)
+            continue;
+
         QVariantMap item(detailProperties(detail));
-        item.insert(addressDetailAddress, ::addressString(detail));
+        item.insert(addressDetailAddress, elements.join(QString::fromLatin1("\n")));
         item.insert(detailType, AddressType);
         item.insert(detailSubTypes, ::addressSubTypes(detail));
         item.insert(detailLabel, ::detailLabelType(detail));
@@ -1240,8 +1242,12 @@ QVariantList SeasidePerson::websiteDetails(const QContact &contact)
 
     int index = 0;
     foreach (const QContactUrl &detail, contact.details<QContactUrl>()) {
+        const QString url(detail.value(QContactUrl::FieldUrl).toUrl().toString());
+        if (url.trimmed().isEmpty())
+            continue;
+
         QVariantMap item(detailProperties(detail));
-        item.insert(websiteDetailUrl, detail.value(QContactUrl::FieldUrl).toUrl().toString());
+        item.insert(websiteDetailUrl, url);
         item.insert(detailType, WebsiteType);
         item.insert(detailSubType, ::websiteSubType(detail));
         item.insert(detailLabel, ::detailLabelType(detail));
@@ -1588,8 +1594,12 @@ QVariantList SeasidePerson::accountDetails(const QContact &contact)
 
     int index = 0;
     foreach (const QContactOnlineAccount &detail, contact.details<QContactOnlineAccount>()) {
+        const QString uri(detail.value(QContactOnlineAccount::FieldAccountUri).toString());
+        if (uri.trimmed().isEmpty())
+            continue;
+
         QVariantMap item(detailProperties(detail));
-        item.insert(accountDetailUri, detail.value(QContactOnlineAccount::FieldAccountUri).toString());
+        item.insert(accountDetailUri, uri);
         item.insert(accountDetailPath, detail.value(QContactOnlineAccount__FieldAccountPath).toString());
         item.insert(accountDetailDisplayName, detail.value(QContactOnlineAccount__FieldAccountDisplayName).toString());
         item.insert(accountDetailIconPath, detail.value(QContactOnlineAccount__FieldAccountIconPath).toString());
