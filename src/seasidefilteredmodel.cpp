@@ -105,19 +105,19 @@ QMap<uint, QString> decompositionMapping()
 {
     QMap<uint, QString> rv;
 
-    rv.insert(0x00df, QString::fromLatin1("ss")); // sharp-s ('sz' ligature)
-    rv.insert(0x00e6, QString::fromLatin1("ae")); // 'ae' ligature
-    rv.insert(0x00f0, QString::fromLatin1("d"));  // eth
-    rv.insert(0x00f8, QString::fromLatin1("o"));  // o with stroke
-    rv.insert(0x00fe, QString::fromLatin1("th")); // thorn
-    rv.insert(0x0111, QString::fromLatin1("d"));  // d with stroke
-    rv.insert(0x0127, QString::fromLatin1("h"));  // h with stroke
-    rv.insert(0x0138, QString::fromLatin1("k"));  // kra
-    rv.insert(0x0142, QString::fromLatin1("l"));  // l with stroke
-    rv.insert(0x014b, QString::fromLatin1("n"));  // eng
-    rv.insert(0x0153, QString::fromLatin1("oe")); // 'oe' ligature
-    rv.insert(0x0167, QString::fromLatin1("t"));  // t with stroke
-    rv.insert(0x017f, QString::fromLatin1("s"));  // long s
+    rv.insert(0x00df, QStringLiteral("ss")); // sharp-s ('sz' ligature)
+    rv.insert(0x00e6, QStringLiteral("ae")); // 'ae' ligature
+    rv.insert(0x00f0, QStringLiteral("d"));  // eth
+    rv.insert(0x00f8, QStringLiteral("o"));  // o with stroke
+    rv.insert(0x00fe, QStringLiteral("th")); // thorn
+    rv.insert(0x0111, QStringLiteral("d"));  // d with stroke
+    rv.insert(0x0127, QStringLiteral("h"));  // h with stroke
+    rv.insert(0x0138, QStringLiteral("k"));  // kra
+    rv.insert(0x0142, QStringLiteral("l"));  // l with stroke
+    rv.insert(0x014b, QStringLiteral("n"));  // eng
+    rv.insert(0x0153, QStringLiteral("oe")); // 'oe' ligature
+    rv.insert(0x0167, QStringLiteral("t"));  // t with stroke
+    rv.insert(0x017f, QStringLiteral("s"));  // long s
 
     return rv;
 }

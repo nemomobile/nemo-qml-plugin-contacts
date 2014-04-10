@@ -281,7 +281,7 @@ QString SeasidePerson::displayLabel() const
 {
     if (mDisplayLabel.isEmpty()) {
         // TODO: localization?
-        return QString::fromLatin1("(Unnamed)");
+        return QStringLiteral("(Unnamed)");
     }
     return mDisplayLabel;
 }
@@ -364,7 +364,7 @@ void SeasidePerson::setRole(const QString &role)
 QString SeasidePerson::department() const
 {
     QContactOrganization company = mContact->detail<QContactOrganization>();
-    return company.department().join(QString::fromLatin1("; "));
+    return company.department().join(QStringLiteral("; "));
 }
 
 void SeasidePerson::setDepartment(const QString &department)
@@ -415,7 +415,7 @@ QUrl SeasidePerson::avatarUrl() const
 
 void SeasidePerson::setAvatarUrl(QUrl avatarUrl)
 {
-    static const QString localMetadata(QString::fromLatin1("local"));
+    static const QString localMetadata(QStringLiteral("local"));
 
     QContactAvatar localAvatar;
     foreach (const QContactAvatar &avatar, mContact->details<QContactAvatar>()) {
@@ -507,14 +507,14 @@ void setDetailLabelType(QContactDetail &detail, int label)
     }
 }
 
-const QString detailReadOnly(QString::fromLatin1("readOnly"));
-const QString detailOriginId(QString::fromLatin1("originId"));
-const QString detailSyncTarget(QString::fromLatin1("syncTarget"));
-const QString detailType(QString::fromLatin1("type"));
-const QString detailSubType(QString::fromLatin1("subType"));
-const QString detailSubTypes(QString::fromLatin1("subTypes"));
-const QString detailLabel(QString::fromLatin1("label"));
-const QString detailIndex(QString::fromLatin1("index"));
+const QString detailReadOnly(QStringLiteral("readOnly"));
+const QString detailOriginId(QStringLiteral("originId"));
+const QString detailSyncTarget(QStringLiteral("syncTarget"));
+const QString detailType(QStringLiteral("type"));
+const QString detailSubType(QStringLiteral("subType"));
+const QString detailSubTypes(QStringLiteral("subTypes"));
+const QString detailLabel(QStringLiteral("label"));
+const QString detailIndex(QStringLiteral("index"));
 
 QVariantMap detailProperties(const QContactDetail &detail)
 {
@@ -631,7 +631,7 @@ void updateDetails(QList<T> &existing, QList<T> &modified, QList<T> &appended, Q
     }
 }
 
-const QString nicknameDetailNickname(QString::fromLatin1("nickname"));
+const QString nicknameDetailNickname(QStringLiteral("nickname"));
 
 }
 
@@ -798,10 +798,10 @@ void setPhoneNumberSubTypes(QContactPhoneNumber &number, const QVariantList &typ
     number.setSubTypes(subTypes);
 }
 
-const QString phoneDetailNumber(QString::fromLatin1("number"));
-const QString phoneDetailNormalizedNumber(QString::fromLatin1("normalizedNumber"));
-const QString phoneDetailMinimizedNumber(QString::fromLatin1("minimizedNumber"));
-const QString phoneDetailSubTypes(QString::fromLatin1("subTypes"));
+const QString phoneDetailNumber(QStringLiteral("number"));
+const QString phoneDetailNormalizedNumber(QStringLiteral("normalizedNumber"));
+const QString phoneDetailMinimizedNumber(QStringLiteral("minimizedNumber"));
+const QString phoneDetailSubTypes(QStringLiteral("subTypes"));
 
 }
 
@@ -898,7 +898,7 @@ void SeasidePerson::setPhoneDetails(const QVariantList &phoneDetails)
 
 namespace {
 
-const QString emailDetailAddress(QString::fromLatin1("address"));
+const QString emailDetailAddress(QStringLiteral("address"));
 
 }
 
@@ -1069,7 +1069,7 @@ void setAddressSubTypes(QContactAddress &address, const QVariantList &types)
     address.setSubTypes(subTypes);
 }
 
-const QString addressDetailAddress(QString::fromLatin1("address"));
+const QString addressDetailAddress(QStringLiteral("address"));
 
 }
 
@@ -1094,7 +1094,7 @@ QVariantList SeasidePerson::addressDetails(const QContact &contact)
             continue;
 
         QVariantMap item(detailProperties(detail));
-        item.insert(addressDetailAddress, elements.join(QString::fromLatin1("\n")));
+        item.insert(addressDetailAddress, elements.join(QStringLiteral("\n")));
         item.insert(detailType, AddressType);
         item.insert(detailSubTypes, ::addressSubTypes(detail));
         item.insert(detailLabel, ::detailLabelType(detail));
@@ -1232,7 +1232,7 @@ void setWebsiteSubType(QContactUrl &website, const QVariant &type)
     }
 }
 
-const QString websiteDetailUrl(QString::fromLatin1("url"));
+const QString websiteDetailUrl(QStringLiteral("url"));
 
 }
 
@@ -1399,7 +1399,7 @@ void setAnniversarySubType(QContactAnniversary &anniversary, const QVariant &typ
     }
 }
 
-const QString anniversaryDetailOriginalDate(QString::fromLatin1("originalDate"));
+const QString anniversaryDetailOriginalDate(QStringLiteral("originalDate"));
 
 }
 
@@ -1561,15 +1561,15 @@ void setOnlineAccountSubTypes(QContactOnlineAccount &account, const QVariantList
     account.setSubTypes(subTypes);
 }
 
-const QString accountDetailUri(QString::fromLatin1("accountUri"));
-const QString accountDetailPath(QString::fromLatin1("accountPath"));
-const QString accountDetailDisplayName(QString::fromLatin1("accountDisplayName"));
-const QString accountDetailIconPath(QString::fromLatin1("iconPath"));
-const QString accountDetailServiceProvider(QString::fromLatin1("serviceProvider"));
-const QString accountDetailServiceProviderDisplayName(QString::fromLatin1("serviceProviderDisplayName"));
-const QString accountDetailPresenceState(QString::fromLatin1("presenceState"));
-const QString accountDetailPresenceMessage(QString::fromLatin1("presenceMessage"));
-const QString accountDetailEnabled(QString::fromLatin1("enabled"));
+const QString accountDetailUri(QStringLiteral("accountUri"));
+const QString accountDetailPath(QStringLiteral("accountPath"));
+const QString accountDetailDisplayName(QStringLiteral("accountDisplayName"));
+const QString accountDetailIconPath(QStringLiteral("iconPath"));
+const QString accountDetailServiceProvider(QStringLiteral("serviceProvider"));
+const QString accountDetailServiceProviderDisplayName(QStringLiteral("serviceProviderDisplayName"));
+const QString accountDetailPresenceState(QStringLiteral("presenceState"));
+const QString accountDetailPresenceMessage(QStringLiteral("presenceMessage"));
+const QString accountDetailEnabled(QStringLiteral("enabled"));
 
 template<typename ListType>
 typename ListType::value_type linkedDetail(const ListType &details, const QString &uri)
