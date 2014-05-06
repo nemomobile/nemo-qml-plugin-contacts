@@ -382,7 +382,7 @@ signals:
     void dataChanged();
 
 public slots:
-    void recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order = SeasideCache::FirstNameFirst) const;
+    void recalculateDisplayLabel(SeasideCache::DisplayLabelOrder order = SeasideCache::displayLabelOrder()) const;
 
 private:
     void updateContactDetails(const QContact &oldContact);
