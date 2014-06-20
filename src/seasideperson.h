@@ -68,6 +68,7 @@ public:
 
     Q_INVOKABLE QVariantList removeDuplicatePhoneNumbers(const QVariantList &phoneNumbers);
     Q_INVOKABLE QVariantList removeDuplicateOnlineAccounts(const QVariantList &onlineAccounts);
+    Q_INVOKABLE QVariantList removeDuplicateEmailAddresses(const QVariantList &emailAddresses);
 
 signals:
     // Not currently emitted:
@@ -318,6 +319,7 @@ public:
 
     Q_INVOKABLE static QVariantList removeDuplicatePhoneNumbers(const QVariantList &phoneNumbers);
     Q_INVOKABLE static QVariantList removeDuplicateOnlineAccounts(const QVariantList &onlineAccounts);
+    Q_INVOKABLE static QVariantList removeDuplicateEmailAddresses(const QVariantList &emailAddresses);
 
     void displayLabelOrderChanged(SeasideCache::DisplayLabelOrder order);
 

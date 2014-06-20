@@ -103,6 +103,11 @@ QVariantList SeasidePersonAttached::removeDuplicateOnlineAccounts(const QVariant
     return SeasidePerson::removeDuplicateOnlineAccounts(onlineAccounts);
 }
 
+QVariantList SeasidePersonAttached::removeDuplicateEmailAddresses(const QVariantList &emailAddresses)
+{
+    return SeasidePerson::removeDuplicateEmailAddresses(emailAddresses);
+}
+
 SeasidePerson::SeasidePerson(QObject *parent)
     : QObject(parent)
     , mContact(new QContact)
@@ -2129,6 +2134,35 @@ QVariantList SeasidePerson::removeDuplicateOnlineAccounts(const QVariantList &on
                     // We don't need to add another without a path
                     break;
                 }
+            }
+        }
+        if (it == end) {
+            // No match found, or differs on path
+            rv.append(detail);
+        }
+    }
+
+    return rv;
+}
+
+QVariantList SeasidePerson::removeDuplicateEmailAddresses(const QVariantList &emailAddresses)
+{
+    QVariantList rv;
+
+    foreach (const QVariant &item, emailAddresses) {
+        const QVariantMap detail(item.value<QVariantMap>());
+        const QString address = detail.value(emailDetailAddress).toString().trimmed().toLower();
+
+        // See if we already have this address (case-insensitive)
+        QVariantList::iterator it = rv.begin(), end = rv.end();
+        for ( ; it != end; ++it) {
+            const QVariant &rvItem(*it);
+            const QVariantMap prior(rvItem.value<QVariantMap>());
+            const QString priorAddress = prior.value(emailDetailAddress).toString().trimmed().toLower();
+
+            if (priorAddress == address) {
+                // This address is already present, suppress this instance
+                break;
             }
         }
         if (it == end) {
