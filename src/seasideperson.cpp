@@ -2037,45 +2037,49 @@ QVariantList SeasidePerson::removeDuplicatePhoneNumbers(const QVariantList &phon
 
     foreach (const QVariant &item, phoneNumbers) {
         const QVariantMap detail(item.value<QVariantMap>());
-        const QVariant &minimized = detail.value(phoneDetailMinimizedNumber);
+        const QString &normalized = detail.value(phoneDetailNormalizedNumber).toString();
+
+        const QChar plus(QChar::fromLatin1('+'));
+        const bool initialPlus = (normalized[0] == plus);
 
         // See if we already have a match for this number in minimized form
         QVariantList::iterator it = rv.begin(), end = rv.end();
         for ( ; it != end; ++it) {
             const QVariant &rvItem(*it);
             const QVariantMap prior(rvItem.value<QVariantMap>());
-            const QVariant &priorMinimized = prior.value(phoneDetailMinimizedNumber);
 
-            if (priorMinimized == minimized) {
-                // This number is already present in minimized form - which is preferred?
-                const QString &normalized = detail.value(phoneDetailNormalizedNumber).toString();
-                const QString &priorNormalized = prior.value(phoneDetailNormalizedNumber).toString();
+            bool replace(false);
+            bool append(false);
 
-                const QString &number = detail.value(phoneDetailNumber).toString();
-                const QString &priorNumber = prior.value(phoneDetailNumber).toString();
+            bool previousMatch = false;
+            if (initialPlus) {
+                // Only suppress this number if the entire number is a match
+                const QString priorNormalized = prior.value(phoneDetailNormalizedNumber).toString();
 
-                // We will allow up to two forms: the longest initial-plus variant, and
-                // the longest non-plus variant, but only if that exceeds the length of
-                // the initial-plus form, where present
-                bool replace(false);
-                bool append(false);
-
-                const QChar plus(QChar::fromLatin1('+'));
-                if (normalized.length() && normalized[0] == plus) {
-                    if (priorNormalized.length() && priorNormalized[0] == plus) {
-                        // Prefer the longer normalized form, or the longer unnormalized form
-                        // if the normalized forms are equal
-                        replace = (normalized.length() > priorNormalized.length() ||
-                                   (normalized.length() == priorNormalized.length() &&
-                                    number.length() > priorNumber.length()));
-                    } else {
-                        if (normalized.length() >= priorNormalized.length()) {
-                            replace = true;
-                        } else {
-                            append = true;
-                        }
-                    }
+                if (priorNormalized != normalized) {
+                    append = true;
                 } else {
+                    // If this number is longer (more formatting) than the previous, replace it
+                    const QString number = detail.value(phoneDetailNumber).toString();
+                    const QString priorNumber = prior.value(phoneDetailNumber).toString();
+
+                    replace = (number.length() > priorNumber.length());
+                }
+            } else {
+                // Suppress this number if it is a minimized match to a preceding number
+                const QString minimized = detail.value(phoneDetailMinimizedNumber).toString();
+                const QString priorMinimized = prior.value(phoneDetailMinimizedNumber).toString();
+
+                if (priorMinimized == minimized) {
+                    // This number is already present in minimized form - which is preferred?
+                    const QString priorNormalized = prior.value(phoneDetailNormalizedNumber).toString();
+
+                    const QString number = detail.value(phoneDetailNumber).toString();
+                    const QString priorNumber = prior.value(phoneDetailNumber).toString();
+
+                    // We will allow up to two forms: the longest-formatted initial-plus variant, and
+                    // the longest non-initial-plus variant, but only if that exceeds the length of
+                    // the initial-plus form, where present
                     if (normalized.length() > priorNormalized.length() ||
                         (normalized.length() == priorNormalized.length() &&
                          number.length() > priorNumber.length())) {
@@ -2086,14 +2090,14 @@ QVariantList SeasidePerson::removeDuplicatePhoneNumbers(const QVariantList &phon
                         }
                     }
                 }
+            }
 
-                if (replace) {
-                    // Prefer this form of the number to the shorter form already present
-                    *it = detail;
-                    break;
-                } else if (!append) {
-                    break;
-                }
+            if (replace) {
+                // Prefer this form of the number to the shorter form already present
+                *it = detail;
+                break;
+            } else if (!append) {
+                break;
             }
         }
         if (it == end) {
