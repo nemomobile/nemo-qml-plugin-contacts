@@ -87,6 +87,7 @@ private slots:
     void constituents();
     void removeDuplicatePhoneNumbers();
     void removeDuplicateOnlineAccounts();
+    void removeDuplicateEmailAddresses();
 
 private:
     QStringList m_nameGroups;
@@ -1087,6 +1088,49 @@ void tst_SeasidePerson::removeDuplicateOnlineAccounts()
             const QString uri(detail.value(accountDetailUri).toString().toLower());
             const QString path(detail.value(accountDetailPath).toString());
             resultList.append(qMakePair(uri, path));
+        }
+        QCOMPARE(resultList.toSet(), expected);
+    }
+}
+
+void tst_SeasidePerson::removeDuplicateEmailAddresses()
+{
+    const QString emailDetailAddress(QString::fromLatin1("address"));
+
+    QList<QVariantMap> addresses;
+
+    QStringList addressDetails;
+    addressDetails << QString::fromLatin1("fred@example.net")
+                   << QString::fromLatin1("Fred@Example.NET")
+                   << QString::fromLatin1("fred@example.com")
+                   << QString::fromLatin1(" fred@example.com ")
+                   << QString::fromLatin1("barney@example.com");
+
+    foreach (const QString &addr, addressDetails) {
+        QVariantMap emailAddress;
+        emailAddress.insert(emailDetailAddress, addr);
+        addresses.append(emailAddress);
+    }
+
+    // Whatever order the addresses are inserted in, the returned addresses should be the same (case-insensitive)
+    QSet<QString> expected;
+    expected.insert(QString::fromLatin1("fred@example.net"));
+    expected.insert(QString::fromLatin1("fred@example.com"));
+    expected.insert(QString::fromLatin1("barney@example.com"));
+
+    SeasidePerson person;
+
+    // Test all possible orderings of the input set
+    int indices[5];
+    for (prepare(indices); permute(indices); ) {
+        QVariantList addressList(reorder(indices, addresses));
+        QVariantList deduplicated(person.removeDuplicateEmailAddresses(addressList));
+
+        QStringList resultList;
+        foreach (const QVariant &item, deduplicated) {
+            const QVariantMap detail(item.value<QVariantMap>());
+            const QString addr(detail.value(emailDetailAddress).toString().trimmed().toLower());
+            resultList.append(addr);
         }
         QCOMPARE(resultList.toSet(), expected);
     }
