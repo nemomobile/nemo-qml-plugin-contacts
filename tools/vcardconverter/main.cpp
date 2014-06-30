@@ -30,6 +30,7 @@
  */
 
 #include <seasideimport.h>
+#include <seasideexport.h>
 
 // Qt
 #include <QCoreApplication>
@@ -42,7 +43,6 @@
 #include <QContactSyncTarget>
 
 // Versit
-#include <QVersitContactExporter>
 #include <QVersitReader>
 #include <QVersitWriter>
 
@@ -60,13 +60,15 @@ void invalidUsage(const QString &app)
 QContactFilter localContactFilter()
 {
     // Contacts that are local to the device have sync target 'local' or 'was_local'
-    QContactDetailFilter filterLocal, filterWasLocal;
+    QContactDetailFilter filterLocal, filterWasLocal, filterBluetooth;
     filterLocal.setDetailType(QContactSyncTarget::Type, QContactSyncTarget::FieldSyncTarget);
     filterWasLocal.setDetailType(QContactSyncTarget::Type, QContactSyncTarget::FieldSyncTarget);
+    filterBluetooth.setDetailType(QContactSyncTarget::Type, QContactSyncTarget::FieldSyncTarget);
     filterLocal.setValue(QString::fromLatin1("local"));
     filterWasLocal.setValue(QString::fromLatin1("was_local"));
+    filterBluetooth.setValue(QString::fromLatin1("bluetooth"));
 
-    return filterLocal | filterWasLocal;
+    return filterLocal | filterWasLocal | filterBluetooth;
 }
 
 }
@@ -149,14 +151,13 @@ int main(int argc, char **argv)
     } else {
         QList<QContact> localContacts(mgr.contacts(localContactFilter()));
 
-        QVersitContactExporter exporter;
-        exporter.exportContacts(localContacts);
-        qDebug("Exporting %d contacts", exporter.documents().count());
+        QList<QVersitDocument> documents(SeasideExport::buildExportContacts(localContacts));
+        qDebug("Exporting %d contacts", documents.count());
 
         QVersitWriter writer(&vcf);
-        writer.startWriting(exporter.documents());
+        writer.startWriting(documents);
         writer.waitForFinished();
-        qDebug("Wrote %d contacts", exporter.documents().count());
+        qDebug("Wrote %d contacts", documents.count());
     }
 
     return 0;
