@@ -1001,15 +1001,19 @@ void tst_SeasidePerson::removeDuplicatePhoneNumbers()
                   << QString::fromLatin1("(12) 345-678")      // punctuation
                   << QString::fromLatin1("00112345678")       // extended
                   << QString::fromLatin1("+0112345678")       // initial plus
-                  << QString::fromLatin1("+00112345678")      // longer initial plus
-                  << QString::fromLatin1("+0011-2345678");    // longer initial plus with punctuation
+                  << QString::fromLatin1("+1112345678");      // differing initial plus
+
+    // The differing number will be returned
+    const int differingIndex = numberStrings.count() - 1;
+
+    numberStrings << QString::fromLatin1("+011-234-5678");    // longer initial plus with punctuation
 
     // The last form is the form that we expect to be selected for display
     const int preferredFormIndex = numberStrings.count() - 1;
 
-    numberStrings << QString::fromLatin1("0000112345678")     // longer extended
-                  << QString::fromLatin1("12345012345678")    // super extended
-                  << QString::fromLatin1("(12345)012345678"); // super extended with punctuation
+    numberStrings << QString::fromLatin1("00001112345678")     // longer extended
+                  << QString::fromLatin1("123450112345678")    // super extended
+                  << QString::fromLatin1("(12345)0112345678"); // super extended with punctuation
 
     // The last form is the extended option that should also be selected
     const int preferredExtendedFormIndex = numberStrings.count() - 1;
@@ -1023,8 +1027,9 @@ void tst_SeasidePerson::removeDuplicatePhoneNumbers()
         numbers.append(number);
     }
 
-    // Whatever order the numbers are inserted in, the two returned numbers should be the same
+    // Whatever order the numbers are inserted in, the three returned numbers should be the same
     QSet<QString> expectedSet;
+    expectedSet.insert(numbers[differingIndex].value(phoneDetailNumber).toString());
     expectedSet.insert(numbers[preferredFormIndex].value(phoneDetailNumber).toString());
     expectedSet.insert(numbers[preferredExtendedFormIndex].value(phoneDetailNumber).toString());
 
