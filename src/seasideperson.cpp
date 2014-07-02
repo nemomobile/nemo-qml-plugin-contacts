@@ -2040,7 +2040,7 @@ QVariantList SeasidePerson::removeDuplicatePhoneNumbers(const QVariantList &phon
         const QString &normalized = detail.value(phoneDetailNormalizedNumber).toString();
 
         const QChar plus(QChar::fromLatin1('+'));
-        const bool initialPlus = (normalized[0] == plus);
+        const bool initialPlus = (!normalized.isEmpty() && normalized[0] == plus);
 
         // See if we already have a match for this number in minimized form
         QVariantList::iterator it = rv.begin(), end = rv.end();
@@ -2051,7 +2051,6 @@ QVariantList SeasidePerson::removeDuplicatePhoneNumbers(const QVariantList &phon
             bool replace(false);
             bool append(false);
 
-            bool previousMatch = false;
             if (initialPlus) {
                 // Only suppress this number if the entire number is a match
                 const QString priorNormalized = prior.value(phoneDetailNormalizedNumber).toString();
