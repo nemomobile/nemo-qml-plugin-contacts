@@ -1,4 +1,3 @@
-VERSION = 0.0.1
 PROJECT_NAME = vcardconverter
 TEMPLATE = app
 CONFIG += ordered hide_symbols

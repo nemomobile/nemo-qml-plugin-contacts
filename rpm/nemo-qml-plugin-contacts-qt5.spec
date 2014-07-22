@@ -53,7 +53,7 @@ Requires:   %{name} = %{version}-%{release}
 # >> build pre
 # << build pre
 
-%qmake5 
+%qmake5 VERSION=%{version}
 
 make %{?_smp_mflags}
 
