@@ -35,6 +35,7 @@
 // Qt
 #include <QCoreApplication>
 #include <QFile>
+#include <QTextStream>
 #include <QTimer>
 
 // Contacts
@@ -51,9 +52,15 @@ QTVERSIT_USE_NAMESPACE
 
 namespace {
 
+void errorMessage(const QString &s)
+{
+    QTextStream ts(stderr);
+    ts << s << endl;
+}
+
 void invalidUsage(const QString &app)
 {
-    qWarning("Usage: %s [-e | --export] <filename>", qPrintable(app));
+    errorMessage(QString::fromLatin1("Usage: %s [-e | --export] <filename>").arg(app));
     ::exit(1);
 }
 
@@ -90,7 +97,7 @@ int main(int argc, char **argv)
             } else if (arg == QString::fromLatin1("-e") || arg == QString::fromLatin1("--export")) {
                 import = false;
             } else {
-                qWarning("%s: unknown option: '%s'", qPrintable(app), qPrintable(arg));
+                errorMessage(QString::fromLatin1("%s: unknown option: '%s'").arg(app).arg(arg));
                 invalidUsage(app);
             }
         } else {
@@ -99,14 +106,14 @@ int main(int argc, char **argv)
     }
 
     if (filename.isNull()) {
-        qWarning("%s: filename must be specified", qPrintable(app));
+        errorMessage(QString::fromLatin1("%s: filename must be specified").arg(app));
         invalidUsage(app);
     }
 
     QFile vcf(filename);
     QIODevice::OpenMode mode(import ? QIODevice::ReadOnly : QIODevice::WriteOnly | QIODevice::Truncate);
     if (!vcf.open(mode)) {
-        qWarning("%s: file cannot be opened: '%s'", qPrintable(app), qPrintable(filename));
+        errorMessage(QString::fromLatin1("%s: file cannot be opened: '%s'").arg(app).arg(filename));
         ::exit(2);
     }
 
