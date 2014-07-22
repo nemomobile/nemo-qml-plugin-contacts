@@ -44,8 +44,10 @@
 #include <QContactAvatar>
 #include <QContactBirthday>
 #include <QContactEmailAddress>
+#include <QContactFamily>
 #include <QContactFavorite>
 #include <QContactGender>
+#include <QContactGeoLocation>
 #include <QContactGlobalPresence>
 #include <QContactGuid>
 #include <QContactHobby>
@@ -68,21 +70,31 @@ namespace {
 
 QString delimiter(QString::fromLatin1("\n    "));
 
+void errorMessage(const QString &s)
+{
+    QTextStream ts(stderr);
+    ts << s << endl;
+}
+
 void invalidUsage(const QString &app)
 {
-    qWarning("Usage: %s [OPTIONS] COMMAND", qPrintable(app));
-    qWarning("\nwhere COMMAND is one of:");
-    qWarning("  list [sync-target]   - lists all contacts, optionally specified by sync-target type");
-    qWarning("  search <search-text> - searches for contacts with details containing search-text");
-    qWarning("  details <ID...>      - lists details for contacts matching the supplied ID list");
-    qWarning("  links <ID...>        - lists links for contacts matching the supplied ID list");
-    qWarning("  delete <ID...>       - removes contacts matching the supplied ID list");
-    qWarning("  dump [ID...]         - displays contact details in debug format");
-    qWarning("  help                 - show this command summary");
-    qWarning("  version              - show the application version");
-    qWarning("\nOPTIONS:");
-    qWarning("  -t                   - use TAB delimiters");
-    qWarning("\nOutput is written to stdout.\n");
+    errorMessage(QString::fromLatin1(
+        "Usage: %1 [OPTIONS] COMMAND\n"
+        "\n"
+        "where COMMAND is one of:\n"
+        "  list [sync-target]   - lists all contacts, optionally specified by sync-target type\n"
+        "  search <search-text> - searches for contacts with details containing search-text\n"
+        "  details <ID...>      - lists details for contacts matching the supplied ID list\n"
+        "  links <ID...>        - lists links for contacts matching the supplied ID list\n"
+        "  delete <ID...>       - removes contacts matching the supplied ID list\n"
+        "  dump [ID...]         - displays contact details in debug format\n"
+        "  help                 - show this command summary\n"
+        "  version              - show the application version\n"
+        "\n"
+        "OPTIONS:\n"
+        "  -t                   - use TAB delimiters\n"
+        "\n"
+        "Output is written to stdout.\n").arg(app));
     ::exit(1);
 }
 
@@ -107,7 +119,7 @@ QSet<quint32> parseIds(const QString &ids)
         bool ok(false);
         quint32 value(id.toUInt(&ok));
         if (!ok) {
-            qWarning() << "Invalid ID value:" << id;
+            errorMessage(QString::fromLatin1("Invalid ID value: %1").arg(id));
             ::exit(2);
         }
         rv.insert(value);
@@ -267,9 +279,31 @@ QString print(const QContactEmailAddress &detail)
     return QString::fromLatin1("EmailAddress:\t") + list.join(QChar::fromLatin1(';'));
 }
 
+QString print(const QContactFamily &detail)
+{
+    QStringList list;
+    list.append(detail.spouse());
+    list.append(detail.children().join(QChar::fromLatin1(',')));
+    return QString::fromLatin1("Family:\t") + list.join(QChar::fromLatin1(';'));
+}
+
 QString print(const QContactFavorite &detail)
 {
     return QString::fromLatin1("Favorite:\t") + QString::number(detail.isFavorite() ? 1 : 0);
+}
+
+QString print(const QContactGeoLocation &detail)
+{
+    QStringList list;
+    list.append(QString::number(detail.latitude()));
+    list.append(QString::number(detail.longitude()));
+    list.append(QString::number(detail.accuracy()));
+    list.append(QString::number(detail.altitude()));
+    list.append(QString::number(detail.altitudeAccuracy()));
+    list.append(QString::number(detail.speed()));
+    list.append(QString::number(detail.heading()));
+    list.append(detail.timestamp().toString(Qt::ISODate));
+    return QString::fromLatin1("GeoLocation:\t%1").arg(detail.label()) + list.join(QChar::fromLatin1(';'));
 }
 
 QString print(const QContactGender &detail)
@@ -440,6 +474,12 @@ void printContactDetails(const QContact &contact)
     foreach (const QContactEmailAddress &detail, contact.details<QContactEmailAddress>()) {
         output << delimiter << print(detail);
     }
+    foreach (const QContactFamily &detail, contact.details<QContactFamily>()) {
+        output << delimiter << print(detail);
+    }
+    foreach (const QContactGeoLocation &detail, contact.details<QContactGeoLocation>()) {
+        output << delimiter << print(detail);
+    }
     foreach (const QContactGuid &detail, contact.details<QContactGuid>()) {
         output << delimiter << print(detail);
     }
@@ -596,7 +636,7 @@ int listContacts(char **begin, char **end)
 
     QString syncTarget(QString::fromUtf8(*begin));
     if (++begin != end) {
-        qWarning() << "Only one syncTarget is supported";
+        errorMessage(QString::fromLatin1("Only one syncTarget is supported"));
         return 3;
     }
     
@@ -612,13 +652,13 @@ int listContacts(char **begin, char **end)
 int searchContacts(char **begin, char **end)
 {
     if (begin == end) {
-        qWarning() << "Search text required";
+        errorMessage(QString::fromLatin1("Search text required"));
         return 2;
     }
 
     QString searchText(QString::fromUtf8(*begin));
     if (++begin != end) {
-        qWarning() << "Only one search text item is supported";
+        errorMessage(QString::fromLatin1("Only one search text item is supported"));
         return 3;
     }
     
@@ -656,7 +696,7 @@ int searchContacts(char **begin, char **end)
 int showDetails(char **begin, char **end)
 {
     if (begin == end) {
-        qWarning() << "ID list required";
+        errorMessage(QString::fromLatin1("ID list required"));
         return 2;
     }
 
@@ -668,7 +708,7 @@ int showDetails(char **begin, char **end)
 int showLinks(char **begin, char **end)
 {
     if (begin == end) {
-        qWarning() << "ID list required";
+        errorMessage(QString::fromLatin1("ID list required"));
         return 2;
     }
 
@@ -680,7 +720,7 @@ int showLinks(char **begin, char **end)
 int deleteContacts(char **begin, char **end)
 {
     if (begin == end) {
-        qWarning() << "ID list required";
+        errorMessage(QString::fromLatin1("ID list required"));
         return 2;
     }
 
@@ -747,7 +787,7 @@ int main(int argc, char **argv)
             command = QString::fromLatin1(argv[2]);
             ++offset;
         } else {
-            qWarning() << "Invalid option:" << command << "\n";
+            errorMessage(QString::fromLatin1("Invalid option: %1").arg(command));
             invalidUsage(app);
         }
     }
@@ -775,12 +815,12 @@ int main(int argc, char **argv)
     }
 
     if (command == QString::fromLatin1("version")) {
-        qWarning("%s Version: " VERSION_STRING, qPrintable(app));
+        errorMessage(QString::fromLatin1("%1 Version: " VERSION_STRING).arg(app));
         return 0;
     }
 
     if (command != QString::fromLatin1("help")) {
-        qWarning() << "Invalid command:" << command << "\n";
+        errorMessage(QString::fromLatin1("Invalid command: %1").arg(command));
     }
     invalidUsage(app);
 }
