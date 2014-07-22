@@ -44,8 +44,10 @@
 #include <QContactAvatar>
 #include <QContactBirthday>
 #include <QContactEmailAddress>
+#include <QContactFamily>
 #include <QContactFavorite>
 #include <QContactGender>
+#include <QContactGeoLocation>
 #include <QContactGlobalPresence>
 #include <QContactGuid>
 #include <QContactHobby>
@@ -267,9 +269,31 @@ QString print(const QContactEmailAddress &detail)
     return QString::fromLatin1("EmailAddress:\t") + list.join(QChar::fromLatin1(';'));
 }
 
+QString print(const QContactFamily &detail)
+{
+    QStringList list;
+    list.append(detail.spouse());
+    list.append(detail.children().join(QChar::fromLatin1(',')));
+    return QString::fromLatin1("Family:\t") + list.join(QChar::fromLatin1(';'));
+}
+
 QString print(const QContactFavorite &detail)
 {
     return QString::fromLatin1("Favorite:\t") + QString::number(detail.isFavorite() ? 1 : 0);
+}
+
+QString print(const QContactGeoLocation &detail)
+{
+    QStringList list;
+    list.append(QString::number(detail.latitude()));
+    list.append(QString::number(detail.longitude()));
+    list.append(QString::number(detail.accuracy()));
+    list.append(QString::number(detail.altitude()));
+    list.append(QString::number(detail.altitudeAccuracy()));
+    list.append(QString::number(detail.speed()));
+    list.append(QString::number(detail.heading()));
+    list.append(detail.timestamp().toString(Qt::ISODate));
+    return QString::fromLatin1("GeoLocation:\t%1").arg(detail.label()) + list.join(QChar::fromLatin1(';'));
 }
 
 QString print(const QContactGender &detail)
@@ -438,6 +462,12 @@ void printContactDetails(const QContact &contact)
         output << delimiter << print(detail);
     }
     foreach (const QContactEmailAddress &detail, contact.details<QContactEmailAddress>()) {
+        output << delimiter << print(detail);
+    }
+    foreach (const QContactFamily &detail, contact.details<QContactFamily>()) {
+        output << delimiter << print(detail);
+    }
+    foreach (const QContactGeoLocation &detail, contact.details<QContactGeoLocation>()) {
         output << delimiter << print(detail);
     }
     foreach (const QContactGuid &detail, contact.details<QContactGuid>()) {
