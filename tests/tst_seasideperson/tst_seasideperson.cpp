@@ -1015,6 +1015,11 @@ void tst_SeasidePerson::removeDuplicatePhoneNumbers()
                   << QString::fromLatin1("123450112345678")    // super extended
                   << QString::fromLatin1("(12345)0112345678"); // super extended with punctuation
 
+    // Add an unrelated number that should be included in the output
+    const int unrelatedIndex = numberStrings.count() - 1;
+
+    numberStrings << QString::fromLatin1("98765432");
+
     // The last form is the extended option that should also be selected
     const int preferredExtendedFormIndex = numberStrings.count() - 1;
 
@@ -1032,11 +1037,12 @@ void tst_SeasidePerson::removeDuplicatePhoneNumbers()
     expectedSet.insert(numbers[differingIndex].value(phoneDetailNumber).toString());
     expectedSet.insert(numbers[preferredFormIndex].value(phoneDetailNumber).toString());
     expectedSet.insert(numbers[preferredExtendedFormIndex].value(phoneDetailNumber).toString());
+    expectedSet.insert(numbers[unrelatedIndex].value(phoneDetailNumber).toString());
 
     SeasidePerson person;
 
     // Test all possible orderings of the input set
-    int indices[9];
+    int indices[10];
     for (prepare(indices); permute(indices); ) {
         QVariantList numberList(reorder(indices, numbers));
         QVariantList deduplicated(person.removeDuplicatePhoneNumbers(numberList));
