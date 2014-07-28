@@ -2088,6 +2088,8 @@ QVariantList SeasidePerson::removeDuplicatePhoneNumbers(const QVariantList &phon
                             replace = true;
                         }
                     }
+                } else {
+                    append = true;
                 }
             }
 
