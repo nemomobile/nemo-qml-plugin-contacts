@@ -314,10 +314,8 @@ struct FilterData : public SeasideCache::ItemListener
                 insert(matchTokens, splitWords(stringPreceding(detail.emailAddress(), atSymbol)));
             foreach (const QContactOrganization &detail, item->contact.details<QContactOrganization>())
                 insert(matchTokens, splitWords(detail.name()));
-            foreach (const QContactOnlineAccount &detail, item->contact.details<QContactOnlineAccount>()) {
+            foreach (const QContactOnlineAccount &detail, item->contact.details<QContactOnlineAccount>())
                 insert(matchTokens, splitWords(stringPreceding(detail.accountUri(), atSymbol)));
-                insert(matchTokens, splitWords(detail.serviceProvider()));
-            }
             foreach (const QContactGlobalPresence &detail, item->contact.details<QContactGlobalPresence>())
                 insert(matchTokens, splitWords(detail.nickname()));
             foreach (const QContactPresence &detail, item->contact.details<QContactPresence>())
