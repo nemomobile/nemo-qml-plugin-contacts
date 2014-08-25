@@ -703,7 +703,10 @@ SeasidePerson *SeasideFilteredModel::personByRow(int row) const
     if(row < 0 || row >= m_contactIds->size()) {
         return NULL;
     }
-    return personFromItem(SeasideCache::itemById(m_contactIds->at(row)));
+    if(m_allContactIds->contains(row)) {
+        return personFromItem(m_allContactIds->at(row));
+    }
+    return NULL;
 }
 
 SeasidePerson *SeasideFilteredModel::personById(int id) const
