@@ -700,10 +700,10 @@ bool SeasideFilteredModel::savePerson(SeasidePerson *person)
 
 SeasidePerson *SeasideFilteredModel::personByRow(int row) const
 {
-    if(row < 0 || row >= m_allContactIds->size()) {
+    if(row < 0 || row >= m_contactIds->size()) {
         return NULL;
     }
-    return personFromItem(SeasideCache::itemById(m_allContactIds->at(row)));
+    return personFromItem(SeasideCache::itemById(m_contactIds->at(row)));
 }
 
 SeasidePerson *SeasideFilteredModel::personById(int id) const
