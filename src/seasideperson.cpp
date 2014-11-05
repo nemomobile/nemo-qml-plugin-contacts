@@ -1958,7 +1958,7 @@ void SeasidePerson::resetContactData()
 QString SeasidePerson::vCard() const
 {
     QVersitContactExporter exporter;
-    if (!exporter.exportContacts(QList<QContact>() << *mContact, QVersitDocument::VCard21Type)) {
+    if (!exporter.exportContacts(QList<QContact>() << *mContact)) {
         qWarning() << Q_FUNC_INFO << "Failed to create vCard: " << exporter.errorMap();
         return QString();
     }
