@@ -201,6 +201,9 @@ public:
     static const QList<quint32> *contacts(FilterType filterType);
     static bool isPopulated(FilterType filterType);
 
+    static QString primaryName(const QString &firstName, const QString &lastName);
+    static QString secondaryName(const QString &firstName, const QString &lastName);
+
     static QString generateDisplayLabel(const QContact &contact, DisplayLabelOrder order = FirstNameFirst);
     static QString generateDisplayLabelFromNonNameDetails(const QContact &contact);
     static QUrl filteredAvatarUrl(const QContact &contact, const QStringList &metadataFragments = QStringList());
