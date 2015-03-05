@@ -183,9 +183,6 @@ void SeasidePerson::setFirstName(const QString &name)
 
     emit firstNameChanged();
 
-    const bool firstNameFirst(SeasideCache::displayLabelOrder() == SeasideCache::FirstNameFirst);
-    emit firstNameFirst ? primaryNameChanged() : secondaryNameChanged();
-
     recalculateDisplayLabel();
 }
 
@@ -202,9 +199,6 @@ void SeasidePerson::setLastName(const QString &name)
     mContact->saveDetail(&nameDetail);
 
     emit lastNameChanged();
-
-    const bool firstNameFirst(SeasideCache::displayLabelOrder() == SeasideCache::FirstNameFirst);
-    emit firstNameFirst ? secondaryNameChanged() : primaryNameChanged();
 
     recalculateDisplayLabel();
 }
@@ -1892,23 +1886,13 @@ void SeasidePerson::emitChangeSignals()
 QString SeasidePerson::getPrimaryName(const QContact &contact) const
 {
     const QContactName nameDetail = contact.detail<QContactName>();
-    const QString firstName(nameDetail.firstName());
-    const QString lastName(nameDetail.lastName());
-
-    if (firstName.isEmpty() && lastName.isEmpty()) {
-        return QString();
-    }
-
-    const bool firstNameFirst(SeasideCache::displayLabelOrder() == SeasideCache::FirstNameFirst);
-    return firstNameFirst ? firstName : lastName;
+    return SeasideCache::primaryName(nameDetail.firstName(), nameDetail.lastName());
 }
 
 QString SeasidePerson::getSecondaryName(const QContact &contact) const
 {
     const QContactName nameDetail = contact.detail<QContactName>();
-
-    const bool firstNameFirst(SeasideCache::displayLabelOrder() == SeasideCache::FirstNameFirst);
-    return firstNameFirst ? nameDetail.lastName() : nameDetail.firstName();
+    return SeasideCache::secondaryName(nameDetail.firstName(), nameDetail.lastName());
 }
 
 void SeasidePerson::ensureComplete()

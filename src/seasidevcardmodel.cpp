@@ -134,20 +134,18 @@ QVariant SeasideVCardModel::data(const QModelIndex &index, int role) const
     const QContact &contact = mContacts.at(index.row());
 
     if (role == PrimaryNameRole || role == SecondaryNameRole) {
-        QContactName name = contact.detail<QContactName>();
-        const QString firstName(name.firstName());
-        const QString lastName(name.lastName());
-        const bool firstNameFirst(displayLabelOrder() == FirstNameFirst);
+        const QContactName nameDetail = contact.detail<QContactName>();
 
-        if (role == SecondaryNameRole) {
-            return firstNameFirst ? lastName : firstName;
-        }
+        QString (*fn)(const QString &, const QString &) = (role == PrimaryNameRole ? &SeasideCache::primaryName : &SeasideCache::secondaryName);
+        const QString name((*fn)(nameDetail.firstName(), nameDetail.lastName()));
 
-        if (firstName.isEmpty() && lastName.isEmpty()) {
-            // No real name details - fall back to the display label for primary name
-            return data(index, Qt::DisplayRole);
+        if (role == PrimaryNameRole && name.isEmpty()) {
+            if (SeasideCache::secondaryName(nameDetail.firstName(), nameDetail.lastName()).isEmpty()) {
+                // No real name details - fall back to the display label for primary name
+                return data(index, Qt::DisplayRole);
+            }
         }
-        return firstNameFirst ? firstName : lastName;
+        return name;
     } else if (role == AvatarRole || role == AvatarUrlRole) {
         QUrl avatarUrl = SeasideCache::filteredAvatarUrl(contact);
         if (role == AvatarUrlRole || !avatarUrl.isEmpty()) {
