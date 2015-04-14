@@ -646,6 +646,10 @@ void SeasideFilteredModel::populateIndex()
 
 QVariantMap SeasideFilteredModel::get(int row) const
 {
+    if(row < 0 || row >= m_contactIds->size()) {
+        return QVariantMap();
+    }
+
     SeasideCache::CacheItem *cacheItem = existingItem(m_contactIds->at(row));
     if (!cacheItem)
         return QVariantMap();
@@ -675,6 +679,9 @@ QVariantMap SeasideFilteredModel::get(int row) const
 
 QVariant SeasideFilteredModel::get(int row, int role) const
 {
+    if(row < 0 || row >= m_contactIds->size()) {
+        return QVariant();
+    }
     SeasideCache::CacheItem *cacheItem = existingItem(m_contactIds->at(row));
     if (!cacheItem)
         return QVariant();
@@ -703,7 +710,10 @@ SeasidePerson *SeasideFilteredModel::personByRow(int row) const
     if(row < 0 || row >= m_contactIds->size()) {
         return NULL;
     }
-    return personFromItem(SeasideCache::itemById(m_contactIds->at(row)));
+    if(m_allContactIds->contains(row)) {
+        return personFromItem(m_allContactIds->at(row));
+    }
+    return NULL;
 }
 
 SeasidePerson *SeasideFilteredModel::personById(int id) const
